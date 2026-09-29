@@ -330,7 +330,7 @@ Threat
 
 ## ARCH-TODO-007 Registry & Versioning
 
-**状态：TODO**
+**状态：DISCUSSING**
 
 范围：
 
