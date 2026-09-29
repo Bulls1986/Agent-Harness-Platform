@@ -485,6 +485,35 @@ Fail / Wait Human
 
 数据库、对象存储、磁盘、Kubernetes/Region 的 Backup/DR 属于基础设施责任，不属于 Task Recovery Contract。[R25]
 
+## 6.16 Artifact / Evidence Retention
+
+平台将任务事实（Fact / Metadata）与产物载荷（Payload）分离：
+
+~~~text
+Platform State Store
+→ Artifact / Evidence metadata
+→ Lineage
+→ Verification / Approval / SideEffect facts
+→ storage reference
+
+OSS / Object Storage
+→ generated files
+→ reports
+→ screenshots
+→ large evidence payload
+→ retained raw logs / trace payload
+~~~
+
+核心规则：
+
+- Artifact / Evidence 的文件、报告、截图及其他大 Payload 默认进入 OSS / Object Storage；平台数据库保存 metadata、lineage、digest 与 storage reference。
+- Object Storage 通过 Adapter 接入，可使用企业 OSS、S3-compatible、MinIO 等实现，平台不绑定具体产品。
+- Raw Log / Trace 默认属于短期诊断数据；只有被 Verification / Reconciliation / Audit 明确提升或引用的内容进入 Evidence 生命周期。
+- Artifact / Evidence 是逻辑对象；物理 Payload 可以基于 content_digest 去重，但不能合并各自的 Lineage。
+- Recoverable Run 所依赖的 checkpoint、workspace state、Evidence、snapshot reference 必须 PIN，不能被 Retention / GC 提前删除。
+- Payload 清理后保留最小 Metadata / Tombstone，使历史 Verification、Recovery、Audit 仍可解释。
+- Retention 时长由 Policy / 部署配置决定，Harness Kernel 不硬编码固定天数。[R26]
+
 # 7. Harness Kernel 与组件模型
 
 ## 7.1 Kernel 核心能力
@@ -698,6 +727,7 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 | ADR-020 | 冻结 Execution ownership：Lease/Fencing 仅治理平台自有 Execution；Fencing Token 拒绝 stale Worker；Lease 丢失不能替代 UNKNOWN/Reconciliation；底层 Framework/Runtime ownership 不重复实现。 | Accepted |
 | ADR-021 | 冻结身份与授权传播：V1 单组织、不引入 Tenant 模型；企业 IdP 负责认证；Initiator 与 Executor Identity 分离；Policy 负责当前授权，Credential Provider 提供最小权限凭据。 | Accepted |
 | ADR-022 | 冻结任务级恢复：平台记录业务执行事实与 Recovery Reference；按 Runtime/Workspace 能力恢复到最深安全边界；Same Attempt Resume 与 Retry 分离；不承担基础设施 Backup/DR。 | Accepted |
+| ADR-023 | 冻结 Artifact/Evidence Retention：任务事实与 Payload 分离；大 Payload 默认进入 OSS/Object Storage；Raw Log 短期保留；Recoverable Run 依赖必须 PIN；清理 Payload 后保留 Metadata/Tombstone 与 Lineage。 | Accepted |
 
 # 19. MAF 扩展性验证要求
 
@@ -795,3 +825,7 @@ docs/references/IDENTITY_AND_AUTHORIZATION_PROPAGATION.md
 
 [R25] Agent Harness Platform - Task Recovery Coverage & Recovery Semantics 契约  
 docs/references/TASK_RECOVERY_COVERAGE_AND_SEMANTICS.md
+
+
+[R26] Agent Harness Platform - Artifact / Evidence / Log Retention 契约  
+docs/references/ARTIFACT_EVIDENCE_LOG_RETENTION.md
