@@ -326,7 +326,15 @@ Correctness
 - 文档与实现提交信息应说明真实意图。
 - 不把无关格式化、大规模重排与架构改动混在同一提交。
 - 任何 Provider 替换必须证明上层 Domain Model / Workflow 不需要修改。
-- 高风险 git.push / merge 等动作必须遵守 Policy / Approval；详细 Workspace/Git Contract 待 ARCH-TODO-003 冻结。
+- 高风险 git.push / merge 等动作必须遵守 Policy / Approval。
+- Git Server 是权威主干事实源；Repository Mirror / Cache 只能作为可重建缓存。
+- Project Repository 通过静态 Project Manifest 定义项目仓库边界，并承载项目级 AGENTS.md / Skills / 公共规范。
+- Project Workspace 可跨 Turn / Run 复用，但 Run 必须冻结自己的 Repository Revision Set。
+- Worktree 按 Git Repository 粒度隔离；并发可写 Run / 子 Agent 默认不得共享同一 Worktree。
+- 执行过程中不得隐式 rebase/merge 追主干；集成前显式同步 upstream 并重新 Verify。
+- 本地 commit 可按 Recipe/Policy 自动执行；push/merge/tag/delete branch/force-push 按外部副作用治理，force-push 默认禁止。
+- 项目研发流程和跨仓执行顺序由项目级 Skill 定义，不写死在 Harness Kernel。
+- 详见 `docs/references/WORKSPACE_AND_GIT_MODEL.md`。
 
 # 16. 当前架构待办
 
