@@ -305,6 +305,32 @@ Runtime Topology
 - Topology 不拥有 Run 状态机，也不决定执行顺序。
 - Run 活跃期间必须可查询当前拓扑；Run 完成后保留最终快照和关键生命周期事件。具体 Retention Policy 由 ARCH-TODO-011 统一定义。[R19]
 
+## 6.10 恢复点（RecoveryPoint）与 Checkpoint 隔离
+
+平台不重新实现底层 Runtime 的 Checkpoint / Resume 机制，只定义统一恢复领域模型和 Adapter 边界。
+
+~~~text
+平台恢复点（RecoveryPoint）
+        ↓
+Runtime Adapter
+Workspace Adapter
+Sandbox Provider
+        ↓
+各自底层实现
+~~~
+
+RecoveryPoint 是轻量引用模型，至少可关联 runtime_checkpoint_ref、workspace_state_ref、repository_revision_set、environment_fingerprint 与可选 sandbox_snapshot_ref。
+
+硬边界：
+
+- Runtime checkpoint 对平台保持 Opaque，平台不得依赖具体 Framework 的内部 Checkpoint 结构。
+- Runtime Adapter 显式声明 checkpoint / resume / durable_wait / snapshot_restore 等真实 Capability。
+- 底层 Runtime 不支持的恢复能力必须明确返回不支持；平台不模拟、不 fork、不 patch。
+- Workspace、Sandbox、Runtime 各自通过 Adapter/Provider 实现恢复，平台只做轻量协调。
+- 不建立 Runtime / Workspace / Sandbox 之间的分布式两阶段提交或平台级补偿协议。
+- Sandbox Snapshot 是 Provider 可选能力，不是所有 RecoveryPoint 的共同硬依赖。
+- RecoveryPoint 不替代外部副作用的 Reconciliation / Compensation 语义。[R20]
+
 # 7. Harness Kernel 与组件模型
 
 ## 7.1 Kernel 核心能力
@@ -511,6 +537,7 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 | ADR-013 | 冻结失败/幂等/副作用契约：UNKNOWN 禁止盲重试；Retry/Replan 分离；非 PURE 执行必须声明副作用契约。 | Accepted |
 | ADR-014 | 冻结 Workspace/Git 模型：Project Repository 静态定义项目；Project Workspace 管理多仓；Worktree 按 Git Repository 隔离；Git Server 为主干唯一事实源。 | Accepted |
 | ADR-015 | 冻结 Runtime Topology：作为运行时事实图记录 Participant 及稳定关系，不承担 Plan/Workflow/Scheduler；基础设施对象可入图但高频调用不入图。 | Accepted |
+| ADR-016 | 冻结恢复隔离模型：平台只定义 RecoveryPoint 与 Recovery Capability；底层 Checkpoint/Restore 由 Adapter/Provider 实现，不支持不补齐，不 fork Framework。 | Accepted |
 
 # 19. MAF 扩展性验证要求
 
@@ -584,3 +611,7 @@ docs/references/WORKSPACE_AND_GIT_MODEL.md
 
 [R19] Agent Harness Platform - 运行时拓扑与参与者模型  
 docs/references/RUNTIME_TOPOLOGY.md
+
+
+[R20] Agent Harness Platform - Checkpoint 与恢复隔离契约  
+docs/references/CHECKPOINT_AND_SNAPSHOT_CONSISTENCY.md
