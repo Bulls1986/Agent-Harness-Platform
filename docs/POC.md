@@ -328,6 +328,19 @@ E2B 不作为独立 Provider。POC 只验证 CubeSandbox 的 E2B-compatible API/
 
 ExecutionResult 必须记录 environment fingerprint。Run 启动后 freeze 环境版本，禁止依赖不可追踪的 latest。
 
+## 16.5 Workspace / Git POC Gate
+
+Workspace / Git Contract 至少验证：
+
+1. **Multi-repo Materialization**：Project Manifest 可稳定拉取多个 Repository Workspace，并记录 Repository Revision Set。
+2. **Writable Isolation**：两个并发可写 Run / 子 Agent 不共享同一 Worktree，不发生源码污染。
+3. **Sandbox Rebind**：销毁 Sandbox 后，可重新绑定/恢复同一 Workspace，代码状态不丢失。
+4. **Mainline Refresh**：Run 执行中不隐式追主干；交付前可显式刷新 upstream、处理冲突并重新 Verify。
+5. **Git Side Effects**：本地 commit 与 push/merge/force-push 的 Policy / Side Effect Contract 边界可验证；force-push 默认拒绝。
+6. **Authority Boundary**：Repository Mirror / Cache 丢失后可从权威 Git Server 重建，且不会成为主干事实源。
+
+E2E / Integration Environment 不在本 Gate 验证，单独按 ARCH-TODO-023 讨论。
+
 # 17. POC 完成定义（DoD）
 
 - 12 个统一框架场景全部有 PASS/FAIL/Gap 结论。
