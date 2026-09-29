@@ -356,29 +356,19 @@ Threat
 
 ## ARCH-TODO-008 Execution Lease / Fencing / Heartbeat
 
-**状态：DISCUSSING**
+**状态：CLOSED**
 
-范围：
+**Decision：** Lease / Fencing 仅治理平台自有 Execution ownership：Lease 表示当前执行资格，Heartbeat 只负责活性与续租，Fencing Token 随 ownership epoch 单调递增并拒绝 stale Worker。RUNNING Execution 丢失 Lease 后不得 blind handoff；明确未执行才可重试，结果不确定必须进入 UNKNOWN → Reconciliation。Framework / Durable Engine / CubeSandbox 内部 Worker ownership 继续由各自实现负责。V1 优先使用现有权威状态存储做原子 claim / renew / fencing，不新增独立分布式锁基础设施。
 
-- execution lease
-- lease TTL
-- heartbeat
-- fencing token
-- stale Worker
-- duplicate consumer
-- worker crash / reconnect
-- ownership transfer
+**产出：** [EXECUTION_LEASE_FENCING_HEARTBEAT.md](references/EXECUTION_LEASE_FENCING_HEARTBEAT.md)
 
-目标：避免旧 Worker 复活后继续执行已经被 Retry、迁移或取消的 Step。
+### 已确认的相邻约束
+
+- MAF Python Durable 的生产私有化 backend 问题记录于 references/MAF_PYTHON_DURABLE_PRIVATE_DEPLOYMENT.md。
+- 008 不为弥补 MAF/Durable Task backend 缺口而建设 Durable Scheduler、TaskHub backend 或 replay engine。
+- Cancellation / Timeout 传播由 ARCH-TODO-016 单独讨论。
 
 ---
-
-
-### 已确认的相邻约束（不并入 008 设计）
-
-- MAF Python Durable 的生产私有化 backend 问题已单独记录于 `references/MAF_PYTHON_DURABLE_PRIVATE_DEPLOYMENT.md`。
-- 008 不为弥补 MAF/Durable Task backend 缺口而建设 Durable Scheduler、TaskHub backend 或 replay engine。
-- Framework 内部 durable worker ownership 继续由 Framework/Durable Engine 自己负责；008 只讨论平台自有 Execution 的 Lease / Fencing / Heartbeat。
 
 ## ARCH-TODO-009 Multi-Tenant Identity & Authorization Propagation
 
