@@ -428,55 +428,18 @@ Fail / Wait Human
 
 ## ARCH-TODO-012 Observability Contract
 
-**状态：DISCUSSING**
+**状态：CLOSED**
 
-核心问题：
+**Decision：** OpenTelemetry 作为 vendor-neutral telemetry baseline；Runtime / Framework 原生 OTel instrumentation 优先复用，Harness 只补 Control Plane / Scheduler / Policy / Recovery / Verification 等平台边界和统一 correlation。Event、Trace/Span、Log、Metric 严格分离；Run:Trace=1:N；run_id / step_id / attempt_id / execution_id / participant_id 用于 Trace/Log correlation，高基数 ID 不进入默认 Metric labels。普通成功链路允许采样，ERROR / UNKNOWN / Recovery / Reconciliation / Approval / Verification Failure 等关键路径优先保留。Prompt / Response / Tool Payload / Repository Content 默认不进入普通 telemetry。
 
-> 平台为了运行诊断、性能分析和跨组件定位，必须产生哪些 Telemetry；这些 Telemetry 如何与 Run / Step / Attempt / Execution / Participant 关联，而不把 Observability 反向变成新的业务事实源。
+**产出：** [OBSERVABILITY_CONTRACT.md](references/OBSERVABILITY_CONTRACT.md)
 
-### 当前边界
+### 边界
 
-- OpenTelemetry 作为 vendor-neutral telemetry baseline / export protocol，不拥有 Harness Domain Model；Runtime 原生 OTel instrumentation 优先复用，Harness 不重复建设同等粒度埋点。
-- Event、Trace/Span、Log、Metric 四类信号严格区分。
-- 平台业务 Event 是审计/状态事实；Trace/Log/Metric 是 observability signals，不能反向决定 Run/Step 最终业务状态。
-- run_id / step_id / attempt_id / execution_id / participant_id 作为统一 correlation attributes 贯穿 Trace/Log；Provider 原生 trace/span/session ID 只能作为 metadata。
-- metrics 禁止把 run_id / step_id / attempt_id / execution_id 等高基数 ID 作为默认 label/dimension。
-- GenAI / Provider-specific OpenTelemetry semantic conventions 可以由 Adapter 映射，但平台核心命名不依赖其稳定性。
-- Prompt / Response / Tool Payload / Repository Content 默认不进入普通 telemetry；敏感或大内容继续走 Artifact/Evidence/Log Retention 与安全边界。
-- Cost / Quota / Chargeback 的业务归因由 ARCH-TODO-013 定义；012 只提供所需 telemetry facts，不定义计费模型。
-
-
-### Runtime 原生观测优先
-
-- MAF Python 当前原生基于 OpenTelemetry instrumentation，能够产生 traces / logs / metrics，并覆盖 agent/model invocation、tool execution、workflow spans 与 token usage；平台直接消费这些原生 telemetry。
-- 对 MAF 不重复包一套同等粒度的自定义埋点；只有平台自己的 Control Plane / Scheduler / Policy / Recovery / Verification 等 MAF 不拥有的边界才由 Harness 补充 telemetry。
-- MAF 原生 telemetry 必须附加或关联平台 run_id / step_id / attempt_id / execution_id / participant_id；如果公开扩展点只能在父 span / baggage / context 中注入，则通过 Adapter 做传播，不修改 MAF 内部实现。
-- Provider / Runtime 原生 span attributes、operation names 与 GenAI semantic attributes 尽量原样保留，平台不为了统一而丢弃可用观测信息。
-- 默认采集非敏感 metadata；message content、tool arguments/results 等 sensitive telemetry 默认关闭。只有经过明确 Policy 允许后才可 opt-in，且仍受 Security / Retention 约束。
-- 其他 Runtime 采用相同原则：优先使用其原生 OpenTelemetry / public instrumentation；平台只补公共关联字段与真实缺口。
-
-### 需要定义
-
-- Event vs Trace vs Log vs Metric
-- trace/span hierarchy and naming
-- correlation attributes
-- model / tool / sandbox / workflow spans
-- structured log minimum fields
-- low-cardinality metrics schema
-- error/failure mapping
-- topology correlation
-- sampling / payload redaction boundary
-- telemetry provider/exporter abstraction
-- diagnostic minimum for recovery and failure analysis
-
-### 明确不在范围
-
-- 自建 Prometheus / Grafana / Loki / Elasticsearch / APM 产品
-- 告警平台本身
-- 全量 Prompt / Response 内容采集
-- Cost / Quota / Chargeback domain
-- Artifact / Evidence payload retention
-- SIEM / security analytics product
+- Observability signals 不拥有 Run / Step 最终业务状态。
+- MAF 原生 traces / logs / metrics 直接接入，不重复包同等粒度埋点。
+- Cost / Quota / Chargeback 由 ARCH-TODO-013 处理。
+- 不建设 Prometheus/Grafana/Loki/APM/Alerting 产品。
 
 ---
 
