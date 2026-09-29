@@ -242,7 +242,7 @@ Sandbox 平台只决定“在哪台执行节点运行 Sandbox”，不拥有 Har
 
 1. 同一 Workflow 在不同 SandboxProvider 间切换，不修改业务 Workflow。
 2. Coding 命令默认不能逃逸到 Agent Runtime 宿主机。
-3. timeout/cancel 能杀死 Sandbox 内子进程并回收资源。
+3. timeout/cancel 能通过 SandboxProvider 的公开能力传播并终止/回收可终止资源；ACK 不等于 TERMINATED，具体语义服从 CANCELLATION_TIMEOUT_PROPAGATION.md。
 4. workspace、network、secret、mount 策略可审计。
 5. Provider 故障不会导致 Run/Plan/Step 状态丢失。
 6. Sandbox destroy/pause/resume 事件映射为统一 Harness Event。
