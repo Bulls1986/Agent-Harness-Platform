@@ -341,6 +341,19 @@ Workspace / Git Contract 至少验证：
 
 E2E / Integration Environment 不在本 Gate 验证，单独按 ARCH-TODO-023 讨论。
 
+## 16.6 Runtime Topology POC Gate
+
+至少验证：
+
+1. **Dynamic Participant**：Agent / Subagent / Executor / Sandbox / MCP Server 可在 Run 中动态加入和退出。
+2. **Relationship Accuracy**：OWNS / SPAWNS / CALLS / RUNS_ON 等关系与真实运行一致。
+3. **No Invocation Flood**：高频 Tool/MCP/Shell 调用不会导致 Topology 节点/边按调用次数膨胀。
+4. **Failure Localization**：Sandbox / Agent / Executor 故障可从 Topology 定位到归属 Run 和 Owner。
+5. **Trace Correlation**：Topology participant_id 可与 Trace/Span/Cost/Evidence 关联。
+6. **Final Snapshot**：Run 完成后可生成最终拓扑快照和关键生命周期事件。
+
+该 Gate 不验证 Workflow 调度、Multi-Agent 协商或长期 Retention Policy。
+
 # 17. POC 完成定义（DoD）
 
 - 12 个统一框架场景全部有 PASS/FAIL/Gap 结论。
