@@ -177,6 +177,17 @@ WAITING_APPROVAL / WAITING_INPUT 属于平台控制状态：
 
 这些事实用于避免已完成工作或外部副作用被重复执行。
 
+## 9.1 Retention / GC 约束
+
+任务恢复依赖与 Retention Policy 必须一致：
+
+- 当前 Run 仍可恢复时，RecoveryPoint 依赖的 Artifact / Evidence / workspace_state_ref / snapshot reference 必须保持 PIN。
+- 只有当 Run 不再需要该恢复依赖，或对应 RecoveryPoint 已失效/释放后，Payload 才可进入 GC。
+- Artifact / Evidence Payload 即使被后续清理，其最小 Metadata / Lineage / content digest 仍应保留，以解释历史恢复与 Verification 结果。
+- 大 Payload 默认由 OSS / Object Storage 承载，平台状态库只保存引用与事实。
+
+详见 ARTIFACT_EVIDENCE_LOG_RETENTION.md。
+
 ## 10. MAF 映射
 
 对于普通 MAF Runtime：
