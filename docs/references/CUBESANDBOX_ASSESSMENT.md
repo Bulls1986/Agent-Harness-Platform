@@ -98,16 +98,16 @@ filesystem + memory snapshot
 Cube Template
 ~~~
 
-因此可以与远程 E2B 共享 Environment Profile 的 OCI source：
+因此 Local/Remote CubeSandbox cluster 可以共享同一个 Environment Profile / OCI source：
 
 ~~~text
                  immutable OCI digest
                      /          \
                     /            \
-          Cube Template      E2B Template
+       Local Cube Template   Remote Cube Template
 ~~~
 
-同一 OCI digest 不意味着两个平台生成的 VM snapshot 字节完全相同；平台要求的是 toolchain、filesystem、runtime contract 与验收结果一致。
+同一 OCI digest 不意味着两个 cluster 的 VM snapshot 字节完全相同；平台要求的是 toolchain、filesystem、runtime contract 与验收结果一致。
 
 ## 6. 性能价值
 
