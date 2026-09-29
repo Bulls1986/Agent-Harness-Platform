@@ -11,11 +11,13 @@
 
 ## 首轮 POC
 
-首轮验证三条路线：
+首轮验证三条路线，当前 POC 优先级为：
 
-- Microsoft Agent Framework（MAF）
-- Google ADK
-- Temporal + 可替换 Agent Runtime
+1. Microsoft Agent Framework（MAF）
+2. Temporal + 可替换 Agent Runtime
+3. Google ADK
+
+本轮不把 Java 原生支持作为评分项。
 
 LangGraph / Deep Agents 因企业生产部署平台绑定与 Managed Feature Cliff 风险，不进入本轮 POC。
 
