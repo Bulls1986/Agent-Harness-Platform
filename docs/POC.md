@@ -381,6 +381,19 @@ E2E / Integration Environment 不在本 Gate 验证，单独按 ARCH-TODO-023 �
 
 该 Gate 只验证隔离边界是否成立，不在本阶段实现完整 IAM、DLP、MCP Trust 或 Supply Chain Security。
 
+## 16.9 Version Freeze POC Gate
+
+至少验证：
+
+1. **Resolve Once**：Run 创建时逻辑配置可解析为确定 Recipe / Component / Runtime / Policy / Tool / Protocol / Environment 版本。
+2. **No Drift**：Run 执行过程中默认版本变化不会改变已运行 Run 的绑定。
+3. **No latest Binding**：Run 持久化记录中不存在未解析的 latest/default 作为最终版本。
+4. **Recovery Consistency**：恢复已有 Run 时仍能读取其原始冻结版本信息。
+5. **Capability Match**：Recipe Requirement 与 Runtime/Component Capability 在 Run 开始前完成匹配，不满足时明确拒绝启动。
+6. **No Registry Product Dependency**：以上能力不依赖建设中心化 Registry 服务即可成立。
+
+该 Gate 不验证 Service Discovery、热升级或复杂依赖求解。
+
 # 17. POC 完成定义（DoD）
 
 - 12 个统一框架场景全部有 PASS/FAIL/Gap 结论。
