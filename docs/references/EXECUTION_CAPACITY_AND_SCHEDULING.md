@@ -41,6 +41,12 @@ Agent Runtime 可以维持大量逻辑并发，但 Coding Execution 会成为资
 
 ## 3. Coding Harness 更接近 CI workload
 
+### 3.1 OpenCode 现实校验
+
+现有 OpenCode 使用经验说明，Coding Agent 不应按“每个用户永久绑定一个 VM/Sandbox”的模型估算容量。更接近实际的是 shared runtime/session + workspace/worktree + 按需 subprocess：用户在等待模型、阅读、搜索、编辑时几乎不消耗重计算资源，只有进入 compile/build/test/browser 等步骤时才形成明显硬件压力。
+
+因此容量模型以 active heavy execution 为主，而不是 registered users、session count 或 Agent logical run count。
+
 典型重资源任务：
 
 ~~~text
