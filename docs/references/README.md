@@ -25,6 +25,7 @@
 17. [运行时拓扑与参与者模型](RUNTIME_TOPOLOGY.md)
 18. [Checkpoint 与恢复隔离契约](CHECKPOINT_AND_SNAPSHOT_CONSISTENCY.md)
 19. [安全信任边界与隔离契约](SECURITY_THREAT_MODEL.md)
+20. [Registry 与版本冻结契约](REGISTRY_AND_VERSIONING.md)
 
 ## 使用原则
 
