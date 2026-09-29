@@ -101,7 +101,7 @@ Sandbox、Memory、Search、Artifact 等关键能力是否可以替换？
 
 1. 不使用厂商托管平台，核心流程能不能完整运行？
 2. 不使用厂商数据库，Run/Session/Checkpoint 能不能落自有存储？
-3. 不使用厂商 Sandbox，能不能替换 Docker/E2B/K8s？
+3. Sandbox 能否通过平台 SPI 替换；生产主路径使用 CubeSandbox 时，是否仍可退回 Docker/K8s 等兼容实现？
 4. 不使用厂商模型，能不能走 LiteLLM/Provider Adapter？
 5. Worker/服务挂掉后能不能恢复？
 6. UI 能不能只依赖自己的协议？
