@@ -448,6 +448,43 @@ External Service
 - Project Manifest 只定义项目资源边界，不等于 Principal 自动获得所有 Repository 权限；Repository 授权通过 Policy + scoped provider credential 完成。
 - 若未来出现多组织共享平台需求，再通过独立 ADR 引入 Tenant / Organization Partition、数据隔离、Quota 与跨组织管理。[R24]
 
+## 6.15 Task Recovery Coverage
+
+平台任务恢复只依赖持久化业务执行事实与底层 Recovery Reference，不复制 Runtime 内部 checkpoint。
+
+~~~text
+Platform State
++ Runtime Recovery Reference
++ optional Workspace State
+        ↓
+recover to deepest safe boundary
+~~~
+
+平台至少持久化 Run lifecycle、Plan/Step/Attempt/Execution 状态、RuntimeBinding、RecoveryPoint、版本绑定、Approval/Waiting、Artifact/Evidence 引用、SideEffectReceipt 与 Reconciliation 状态。
+
+恢复能力由实际 Runtime / Workspace / Sandbox Capability 决定：
+
+- WAITING_INPUT / WAITING_APPROVAL 必须恢复同一个 Run 的等待状态；
+- 无可用 Runtime checkpoint 时，最多恢复到可证明安全的 Step Boundary，并使用 Same Step + New Attempt；
+- Runtime 提供真实 checkpoint/resume 时，可以 Same Run + Same Step + Same Attempt Resume；Resume 不等于 Retry；
+- Runtime State、Workspace State、Sandbox State 是独立恢复维度，Sandbox 实例不是任务恢复硬依赖；
+- RUNNING Execution 故障后必须结合 Lease/Fencing 与 Side Effect Contract；结果不确定进入 UNKNOWN → Reconciliation；
+- 不得因为 checkpoint 不可用就默认从整个 Run 起点重跑。
+
+默认恢复降级顺序：
+
+~~~text
+Same Attempt Resume
+        ↓
+Same Step + New Attempt
+        ↓ unsafe
+UNKNOWN → Reconciliation
+        ↓
+Fail / Wait Human
+~~~
+
+数据库、对象存储、磁盘、Kubernetes/Region 的 Backup/DR 属于基础设施责任，不属于 Task Recovery Contract。[R25]
+
 # 7. Harness Kernel 与组件模型
 
 ## 7.1 Kernel 核心能力
@@ -660,6 +697,7 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 | ADR-019 | 冻结版本管理：V1 不建设统一 Registry 服务；Run 创建时解析并冻结 Recipe/Component/Runtime/Policy/Tool/Protocol/Environment 版本，运行中不漂移。 | Accepted |
 | ADR-020 | 冻结 Execution ownership：Lease/Fencing 仅治理平台自有 Execution；Fencing Token 拒绝 stale Worker；Lease 丢失不能替代 UNKNOWN/Reconciliation；底层 Framework/Runtime ownership 不重复实现。 | Accepted |
 | ADR-021 | 冻结身份与授权传播：V1 单组织、不引入 Tenant 模型；企业 IdP 负责认证；Initiator 与 Executor Identity 分离；Policy 负责当前授权，Credential Provider 提供最小权限凭据。 | Accepted |
+| ADR-022 | 冻结任务级恢复：平台记录业务执行事实与 Recovery Reference；按 Runtime/Workspace 能力恢复到最深安全边界；Same Attempt Resume 与 Retry 分离；不承担基础设施 Backup/DR。 | Accepted |
 
 # 19. MAF 扩展性验证要求
 
@@ -753,3 +791,7 @@ docs/references/EXECUTION_LEASE_FENCING_HEARTBEAT.md
 
 [R24] Agent Harness Platform - Identity & Authorization Propagation 契约  
 docs/references/IDENTITY_AND_AUTHORIZATION_PROPAGATION.md
+
+
+[R25] Agent Harness Platform - Task Recovery Coverage & Recovery Semantics 契约  
+docs/references/TASK_RECOVERY_COVERAGE_AND_SEMANTICS.md
