@@ -514,6 +514,30 @@ OSS / Object Storage
 - Payload 清理后保留最小 Metadata / Tombstone，使历史 Verification、Recovery、Audit 仍可解释。
 - Retention 时长由 Policy / 部署配置决定，Harness Kernel 不硬编码固定天数。[R26]
 
+## 6.17 Observability Contract
+
+平台采用 OpenTelemetry 作为 vendor-neutral telemetry baseline，但不把 OTel 数据模型提升为 Harness 领域模型。
+
+~~~text
+Business Event
+≠ Trace / Span
+≠ Log
+≠ Metric
+~~~
+
+Runtime / Framework 原生 OpenTelemetry instrumentation 优先复用；Harness 只补平台自己的 Control Plane、ExecutionScheduler、Policy/Approval、Recovery/Reconciliation、Verification、Sandbox orchestration 等边界，以及统一 Correlation。
+
+核心规则：
+
+- MAF 等 Runtime 原生能够输出的 traces / logs / metrics 直接接入，不重复建设同等粒度 instrumentation。
+- Run 与 Trace 是 1:N；人工等待、恢复、进程重启或跨 Runtime handoff 后可创建新 Trace，使用 harness.run.id 继续关联。
+- Trace / Log 在具备上下文时关联 run_id / step_id / attempt_id / execution_id / participant_id；Provider 原生 session/trace/span ID 仅作为 metadata。
+- run_id / execution_id / user_id 等高基数业务 ID 不作为默认 Metric label。
+- Trace/Log 可采样，但 Business Event 不受采样影响；ERROR、UNKNOWN、Recovery、Reconciliation、Approval、Verification Failure 等关键路径优先保留。
+- Prompt / Response / Tool Payload / Repository Content 默认不进入普通 telemetry；需要作为 Evidence 的内容进入 Artifact/Evidence 流程。
+- GenAI / Provider-specific semantic conventions 保持在 Adapter / telemetry boundary，不反向改变平台领域模型。
+- Observability Backend 属于部署能力，Harness 不自建 Prometheus/Grafana/Loki/APM/Alerting 产品。[R27]
+
 # 7. Harness Kernel 与组件模型
 
 ## 7.1 Kernel 核心能力
@@ -728,6 +752,7 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 | ADR-021 | 冻结身份与授权传播：V1 单组织、不引入 Tenant 模型；企业 IdP 负责认证；Initiator 与 Executor Identity 分离；Policy 负责当前授权，Credential Provider 提供最小权限凭据。 | Accepted |
 | ADR-022 | 冻结任务级恢复：平台记录业务执行事实与 Recovery Reference；按 Runtime/Workspace 能力恢复到最深安全边界；Same Attempt Resume 与 Retry 分离；不承担基础设施 Backup/DR。 | Accepted |
 | ADR-023 | 冻结 Artifact/Evidence Retention：任务事实与 Payload 分离；大 Payload 默认进入 OSS/Object Storage；Raw Log 短期保留；Recoverable Run 依赖必须 PIN；清理 Payload 后保留 Metadata/Tombstone 与 Lineage。 | Accepted |
+| ADR-024 | 冻结 Observability：OpenTelemetry 为统一 telemetry baseline；Runtime 原生 instrumentation 优先；Run:Trace=1:N；统一 Harness correlation；关键路径优先保留；高基数业务 ID 不进入默认 Metric labels。 | Accepted |
 
 # 19. MAF 扩展性验证要求
 
@@ -829,3 +854,7 @@ docs/references/TASK_RECOVERY_COVERAGE_AND_SEMANTICS.md
 
 [R26] Agent Harness Platform - Artifact / Evidence / Log Retention 契约  
 docs/references/ARTIFACT_EVIDENCE_LOG_RETENTION.md
+
+
+[R27] Agent Harness Platform - Observability Contract  
+docs/references/OBSERVABILITY_CONTRACT.md
