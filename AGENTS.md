@@ -307,6 +307,21 @@ Local / Remote CubeSandbox 必须遵守统一 Execution Environment Contract。
 
 `docs/references/CHECKPOINT_AND_SNAPSHOT_CONSISTENCY.md`
 
+# 10.3 安全隔离边界
+
+必须遵守：
+
+- Repository、Tool、MCP、Web、Model Output 等外部内容默认不可信。
+- Instruction 与 Data 必须分层，低信任内容不得自行升级为高信任指令。
+- Data Plane 只产生 Result / Evidence / Artifact / Event / Failure，不拥有 Run/Step 最终状态控制权。
+- Secret 默认不直接进入模型上下文；Network Access 属于 Capability / Policy 边界。
+- 单一 Sandbox / Agent Runtime / Tool Runtime 被攻破，不应天然获得 Control Plane 或全局 Tenant 权限。
+- 安全能力优先通过 Framework 公开扩展点映射；Framework 外能力放平台外围；需要侵入式修改 Framework 的能力不进入强制基线。
+
+详见：
+
+`docs/references/SECURITY_THREAT_MODEL.md`
+
 # 11. POC 原则
 
 POC 必须：
