@@ -117,7 +117,11 @@ Side Effect 至少需要讨论：
 
 ## ARCH-TODO-003 Workspace / Repository / Git Model
 
-**状态：TODO**
+**状态：CLOSED**
+
+**Decision：** 已冻结 Project Repository → Project Workspace → Repository Workspace → Worktree 的分层；Project Manifest 静态定义项目仓库边界；Workspace 可跨 Turn/Run 复用；Run 冻结 Repository Revision Set；主干以 Git Server 为唯一权威；执行期间不隐式追主干，集成前显式刷新并重新验证；允许本地自动 commit，push/merge 等进入 Policy 与副作用契约；多仓 Revision Set 仅记录，不构建跨仓事务；项目研发流程由 Skill 定义。
+
+**产出：** [WORKSPACE_AND_GIT_MODEL.md](references/WORKSPACE_AND_GIT_MODEL.md)
 
 ### 问题
 
@@ -531,6 +535,16 @@ UI Cancel
 
 原则：先把 Run / Step / Executor / Topology / Budget / Capability 做正确，再扩展 Multi-Agent。
 
+**已记录的讨论方向：**
+
+- 子 Agent 作为运行时参与者（Participant），不新建一套顶层业务领域模型。
+- 子 Agent 必须有 Owner、Run/Step 归属、预算边界和取消传播。
+- 子 Agent 不得擅自扩大父任务目标。
+- 只读子 Agent 可以共享只读基线；可写子 Agent 默认使用独立 Worktree。
+- Agent 不拥有 Worktree，Repository Workspace 才拥有 Worktree。
+- 子 Agent 产出必须形成 Artifact / Evidence / Finding / Patch 等可追踪对象。
+- MAF 可通过 Agent-as-Tool、Workflow/Multi-Agent Orchestration、Sub-workflow 映射这些能力；平台语义不能依赖 MAF 独有模型。
+
 ---
 
 ## ARCH-TODO-018 Data Residency / DLP / PII
@@ -626,3 +640,89 @@ UI Cancel
    - 本文件状态改为 CLOSED。
 4. 任何 POC 暴露的新架构问题，优先回到本 Backlog 登记，再决定是否扩展范围。
 5. 不因为某个框架当前实现方便而改变平台领域模型。
+
+
+---
+
+## ARCH-TODO-021 Project Instructions / Skills Context
+
+**状态：TODO**
+
+### 来源
+
+ARCH-TODO-003 讨论过程中扩展出的项目上下文问题。
+
+### 需要讨论
+
+- Project Repository 中 AGENTS.md、Project Skills、公共规范如何发现和解析。
+- AGENTS.md 是否只是 ProjectInstructionProvider 的一种实现。
+- 项目级 Skill 的发现、版本、优先级与继承。
+- 根目录/子目录指令覆盖规则。
+- Main Agent / Subagent / Runtime 如何获得 Effective Project Context。
+- MAF SkillsProvider 与平台 ProjectSkillsProvider 的映射。
+- Codex/OpenCode 自身规则发现与平台级保证之间的边界。
+- 非 Coding Agent 是否需要项目指令。
+- 项目上下文如何随 Worktree / Repository Workspace 切换重新解析。
+
+### 当前已接受方向
+
+- 不是所有 Agent 都必须依赖 AGENTS.md。
+- 平台需要的是“项目级指令能力（Project Instructions）”，而不是硬编码 AGENTS.md。
+- 项目级 Skill 是可选能力，不应成为所有 Runtime 的强依赖。
+- Provider/Runtime 原生规则加载机制可保留，但不能成为平台唯一保障。
+
+---
+
+## ARCH-TODO-022 Skill Script Execution / Runner
+
+**状态：TODO**
+
+### 来源
+
+讨论 MAF 项目级 Skill 时扩展出的脚本执行问题。
+
+### 需要讨论
+
+- 内联技能脚本（Inline Skill Script）与文件型技能脚本（File-based Skill Script）的安全边界。
+- MAF SkillScriptRunner 如何映射到平台 Execution Plane。
+- LocalSubprocessSkillRunner 仅用于开发/调试还是完全禁用。
+- 生产默认 SandboxSkillRunner / CubeSandbox Runner。
+- Script 的 Policy / Approval / Timeout / Cancellation / Resource Limit。
+- Script Side Effect Contract 与 Evidence。
+- Python / Shell / Node 等脚本类型支持。
+- Skill Script 版本、Environment Profile 与工具链一致性。
+
+### 当前已接受方向
+
+~~~text
+MAF SkillsProvider
+→ run_skill_script
+→ Platform SkillScriptRunner
+→ ExecutionScheduler
+→ CubeSandboxProvider
+→ CubeSandbox
+~~~
+
+生产文件型 Skill 脚本不得默认绕过 Execution Plane 落到 Agent Runtime 本机 subprocess。
+
+---
+
+## ARCH-TODO-023 E2E / Integration Test Environment
+
+**状态：TODO**
+
+### 来源
+
+多仓 Project Workspace 讨论过程中出现，但明确不在 ARCH-TODO-003 展开。
+
+### 需要讨论
+
+- 为一次 Run 拉起独立测试环境，还是绑定现有测试环境。
+- 多个后端/前端仓库如何组合部署。
+- Integration Environment 的生命周期、租约、隔离与清理。
+- 测试数据与数据恢复。
+- 并发 Run 的环境冲突。
+- 环境与 Repository Revision Set 的绑定。
+- E2E Evidence、失败恢复与成本控制。
+
+该主题单独讨论，避免 Workspace/Git Contract 承担部署环境职责。
