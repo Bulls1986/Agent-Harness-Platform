@@ -388,38 +388,48 @@ Threat
 
 ---
 
-## ARCH-TODO-010 HA / DR / Backup
+## ARCH-TODO-010 Task Recovery Coverage & Recovery Semantics
 
 **状态：DISCUSSING**
 
-范围：
+核心问题：
 
-- Control Plane / Scheduler / Worker 进程级 HA
-- Runtime / Checkpoint / RecoveryPoint 恢复边界
-- CubeSandbox control/data plane failure 的平台侧响应
-- Redis / Cache / Derived State 丢失后的可重建性
-- platform-owned authoritative state 与 rebuildable / ephemeral state 分类
-- cluster / runtime service failure 后的恢复顺序
-- RPO / RTO 作为部署/SLA要求的接口边界，而非平台内置备份实现
+> 一个 Run 为了在 Worker / Runtime / Sandbox / 进程故障后安全继续，平台必须持久化哪些事实；在不同能力条件下，最多能够恢复到 Run / Step / Attempt / Execution 的哪一层。
 
-明确不在范围：
+本待办只讨论**任务级恢复（Task-level Recovery）**，不讨论平台基础设施级 HA / DR / Backup。
 
-- PostgreSQL / MSSQL / Object Storage 的物理备份、复制、主从、快照、磁盘容灾
-- Persistent Volume / StorageClass / RAID / SAN / 云盘层面的可靠性
-- 数据库产品自身 HA / Backup / DR 方案设计
-- 跨 Region Active-Active 数据库架构
+### 需要定义
 
-这些属于企业基础设施 / Storage Platform 责任。Harness 只声明恢复依赖与失败后的系统语义，不重复建设底层存储保护能力。
+- Run / Plan / Step / Attempt / Execution 哪些状态必须持久化；
+- Runtime binding / checkpoint reference 需要记录什么；
+- RecoveryPoint 与当前 Run 状态如何关联；
+- Workspace / Repository Revision Set / Environment Fingerprint 需要保留到什么程度；
+- Artifact / Evidence / Approval / Side Effect Receipt 哪些属于恢复所需事实；
+- Worker / Runtime / Sandbox 故障后恢复粒度；
+- 无 checkpoint、checkpoint 不可用、workspace 不可恢复时的降级行为；
+- WAITING_INPUT / WAITING_APPROVAL 如何恢复；
+- RUNNING Execution 故障后如何结合 Lease/Fencing 与 UNKNOWN/Reconciliation；
+- 不同 Runtime Capability 下平台能承诺的 Recovery Level。
+
+### 明确不在范围
+
+- PostgreSQL / MSSQL / Object Storage 的物理备份；
+- 数据库主从、复制、快照、磁盘容灾；
+- Control Plane / Scheduler 服务级 HA；
+- K8s / Region / Cluster disaster recovery；
+- 跨 Region Active-Active；
+- 企业基础设施 RPO / RTO 设计。
+
+这些属于企业基础设施 / Storage / Deployment 责任，不属于 Harness Task Recovery Contract。
+
+### 与既有 Contract 的关系
+
+- ARCH-TODO-002：定义 UNKNOWN、Retry、Reconciliation、副作用恢复语义。
+- ARCH-TODO-005：定义 RecoveryPoint 与 Runtime / Workspace / Sandbox Adapter 隔离。
+- ARCH-TODO-008：定义 Execution Lease / Fencing，拒绝 stale Worker。
+- ARCH-TODO-010：在上述基础上冻结“平台为了任务恢复具体记录什么，以及能恢复到什么程度”。
 
 ---
-
-
-### 当前讨论结论
-
-- Checkpoint / Durable Backend 是 Runtime/Worker 故障后的主要恢复机制。
-- RecoveryPoint 只保存平台侧恢复引用，不复制底层 Runtime checkpoint 内容。
-- 若底层状态后端整体数据丢失，是否可恢复取决于企业基础设施是否提供该后端的备份/复制能力；Harness 不对此实现第二套备份机制。
-- 对 V1 而言，ARCH-TODO-010 的核心不是 Backup 产品设计，而是“哪些状态是权威的、哪些可以重建、进程/组件故障后如何安全恢复”。
 
 ## ARCH-TODO-011 Artifact / Evidence / Log Retention
 
