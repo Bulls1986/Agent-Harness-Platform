@@ -366,7 +366,7 @@ Threat
 
 - MAF Python Durable 的生产私有化 backend 问题记录于 references/MAF_PYTHON_DURABLE_PRIVATE_DEPLOYMENT.md。
 - 008 不为弥补 MAF/Durable Task backend 缺口而建设 Durable Scheduler、TaskHub backend 或 replay engine。
-- Cancellation / Timeout 传播由 ARCH-TODO-016 单独讨论。
+- Cancellation / Timeout 传播已由 ARCH-TODO-016 冻结，详见 CANCELLATION_TIMEOUT_PROPAGATION.md。
 
 ---
 
@@ -507,7 +507,7 @@ Harness 仍负责具体 Execution 的 Capability / Policy / Approval / Credentia
 后续需要讨论：
 
 - spawn / ownership
-- child budget
+- child execution limits
 - child cancellation
 - context inheritance
 - artifact/evidence lineage
