@@ -125,7 +125,7 @@ Dockerfile change
    ↓
 CI build OCI
    ↓
-security scan
+external CI/CD / Container Security validation
    ↓
 digest freeze
    ↓
@@ -176,3 +176,17 @@ Local/Remote CubeSandbox 集群能否真正无感切换，关键不在 endpoint 
 5. Execution fingerprint
 
 这五项应成为 Sandbox POC 的硬门禁。
+
+## 11. Supply Chain Security 边界
+
+OCI provenance、SBOM、image signing、signature verification、vulnerability scanning 等不由 Harness Platform 实现。
+
+Harness 只消费外部 CI/CD / Artifact Registry / Container Security 已提供的环境结果，例如：
+
+- immutable OCI digest；
+- environment version；
+- capability；
+- verification status；
+- optional external attestation/reference。
+
+这些外部安全结果可以作为 Environment metadata 或 admission input，但 Harness 不维护其扫描、签名、证明和治理生命周期。
