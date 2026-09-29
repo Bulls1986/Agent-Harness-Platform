@@ -276,6 +276,22 @@ Local / Remote CubeSandbox 必须遵守统一 Execution Environment Contract。
 
 `docs/references/RUNTIME_TOPOLOGY.md`
 
+# 10.2 恢复能力边界
+
+必须遵守：
+
+- 平台拥有恢复点（RecoveryPoint）领域模型，但不重新实现 Runtime Checkpoint Engine。
+- Runtime Checkpoint 对平台必须保持 Opaque，通过 Runtime Adapter 引用和恢复。
+- Runtime / Workspace / Sandbox 必须显式声明真实恢复 Capability。
+- 底层 Framework / Provider 不支持的能力，平台不得通过 fork、monkey patch 或复制内部实现补齐。
+- 平台只做轻量恢复协调，不建立跨组件 2PC 或新的分布式恢复协议。
+- Sandbox Snapshot 是可选 Provider 能力，不是 RecoveryPoint 的统一硬依赖。
+- 外部副作用恢复继续遵守副作用回执与状态核对契约。
+
+详见：
+
+`docs/references/CHECKPOINT_AND_SNAPSHOT_CONSISTENCY.md`
+
 # 11. POC 原则
 
 POC 必须：
