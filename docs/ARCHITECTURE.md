@@ -117,8 +117,9 @@ flowchart TB
     UI[UI / Portal / Desktop] --> IG[Interaction Gateway\nResponses-compatible + Harness Extensions]
     IG --> CP[Control Plane / 控制平面]
     CP --> HK[Harness Kernel\nRun / State / Workflow / Retry / Recovery]
-    CP --> GOV[Governance\nTenant / IAM / Policy / Approval]
-    HK --> CR[Component & Capability Registry]
+    EXTGOV[External Enterprise Governance\nIdP/IAM / Credential / Admission] --> CP
+    CP --> GOV[Harness Execution Governance\nPolicy / Approval]
+    HK --> CR[Version / Capability Directory\nlogical capability, not a service]
     CR --> DP[Data Plane / 执行平面]
     DP --> AR[Agent Runtime\nMAF / ADK / Agents SDK / Codex / Strands]
     DP --> SB[Sandbox / Execution Plane\nCubeSandbox / Docker / K8s]
@@ -209,7 +210,7 @@ Conversation
 - Task / Run 生命周期、状态机、队列、优先级和并发控制。
 - Recipe 解析、组件装配、Capability 依赖检查。
 - Plan/Step 生命周期、Retry / Replan / Abort / Complete 决策。
-- Policy、Approval、Tenant、IAM、Secret 引用。
+- Policy / Approval 执行决策，以及外部 Identity / Credential / Governance Reference。
 - Checkpoint、恢复、事件存储与 Replay。
 - Artifact/Evidence 元数据与 Lineage。
 
@@ -225,7 +226,7 @@ Conversation
 
 - 模型调用与 Agent Runtime 执行。
 - Shell、Filesystem、Git、Browser、Database、MCP、Code Execution。
-- Sandbox workspace、snapshot、artifact staging 和资源限制。
+- Sandbox workspace、snapshot、artifact staging；资源限制由 Harness 声明需求并由 Sandbox / Provider 实际执行。
 - 返回结构化 ExecutionResult / ToolResult / Evidence，不决定业务 Run 是否完成。
 
 ## 6.2 “Sandbox 不决定业务 Workflow”的含义
@@ -757,7 +758,7 @@ Context Engine 不等于 conversation history。每次模型调用由 ContextBui
 - Working Memory：Plan、Todo、Current Step、Run State。
 - Long-Term Memory：显式长期记忆与语义历史记忆。
 - Retrieval Context：RAG、Repository、Enterprise Data。
-- User/Tenant Context：用户画像、租户策略和业务背景。
+- External User/Project Context：由上游或项目配置提供的用户/业务上下文引用；Harness 不拥有用户画像或 Tenant 治理模型。
 - Compaction：Context Window 管理，不与 Long-Term Memory 混为一体。
 
 平台建议采用 ContextProvider SPI 作为统一扩展模型，通过 scope、lifecycle、retrieval、persistence、priority、context size limit 和 update policy 控制不同上下文来源。
@@ -769,13 +770,13 @@ Context Engine 不等于 conversation history。每次模型调用由 ContextBui
 - Evidence：用于验收的事实证据，如命令退出码、测试报告、git diff、扫描结果。
 - Lineage：Requirement → Plan → Step → Artifact/Evidence → Verification → Final Output。
 
-# 13. Capability、Policy、Approval 与 Secret
+# 13. Capability、Policy、Approval 与 External Credential
 
-Capability 表示组件具备的技术能力；Policy 决定当前用户/租户/环境是否允许调用该能力。Secret 只通过 SecretProvider 注入执行环境，模型上下文仅拿到引用或临时凭证。
+Capability 表示组件具备的技术能力；Policy 只负责 Harness 当前 Execution 是否允许调用该能力。Credential / Secret 的存储、签发、轮换与生命周期由外部企业 Credential / Secret Infrastructure 负责；Harness 仅通过 Adapter / Reference 获取当前 Execution 所需的 scoped credential，模型上下文默认不接收长期 Secret。
 
 - git.push 可以是 Capability，但对 main/develop 的允许规则属于 Policy。
 - production.deploy 可以要求 approval.requested 后进入 WAITING_APPROVAL。
-- Sandbox 执行权限、网络出口、文件挂载、CPU/内存/PID 均由 Policy/SandboxSpec 控制。
+- Harness 可通过 Policy / SandboxSpec 表达 Sandbox 权限、网络出口、挂载和资源限制要求；具体 enforcement 由 Sandbox Provider / 外部网络与基础设施能力负责。
 
 # 14. Observability 与 Evaluation
 
@@ -786,15 +787,16 @@ Capability 表示组件具备的技术能力；Policy 决定当前用户/租户/
 
 # 15. 推荐部署拓扑
 
-推荐采用“企业平台控制层 + 独立 Agent Runtime 服务”的服务边界。Platform Layer 负责 Tenant、IAM、Policy、Recipe、Artifact、API Gateway；具体实现语言不作为本轮架构选型因素，Agent Runtime 可按框架最适合的语言以独立容器部署。
+推荐采用“Harness Control Plane + 独立 Agent Runtime 服务 + 外部企业治理/基础设施”的服务边界。Harness Platform Layer 负责 Run/Policy/Recipe/Artifact/API 等任务执行语义；IAM、Credential、MCP Governance、APM、Storage DR 等继续由外部企业能力负责。具体实现语言不作为本轮架构选型因素，Agent Runtime 可按框架最适合的语言以独立容器部署。
 
 | **层**              | **建议技术职责**                                    | **说明**             |
 |---------------------|-----------------------------------------------------|----------------------|
-| Platform Layer      | Tenant/IAM/Policy/Recipe/Artifact/Portal API        | 语言中立，由企业自行实现 |
+| Harness Platform Layer | Run/Policy/Recipe/Artifact/API                      | 任务编排与执行控制；不拥有企业 IAM/治理产品 |
+| External Enterprise Services | IdP/IAM/Credential/Governance/Observability      | 外部能力；Harness 仅通过 Adapter/Reference/Decision 接入 |
 | Durable Control     | MAF Workflow / ADK orchestration / Temporal         | 由 POC 决定          |
 | Agent Runtime       | MAF / ADK / OpenAI Agents / Strands / Codex Adapter | 独立进程/容器        |
 | Sandbox / Execution | CubeSandbox 为生产默认候选；Docker/K8s 为 fallback/扩展 | Local/Remote Cube cluster 可替换，不绑定云服务 |
-| Storage             | PostgreSQL + Object Storage + Event/Audit Store     | 数据掌握在企业       |
+| External Storage      | PostgreSQL + Object Storage                         | Harness 消费持久化能力；底层 HA/Backup/DR 由企业基础设施负责 |
 | Model               | LiteLLM/Provider Adapter                            | 模型可替换           |
 
 # 16. 首轮技术选型
