@@ -65,7 +65,7 @@ Agents SDK
   ↓
 Sandbox abstraction
   ↓
-E2B / Docker / Local / other provider
+CubeSandbox / Docker / K8s / other provider
 ~~~
 
 对企业平台而言，Sandbox 应继续通过自有 `SandboxProvider/SPI` 抽象，而不是让业务 Workflow 绑定具体 Provider。
@@ -108,8 +108,8 @@ Executor SPI
   └─ CodexExecutor
 
 Sandbox SPI
-  ├─ Docker
-  └─ E2B
+  ├─ CubeSandbox
+  └─ Docker / K8s fallback
 ~~~
 
 最终原则：
