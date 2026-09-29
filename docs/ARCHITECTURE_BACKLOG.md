@@ -455,19 +455,22 @@ Fail / Wait Human
 
 ## ARCH-TODO-014 Environment Supply Chain Security
 
-**状态：DISCUSSING**
+**状态：CLOSED**
 
-范围：
+**Decision：** 本专题不由 Harness Platform 处理。OCI provenance、SBOM、image signing、signature verification、vulnerability scanning、base image/dependency policy、template promotion security gate 等属于企业 CI/CD、Artifact Registry、Container Security / Supply Chain Security 基础设施职责。
 
-- OCI provenance
-- SBOM
-- image signing
-- signature verification
-- vulnerability scanning
-- base image policy
-- dependency policy
-- template promotion gate
-- unsigned/unverified image rejection
+Harness 只消费已准备好的 Environment Profile、immutable OCI digest、capability、verification status 等环境元数据，并在 Run / Execution 中冻结和记录实际使用的 environment version / digest。
+
+明确不建设：
+
+- image signing / signature verification service
+- SBOM generation / storage
+- vulnerability scanner
+- image promotion security workflow
+- base image / dependency governance product
+- supply-chain attestation service
+
+如果企业外部平台提供上述结果，Harness 可以把最终 verification / policy decision 当作 Environment metadata 或 admission input 使用，但不拥有其内部模型和生命周期。
 
 ---
 
