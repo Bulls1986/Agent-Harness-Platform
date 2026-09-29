@@ -534,6 +534,78 @@ UI Cancel
 - Sandbox Provider 内部节点调度/kill 机制
 - 外部系统 transaction rollback engine
 
+### 当前建议语义
+
+#### 1. Cancel Request ≠ CANCELLED
+
+显式取消先进入中间控制状态：
+
+~~~text
+RUNNING
+→ CANCELLING
+→ propagate cancel
+→ confirm termination / reconcile
+→ CANCELLED | UNKNOWN | FAILED
+~~~
+
+`CANCELLED` 只能表示平台已经能够确认该执行不再继续，且不存在尚未处理的未知副作用。
+
+#### 2. Timeout 不是 Cancel
+
+Timeout 是 Execution Limit / deadline 触发的停止原因，不是新的 terminal state：
+
+~~~text
+not dispatched / safely stopped
+→ FAILED + TIMEOUT
+
+possibly dispatched side effect
+→ UNKNOWN + TIMEOUT_AFTER_DISPATCH
+→ Reconciliation
+~~~
+
+#### 3. Propagation Chain
+
+~~~text
+Run Cancel
+→ current Step / Attempt
+→ active Execution
+→ Runtime / Tool / MCP / Sandbox Adapter
+→ underlying public cancel/abort API
+~~~
+
+只传播到 Harness 已知的活动执行链。已经 terminal 的节点不重新打开；尚未开始的 pending work 不再 dispatch。
+
+#### 4. Graceful First, Force When Supported
+
+取消优先 cooperative/graceful；超过 grace period 后可由对应 Provider 做 force terminate。
+
+Harness 只要求 Adapter 返回真实 capability/result，例如 graceful_cancel / force_terminate / unsupported，不重新实现 Runtime/Sandbox 内部 kill 机制。
+
+#### 5. Cancellation Acknowledgement
+
+Adapter 至少要能返回：
+
+~~~text
+ACKNOWLEDGED
+TERMINATED
+UNSUPPORTED
+UNKNOWN
+~~~
+
+`ACKNOWLEDGED` 仅表示已收到取消信号，不等于已经停止。
+
+#### 6. Waiting State
+
+WAITING_INPUT / WAITING_APPROVAL 尚未 dispatch 新副作用时，可以直接撤销等待并终止原 Run，不需要创建新 Run。
+
+#### 7. Cleanup
+
+取消后的 workspace/artifact/evidence 不做隐式回滚或删除。Sandbox/process 临时资源可以释放；已经产生的任务事实与 Evidence 继续保留。
+
+#### 8. MAF Mapping
+
+MAF 原生 cancellation/public API 优先直接使用。MAF 的 cooperative cancellation 或 MCP best-effort cancel 只能作为 termination signal，不能推导“副作用一定未发生”；同步 Tool 已经执行时仍可能完成，因此仍需服从 SideEffect / UNKNOWN / Reconciliation 契约。
+
 # 4. P2：明确延后但需要保留
 
 ## ARCH-TODO-017 Multi-Agent / Subagent Ownership
