@@ -125,6 +125,25 @@ Run 可以暂停和恢复，但只有非终态 Run 可以 Resume。
 
 后续用户请求必须进入新 Turn / Run，或者在同一 Turn 下创建新的 Run。
 
+## 4.2 Identity Binding
+
+Run 必须保留发起者（Initiator）身份作为不可变审计事实，可通过 security_context / principal binding 引用。
+
+V1 不要求 tenant_id：
+
+~~~text
+Run
+├─ initiator_principal_id
+├─ security_context_ref?
+└─ policy_context
+~~~
+
+具体 Execution 的 Executor / Service Principal 单独记录，不覆盖 Run 的 Initiator。
+
+身份历史事实可以冻结，但敏感动作的 Authorization 必须在 Execution 时按当前有效权限重新评估。
+
+详见 IDENTITY_AND_AUTHORIZATION_PROPAGATION.md。
+
 ## 5. 新 Turn / 新 Run / 新 Attempt 判定
 
 | 场景 | 领域动作 |
