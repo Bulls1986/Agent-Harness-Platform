@@ -438,6 +438,22 @@ Lease TTL、heartbeat interval 和 grace period 由 POC 实测确定，不作为
 
 该 Gate 不验证 SCIM、完整 Role Management UI、DLP、跨组织管理或自建 Secret Manager 产品。
 
+## 16.12 Task Recovery Coverage POC Gate
+
+至少验证：
+
+1. **Waiting State Recovery**：WAITING_INPUT / WAITING_APPROVAL 在 Runtime/Worker 重启后仍恢复为同一个 Run。
+2. **Step Boundary Recovery**：无 Runtime checkpoint 时，已完成 Step 不重复执行，当前可安全重试 Step 使用 Same Step + New Attempt。
+3. **Same Attempt Resume**：Runtime 声明 checkpoint/resume 时，Worker 故障后能恢复 Same Run + Same Step + Same Attempt，且不错误创建 Retry Attempt。
+4. **Capability Truthfulness**：不支持 runtime checkpoint / workspace restore 的 Adapter 必须明确返回 unsupported，平台不得模拟。
+5. **Workspace Independence**：Sandbox 销毁后，在 Workspace 可恢复时能够创建新 Sandbox 并继续，不要求恢复原 Sandbox 实例。
+6. **Checkpoint Unavailable Degradation**：checkpoint 丢失/不兼容时按 Same Step + New Attempt → Reconciliation → Fail/Wait Human 安全降级，不从整个 Run 起点盲重跑。
+7. **RUNNING Side Effect Safety**：故障前 RUNNING 的非 PURE Execution 如果结果未知，恢复后进入 UNKNOWN → Reconciliation，不 blind resume/retry。
+8. **Recovery Facts**：Run/Plan/Step/Attempt/Execution、RuntimeBinding、RecoveryPoint、Approval、SideEffectReceipt 等恢复所需事实均能在进程重启后重新读取。
+9. **No Infrastructure Backup Dependency**：测试任务恢复不要求 Harness 实现 PostgreSQL/MSSQL/Object Storage/磁盘的 Backup/DR 逻辑。
+
+MAF Durable POC 若宣称 Same Attempt Resume，必须用真实 Durable backend 证明；普通 MAF 或其他 Runtime 若只能做到 Step Boundary Recovery，应明确记录该 Capability 差异。
+
 # 17. POC 完成定义（DoD）
 
 - 12 个统一框架场景全部有 PASS/FAIL/Gap 结论。
