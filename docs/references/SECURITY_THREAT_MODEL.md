@@ -164,7 +164,7 @@ Threat
 以下主题继续由独立待办处理：
 
 - Identity / RBAC / ABAC / Delegated Credential → IDENTITY_AND_AUTHORIZATION_PROPAGATION.md
-- Environment / OCI Supply Chain Security → ARCH-TODO-014
+- Environment / OCI Supply Chain Security → 企业 CI/CD / Artifact Registry / Container Security 基础设施负责；Harness 只消费已验证的 Environment metadata / immutable digest
 - Tool / MCP Trust → ARCH-TODO-015
 - Data Residency / DLP / PII → ARCH-TODO-018
 - Project Instructions / Skills Context → ARCH-TODO-021
