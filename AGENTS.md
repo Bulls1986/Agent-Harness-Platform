@@ -389,6 +389,23 @@ docs/references/IDENTITY_AND_AUTHORIZATION_PROPAGATION.md
 
 docs/references/TASK_RECOVERY_COVERAGE_AND_SEMANTICS.md
 
+# 10.8 Artifact / Evidence Retention 边界
+
+必须遵守：
+
+- Task Facts 与 Payload 分离；Artifact / Evidence 大 Payload 默认进入 OSS / Object Storage，平台数据库保留 metadata / lineage / digest / storage reference。
+- Raw Log / Trace 默认短期保留，不自动视为长期 Evidence。
+- 被 Verification / Reconciliation / Audit 明确引用的日志内容必须提升为 Evidence 或形成稳定 Evidence Reference。
+- Artifact / Evidence 是逻辑身份；物理 Payload 可以去重，但不能合并逻辑 Lineage。
+- Recoverable Run 仍依赖的 checkpoint、workspace state、Evidence、snapshot reference 不得被 GC。
+- Payload 清理后保留最小 Metadata/Tombstone，使历史任务仍可解释。
+- Retention 时间由 Policy / 部署配置决定，禁止在 Harness Kernel 写死固定天数。
+- Workspace / Sandbox Snapshot 的生命周期由对应 Contract / Provider 管理，本层只定义引用与 GC 约束。
+
+详见：
+
+docs/references/ARTIFACT_EVIDENCE_LOG_RETENTION.md
+
 # 11. POC 原则
 
 POC 必须：
