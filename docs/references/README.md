@@ -20,6 +20,7 @@
 12. [Local / Remote Sandbox 环境一致性](ENVIRONMENT_CONSISTENCY.md)
 13. [CubeSandbox 作为本地 Agent Sandbox 的候选评估](CUBESANDBOX_ASSESSMENT.md)
 14. [Domain Model & State Contract](DOMAIN_MODEL_AND_STATE_CONTRACT.md)
+15. [失败、幂等与副作用契约](FAILURE_IDEMPOTENCY_AND_RECOVERY.md)
 
 ## 使用原则
 
