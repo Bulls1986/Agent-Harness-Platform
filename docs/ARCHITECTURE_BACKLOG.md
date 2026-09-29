@@ -372,43 +372,19 @@ Threat
 
 ## ARCH-TODO-009 Identity & Authorization Propagation
 
-**状态：DISCUSSING**
+**状态：CLOSED**
 
-背景：
+**Decision：** V1 以企业内部单组织信任域为基线，不引入 Tenant 一等领域模型。Authentication 由企业现有 IdP / IAM 负责；平台通过轻量 SecurityContext 保留 Initiator Identity，并将其与具体 Execution 的 Executor / Service Identity 分离。RBAC / ABAC / Group / Claim 作为 Policy 输入，平台只拥有 Authorization Decision。用户长期登录 Token / Secret 不向 Agent / Model / Sandbox 传播；外部访问通过 Credential Provider 获取短期、最小权限凭据。Run 固化 Initiator 作为审计事实，但敏感 Execution 必须按当前有效权限重新授权。
 
-- 当前目标是企业内部 Agent Harness Platform，V1 以单组织信任域为基线。
-- 不为了未来可能的 SaaS / 多租户场景提前引入 Tenant 一等领域模型。
-- 若未来确实出现多组织隔离需求，再通过独立架构决策引入 Tenant / Organization Partition。
+**产出：** [IDENTITY_AND_AUTHORIZATION_PROPAGATION.md](references/IDENTITY_AND_AUTHORIZATION_PROPAGATION.md)
 
-范围：
+### 边界
 
-~~~text
-User / Service Principal
-→ Run
-→ Agent / Executor
-→ Tool / MCP
-→ Sandbox
-→ External Service
-~~~
-
-需要定义：
-
-- identity propagation
-- initiator identity vs executor/service identity
-- RBAC / ABAC / Policy
-- delegated credential
-- secret scope
-- approval authority
-- project/repository authorization
-- credential issuance / least privilege
-- audit attribution
-
-当前边界：
-
-- Authentication 由企业现有 IdP / IAM 负责，Harness 不自建账号认证体系。
-- V1 不要求 Tenant 模型；资源隔离优先以 User / Project / Repository / Environment / Policy Scope 表达。
-- 不把用户长期登录 Token 直接传播到 Agent / Model / Sandbox。
-- 若未来需要多租户，必须单独讨论 Tenant isolation、data partition、quota、cross-tenant admin 等问题，不在本待办提前实现。
+- 不自建账号认证、SSO、User Directory、SCIM 或完整 IAM。
+- 不建设 Tenant / Organization Partition；未来确有多组织共享需求时单独立项。
+- 不复制 Repository Provider ACL；通过 Policy + scoped credential 组合授权。
+- Agent / Worker / Sandbox 不能自行伪造 Approval。
+- Secret 产品与生命周期、DLP、Tool/MCP Trust、Network Policy 继续由独立专题处理。
 
 ---
 
