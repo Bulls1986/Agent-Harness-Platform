@@ -224,7 +224,7 @@ Sandbox ≠ Workspace
 
 ## ARCH-TODO-005 Harness Checkpoint / Sandbox Snapshot Consistency
 
-**状态：TODO**
+**状态：DISCUSSING**
 
 ### 问题
 
