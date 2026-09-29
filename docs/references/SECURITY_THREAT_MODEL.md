@@ -165,7 +165,7 @@ Threat
 
 - Identity / RBAC / ABAC / Delegated Credential → IDENTITY_AND_AUTHORIZATION_PROPAGATION.md
 - Environment / OCI Supply Chain Security → 企业 CI/CD / Artifact Registry / Container Security 基础设施负责；Harness 只消费已验证的 Environment metadata / immutable digest
-- Tool / MCP Trust → ARCH-TODO-015
+- MCP Trust / Admission → 外部 MCP Governance / Enterprise Tool Governance 负责；Harness 只消费已准入 MCP，详见 MCP_TRUST_OWNERSHIP_BOUNDARY.md
 - Data Residency / DLP / PII → ARCH-TODO-018
 - Project Instructions / Skills Context → ARCH-TODO-021
 - Sandbox 具体网络与隔离实现 → Sandbox Provider / POC
