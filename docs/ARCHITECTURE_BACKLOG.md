@@ -164,7 +164,11 @@ Sandbox ≠ Workspace
 
 ## ARCH-TODO-004 Runtime Topology / Participant Model
 
-**状态：DISCUSSING**
+**状态：CLOSED**
+
+**Decision：** 已冻结 Runtime Topology 为运行时事实模型，不承担 Plan/Workflow/Scheduler 职责；Sandbox、MCP Server 等基础设施对象作为 Participant 进入拓扑；仅记录身份、生命周期和稳定关系，不记录高频调用明细；具体 Retention Policy 留给 ARCH-TODO-011。
+
+**产出：** [RUNTIME_TOPOLOGY.md](references/RUNTIME_TOPOLOGY.md)
 
 ### 问题
 
