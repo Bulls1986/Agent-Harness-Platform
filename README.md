@@ -29,7 +29,7 @@ LangGraph / Deep Agents 因企业生产部署平台绑定与 Managed Feature Cli
 - Event 是系统事实，可用于 UI Streaming、审计、Replay 与恢复。
 - 部署独立性、数据独立性、协议独立性是一级架构门禁。
 - Coding Execution 视为独立重资源区，生产默认进入隔离 Sandbox，不在 Agent Runtime 宿主机裸跑。
-- 执行容量采用 Local Sandbox baseline + Remote burst；当前本地第一候选为 CubeSandbox，E2B Cloud 作为弹性候选。
+- 执行容量采用 Local CubeSandbox baseline + Remote CubeSandbox burst；E2B 仅保留为兼容 API/SDK 语义，不作为独立 Provider。
 - Local/Remote 环境通过 Environment Registry + immutable OCI digest 维持可验证的一致性。
 
 
