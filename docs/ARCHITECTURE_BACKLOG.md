@@ -443,21 +443,33 @@ Fail / Wait Human
 
 ---
 
-## ARCH-TODO-013 Cost / Quota / Attribution
+## ARCH-TODO-013 Quota / Budget Guardrails
 
-**状态：DISCUSSING**
+**状态：TODO**
 
-范围：
+### 当前边界
 
-- token/model cost
-- sandbox CPU/RAM/runtime
-- storage
-- remote cluster
-- browser/tool cost
-- tenant/project/run attribution
-- quota
-- budget enforcement
-- chargeback/showback
+- V1 不做 Cost Accounting、Price Calculation、Chargeback、Showback 或 Billing Attribution。
+- 不维护模型价格表，不把 token / sandbox runtime / storage usage 换算为金额。
+- Observability 可保留 Runtime 原生 token / duration 等 telemetry，但这些只是诊断数据，不形成 Cost Domain。
+- 如果后续确有资源限额需求，只讨论 Quota / Budget Guardrail，例如并发、token、执行时长、资源上限；不得反向引入财务计费模型。
+
+范围（若后续需要）：
+
+- run / project / principal quota
+- max tokens / max iterations / max replans
+- execution concurrency
+- sandbox runtime / resource ceiling
+- budget enforcement semantics
+- exceeded behavior
+
+明确不在范围：
+
+- provider price table
+- currency / cost conversion
+- invoice reconciliation
+- chargeback / showback
+- financial attribution
 
 ---
 
