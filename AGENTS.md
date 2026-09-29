@@ -501,6 +501,23 @@ docs/references/ENVIRONMENT_SUPPLY_CHAIN_OWNERSHIP_BOUNDARY.md
 
 docs/references/MCP_TRUST_OWNERSHIP_BOUNDARY.md
 
+# 10.13 Cancellation / Timeout 边界
+
+必须遵守：
+
+- Cancel Request 不等于 CANCELLED；活动执行先进入 CANCELLING。
+- Cancel 沿 Run → Step/Attempt → active Execution → Runtime/Tool/MCP/Sandbox Adapter 传播；未开始工作停止 dispatch。
+- 优先 graceful cancel；只有 Provider 明确支持时才可升级 force terminate。
+- ACKNOWLEDGED 只表示收到信号，TERMINATED 才能证明下游停止。
+- Timeout 是 Failure Type / termination cause，不是 CANCELLED 的别名。
+- 已 dispatch 的非 PURE Execution 在 Cancel/Timeout 后结果不确定时必须 UNKNOWN → Reconciliation。
+- Cancellation 不做隐式 rollback，不删除 Workspace / Artifact / Evidence / SideEffect 历史。
+- Provider 不支持 cancel 时显式 unsupported，不 fork / patch Framework。
+
+详见：
+
+docs/references/CANCELLATION_TIMEOUT_PROPAGATION.md
+
 # 11. POC 原则
 
 POC 必须：
