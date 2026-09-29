@@ -67,6 +67,26 @@ failure_type = TIMEOUT_AFTER_DISPATCH
 - **执行结果（Outcome）**：我们知道执行最终发生了什么。
 - **失败分类（Failure Type）**：为什么没有正常完成或为什么结果不可确认。
 
+## 3.1 Cancellation 与 Timeout 的关系
+
+Cancel 与 Timeout 必须分离：
+
+- Cancel 是停止继续执行的显式控制意图；
+- Timeout 是 Execution Limit / deadline 到期后的 Failure Type / termination cause。
+
+活动 Execution 收到 Cancel Request 后可进入 `CANCELLING`；只有确认停止后才能进入 `CANCELLED`。
+
+如果 Cancel/Timeout 时请求已经 dispatch 且副作用结果无法确认：
+
+~~~text
+UNKNOWN
+→ Reconciliation
+~~~
+
+不得因为已经发送 cancel 信号就把未知副作用降级为 CANCELLED。
+
+详见 CANCELLATION_TIMEOUT_PROPAGATION.md。
+
 ## 4. 失败分类（Failure Classification）
 
 V1 至少支持：
@@ -347,7 +367,7 @@ observed_result:
 - Workspace/Git 的具体副作用与核对方式 → ARCH-TODO-003
 - RecoveryPoint 跨层一致性 → ARCH-TODO-005
 - Execution Lease / Fencing / Heartbeat → ARCH-TODO-008
-- Cancellation / Timeout 向各层传播 → ARCH-TODO-016
+- Cancellation / Timeout 向各层传播 → CANCELLATION_TIMEOUT_PROPAGATION.md（已冻结）
 - Tool / MCP 的准入与信任由外部 Governance 负责；具体调用的 SideEffect 声明仍由本契约约束，详见 MCP_TRUST_OWNERSHIP_BOUNDARY.md
 
 ## 14. Accepted Rules
