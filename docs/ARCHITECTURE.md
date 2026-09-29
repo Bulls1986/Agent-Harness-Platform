@@ -346,6 +346,32 @@ RecoveryPoint 是轻量引用模型，至少可关联 runtime_checkpoint_ref、w
 - Sandbox Snapshot 是 Provider 可选能力，不是所有 RecoveryPoint 的共同硬依赖。
 - RecoveryPoint 不替代外部副作用的 Reconciliation / Compensation 语义。[R20]
 
+## 6.11 安全信任边界（Security Trust Boundary）
+
+平台采用轻量安全隔离模型，只定义 Trust Boundary 与隔离语义，不在核心架构中重新实现完整 IAM、DLP、MCP Trust 或供应链安全系统。
+
+~~~text
+用户 / 客户端
+    ↓
+控制平面（Control Plane）
+    ↓
+Agent Runtime / Tool Runtime
+    ↓
+Sandbox / Workload
+    ↓
+外部系统（Model / MCP / Git / API / Internet）
+~~~
+
+核心规则：
+
+- Repository、Tool、MCP、Web、Model Output 等外部内容默认不可信。
+- Instruction 与 Data 必须分层，低信任数据不能覆盖高信任指令。
+- Data Plane 只产生 Result / Evidence / Artifact / Event / Failure，最终 Run/Step 状态迁移仍由 Control Plane 决定。
+- Participant 权限遵循最小权限与有限 Blast Radius。
+- Secret 默认不直接进入模型上下文；Network Access 属于 Capability / Policy 边界。
+- Framework 有公开扩展点则通过 Adapter / Middleware / Hook / Provider 映射；Framework 不负责的能力放平台外围。
+- 必须 fork、monkey patch、复制内部实现或依赖私有 API 才能获得的能力，不进入平台强制基线。[R21]
+
 # 7. Harness Kernel 与组件模型
 
 ## 7.1 Kernel 核心能力
@@ -554,6 +580,7 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 | ADR-015 | 冻结 Runtime Topology：作为运行时事实图记录 Participant 及稳定关系，不承担 Plan/Workflow/Scheduler；基础设施对象可入图但高频调用不入图。 | Accepted |
 | ADR-016 | 冻结恢复隔离模型：平台只定义 RecoveryPoint 与 Recovery Capability；底层 Checkpoint/Restore 由 Adapter/Provider 实现，不支持不补齐，不 fork Framework。 | Accepted |
 | ADR-017 | 公开扩展点优先：平台通过 Public Extension Point + Adapter 隔离底层框架；框架外能力放平台外围；必须侵入式修改框架的能力不作为平台强制能力。 | Accepted |
+| ADR-018 | 冻结安全信任边界：外部内容默认不可信；Instruction/Data 分层；Data Plane 不拥有业务最终状态；安全机制通过公开扩展点或外围基础设施实现。 | Accepted |
 
 # 19. MAF 扩展性验证要求
 
@@ -631,3 +658,7 @@ docs/references/RUNTIME_TOPOLOGY.md
 
 [R20] Agent Harness Platform - Checkpoint 与恢复隔离契约  
 docs/references/CHECKPOINT_AND_SNAPSHOT_CONSISTENCY.md
+
+
+[R21] Agent Harness Platform - 安全信任边界与隔离契约  
+docs/references/SECURITY_THREAT_MODEL.md
