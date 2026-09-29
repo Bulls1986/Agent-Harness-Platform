@@ -133,11 +133,11 @@ Data Plane 不得绕过 Policy / Approval 自行扩大权限或修改平台业�
 本契约只冻结原则：
 
 - Secret 默认不直接进入模型上下文。
-- Secret 通过受控 Provider / Execution Boundary 注入。
-- Network Access 属于 Capability / Policy 边界。
-- Agent / Tool 不得自行扩大网络或 Secret Scope。
+- Secret / Credential 的存储、签发、轮换与生命周期由外部企业 Credential / Secret Infrastructure 负责；Harness 仅通过 Adapter / Execution Boundary 消费 scoped credential。
+- Network enforcement 由 Sandbox Provider / 企业网络基础设施负责；Harness 仅表达当前 Execution 的 Capability / Policy / SandboxSpec 约束。
+- Agent / Tool 不得自行扩大网络或 Credential Scope。
 
-具体 Secret Scope、Network Policy、Credential Delegation 由后续专项定义。
+Harness 不建设 Secret Manager、Network Policy 产品或 Credential lifecycle；只定义执行边界需要的 reference / constraint / decision consumption。
 
 ## 9. 威胁记录模型
 
@@ -166,7 +166,7 @@ Threat
 - Identity / RBAC / ABAC / Delegated Credential → IDENTITY_AND_AUTHORIZATION_PROPAGATION.md
 - Environment / OCI Supply Chain Security → 企业 CI/CD / Artifact Registry / Container Security 基础设施负责；Harness 只消费已验证的 Environment metadata / immutable digest
 - MCP Trust / Admission → 外部 MCP Governance / Enterprise Tool Governance 负责；Harness 只消费已准入 MCP，详见 MCP_TRUST_OWNERSHIP_BOUNDARY.md
-- Data Residency / DLP / PII → ARCH-TODO-018
+- Data Residency / DLP / PII → 当前 P2 DEFERRED；默认属于企业数据治理/安全基础设施，若未来 POC 暴露 Harness 必须消费的 admission decision，再单独定义最小集成边界
 - Project Instructions / Skills Context → ARCH-TODO-021
 - Sandbox 具体网络与隔离实现 → Sandbox Provider / POC
 
@@ -174,7 +174,7 @@ Threat
 
 最终冻结：
 
-1. Repository、Tool、MCP、Web、Model Output 等外部内容默认不可信。
+1. Repository、Web、Model Output，以及 Tool/MCP 返回的外部业务内容不能自动提升为高信任指令；Tool/MCP Server 的准入与可信治理由外部 Governance 负责，Harness 可调用即视为已准入。
 2. Instruction 与 Data 必须隔离，低信任数据不能提升为高信任指令。
 3. Data Plane 不能拥有 Control Plane 的最终业务状态控制权。
 4. 权限遵循最小权限与有限爆炸半径。
