@@ -72,7 +72,7 @@ flowchart TB
 | Sandbox  | CubeSandbox 为生产 POC 基线；Local/Remote 使用不同 Cube cluster；Docker 作为开发/兼容对照。 |
 | 代码仓   | 准备统一 Demo Repo，包含可复现缺陷、单测、E2E/集成测试与 lint。                          |
 | UI       | 统一测试页面消费自有 SSE Event Protocol；不直接使用框架自带 Dev UI 作为最终结论。        |
-| 观测     | 至少输出 run_id、step_id、model call、tool call、command、duration、status、cost/token。 |
+| 观测     | 至少输出 run_id、step_id、model call、tool call、command、duration、status、token usage。 |
 
 # 5. 统一测试场景
 
@@ -98,7 +98,7 @@ flowchart TB
 - 禁止让不同方案使用不同难度 Demo。
 - Acceptance Criteria 由平台侧固定，不允许框架自行改变。
 - 测试失败必须触发明确 Failure Type，而不是把所有失败都归为“模型继续尝试”。
-- 限制 max_iterations、max_replans、max_runtime、max_cost，观察每个框架的控制能力。
+- 限制 max_iterations、max_replans、max_runtime，观察每个框架的控制能力。
 
 # 7. POC-A：Microsoft Agent Framework
 
@@ -323,7 +323,7 @@ E2B 不作为独立 Provider。POC 只验证 CubeSandbox 的 E2B-compatible API/
 - Local Cube saturation → Remote Cube burst。
 - Remote Cube 不可用 → backpressure/queue。
 - cancellation 后资源回收。
-- pause/resume 后资源配额归还。
+- pause/resume 后执行容量释放。
 - Scheduler 重启后 pending/running 状态一致。
 
 初始工程观察目标可采用 interactive queue p95 < 5s、normal p95 < 15s、heavy p95 < 60s，最终以实测 workload 修正，不作为预先承诺的生产 SLA。
@@ -363,7 +363,7 @@ E2E / Integration Environment 不在本 Gate 验证，单独按 ARCH-TODO-023 �
 2. **Relationship Accuracy**：OWNS / SPAWNS / CALLS / RUNS_ON 等关系与真实运行一致。
 3. **No Invocation Flood**：高频 Tool/MCP/Shell 调用不会导致 Topology 节点/边按调用次数膨胀。
 4. **Failure Localization**：Sandbox / Agent / Executor 故障可从 Topology 定位到归属 Run 和 Owner。
-5. **Trace Correlation**：Topology participant_id 可与 Trace/Span/Cost/Evidence 关联。
+5. **Trace Correlation**：Topology participant_id 可与 Trace/Span/Evidence 关联。
 6. **Final Snapshot**：Run 完成后可生成最终拓扑快照和关键生命周期事件。
 
 该 Gate 不验证 Workflow 调度、Multi-Agent 协商或长期 Retention Policy。
@@ -485,6 +485,18 @@ MAF Durable POC 若宣称 Same Attempt Resume，必须用真实 Durable backend 
 10. **Backend Independence**：更换 OTLP-compatible backend 不修改 Harness Domain Model。
 
 POC 记录 Runtime 原生能观测到的真实范围；某项 Runtime 原生 telemetry 不存在时，只在确有平台诊断价值且有公开扩展点时补充，不 fork / patch Framework。
+
+## 16.15 Cost / Quota Ownership Gate
+
+至少验证：
+
+1. Harness Domain / persistence 不存在 price table、balance、quota account、cost ledger、billing account 等核心对象。
+2. Runtime 原生 token usage / duration 可以通过 Observability 输出，但平台不执行金额换算或额度扣减。
+3. max_iterations / max_replans / timeout 等 Execution Limits 可独立生效，不依赖 Cost / Quota Domain。
+4. 若外部 Governance/Portal 返回 quota/entitlement deny，可通过既有 Policy/Admission boundary 阻止执行，而无需 Harness 持有 quota balance。
+5. 替换 Runtime / Model Provider 不要求平台维护供应商价格映射。
+
+该 Gate 只验证职责边界，不建设计费/额度功能。
 
 # 17. POC 完成定义（DoD）
 
