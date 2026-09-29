@@ -43,7 +43,7 @@ Project、Repository、Environment、Secret、Tool、External Resource 仍必须
 
 V1 不引入 tenant_id 作为强制领域字段。
 
-若未来出现多个独立组织共享同一平台的需求，必须通过新的架构决策单独引入 Tenant / Organization Partition、数据隔离、Quota、跨组织管理与审计模型。
+若未来出现多个独立组织共享同一平台的需求，必须通过新的架构决策单独引入 Tenant / Organization Partition、数据隔离、跨组织管理与审计模型；Cost / Quota / Billing 仍由外部治理系统负责。
 
 ## 3. Principal
 
