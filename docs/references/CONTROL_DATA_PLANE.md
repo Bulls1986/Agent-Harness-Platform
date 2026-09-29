@@ -145,8 +145,30 @@ Activity / Agent / Sandbox = Data Plane
 
 可将 ADK 作为 Java Agent Runtime / orchestration 组件；平台仍保留最终 Run/Policy/Artifact 控制权。
 
-## 6. 最终原则
+## 6. Sandbox Infrastructure Control Plane
+
+采用 CubeSandbox 等基础设施后，需要再区分一层“Sandbox Infrastructure Control Plane”：
+
+~~~text
+Agent Harness Control Plane
+Run / Plan / Policy / Verify / Replan
+          ↓
+ExecutionScheduler
+          ↓
+Sandbox Infrastructure Control Plane
+CubeAPI / CubeMaster
+          ↓
+Sandbox Data Plane
+Cubelet / MicroVM / Network / Storage / Process
+~~~
+
+CubeMaster 可以决定 Sandbox 落到哪个 compute node、何时 pause/resume/snapshot，但不能决定 Harness Run 是否 Retry/Replan/Complete。
+
+本项目生产候选统一使用 CubeSandboxProvider；Local/Remote 只是不同 Cube cluster/endpoint。E2B 仅作为 CubeSandbox 兼容 API/SDK 语义，不进入独立 Provider 列表。
+
+## 7. 最终原则
 
 > Control Plane 不直接执行副作用操作。  
 > Data Plane 不拥有平台业务状态机最终控制权。  
+> Sandbox Infrastructure Control Plane 不拥有 Harness 业务 Workflow。  
 > Agent 可以提出决策，但确定性状态迁移由平台代码裁决。
