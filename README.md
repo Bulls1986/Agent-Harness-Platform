@@ -8,6 +8,7 @@
 
 - [企业级 Agent Harness Platform 架构设计 V1.0](docs/ARCHITECTURE.md)
 - [Agent Harness Platform 架构 POC 说明书 V1.0](docs/POC.md)
+- [架构待办 / Architecture Backlog](docs/ARCHITECTURE_BACKLOG.md)
 
 ## 首轮 POC
 
