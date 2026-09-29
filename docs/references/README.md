@@ -33,3 +33,5 @@
 - 正式架构文档只保留当前有效决策和接口边界。
 - 任何引用到具体框架当前能力、许可证或托管方式的内容，在正式选型前必须重新核验。
 - 当参考资料中的结论被 ADR 正式接受后，应在 ADR 中建立反向链接。
+
+21. [MAF Python Durable 私有化部署约束](MAF_PYTHON_DURABLE_PRIVATE_DEPLOYMENT.md)
