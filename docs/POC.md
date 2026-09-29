@@ -368,6 +368,19 @@ E2E / Integration Environment 不在本 Gate 验证，单独按 ARCH-TODO-023 �
 
 该 Gate 验证的是隔离和可替换性，不要求所有候选 Runtime 具备相同恢复能力。
 
+## 16.8 Security Isolation POC Gate
+
+至少验证：
+
+1. **Untrusted Repository**：Repository 内容不能绕过平台指令/Policy 边界取得更高权限。
+2. **Instruction/Data Separation**：Tool/MCP/Web/Repo 输出不能直接升级为 Platform Instruction。
+3. **Control/Data Plane Boundary**：Sandbox/Agent Runtime 返回的自声明结果不能直接修改 Run/Step 最终状态。
+4. **Public Extension Point Only**：MAF 等 Runtime 的安全接入只能使用公开 Middleware / Hook / Provider / Approval / Adapter 等扩展点，不 fork、不 monkey patch。
+5. **Infrastructure Separation**：Sandbox、Network、Secret 等安全能力可以由外围 Provider 承担，无需修改 Agent Framework 内核。
+6. **Bounded Blast Radius**：单个 Sandbox / Runtime / Tool 被攻破时，不应自然获得 Control Plane 或其他 Tenant/Project 的全局权限。
+
+该 Gate 只验证隔离边界是否成立，不在本阶段实现完整 IAM、DLP、MCP Trust 或 Supply Chain Security。
+
 # 17. POC 完成定义（DoD）
 
 - 12 个统一框架场景全部有 PASS/FAIL/Gap 结论。
