@@ -275,7 +275,7 @@ RecoveryPoint
 
 ## ARCH-TODO-006 Security Threat Model
 
-**状态：TODO**
+**状态：DISCUSSING**
 
 ### 问题
 
