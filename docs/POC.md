@@ -167,8 +167,8 @@ Temporal 不提供 Agent Harness，而提供 Durable Execution。该路线验证
 
 ## 9.2 建议拓扑
 
-- Java/Spring Boot：Platform API、Recipe、Policy、Artifact、SSE Gateway。
-- Temporal Java Workflow：Plan → Execute → Verify → Replan 状态机。
+- Platform Service：Platform API、Recipe、Policy、Artifact、SSE Gateway；实现语言不计入评分。
+- Temporal Workflow：Plan → Execute → Verify → Replan 状态机；选择团队最合适的官方 SDK 完成 POC。
 - Activity：调用独立 Agent Runtime Service；POC 可选择 OpenAI Agents SDK 或极简自研 Adapter。
 - Sandbox SPI：Docker 为默认实现；E2B 作为可选第二实现。
 - Temporal Service：优先本地/self-host 基线，确保不是 Temporal Cloud 才能运行。
