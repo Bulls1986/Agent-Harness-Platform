@@ -25,7 +25,11 @@
 
 ## ARCH-TODO-001 Domain Model & State Contract
 
-**状态：TODO**
+**状态：CLOSED**
+
+**Decision：** 已冻结 Conversation → Turn → Run → Plan/Step/Attempt 的 V1 领域关系；Turn:Run=1:N；Plan 版本化；Step/Attempt 分离；terminal Run never reopen；Provider ID 仅为 binding/metadata。
+
+**产出：** [DOMAIN_MODEL_AND_STATE_CONTRACT.md](references/DOMAIN_MODEL_AND_STATE_CONTRACT.md)
 
 ### 问题
 
@@ -59,7 +63,7 @@
 
 ## ARCH-TODO-002 Failure / Idempotency / Side Effect Contract
 
-**状态：TODO**
+**状态：DISCUSSING**
 
 ### 问题
 
