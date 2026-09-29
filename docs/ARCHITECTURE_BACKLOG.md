@@ -474,43 +474,15 @@ Harness 只消费已准备好的 Environment Profile、immutable OCI digest、ca
 
 ---
 
-## ARCH-TODO-015 Tool / MCP Trust Model
+## ARCH-TODO-015 MCP Trust Ownership Boundary
 
-**状态：DISCUSSING**
+**状态：CLOSED**
 
-核心问题：
+**Decision：** MCP Server / Tool 的准入、可信度、安全审查、发布、升级、撤销与下线属于外部 MCP Governance / Enterprise Tool Governance；Harness 只消费已经被治理层准入的 MCP。只要平台可调用，就视为已通过外部治理，不再建立 MCP Trust Score、Server Risk Level、Marketplace Approval 或二次审核模型。
 
-> Harness 如何识别 Tool / MCP Server、限制其可调用能力、隔离 Credential/Network Scope，并把其返回内容作为不可信数据处理，而不建设完整 MCP 管理平台。
+Harness 仍负责具体 Execution 的 Capability / Policy / Approval / Credential / SideEffect / Audit，以及 Tool/MCP version binding；MCP 返回的业务数据仍遵守统一 Instruction / Data 隔离规则，不自动获得 Platform/System Instruction 权限。
 
-### 当前边界
-
-- Tool / MCP Server identity、Capability、Authorization、Result Trust 四个维度分离。
-- MCP/Tool 被连接或被授权，不代表其返回内容可信；Tool/MCP Result 默认仍是 untrusted data。
-- Tool capability/side-effect class 必须在调用前可知；非 PURE 调用继续服从 Side Effect Contract、Approval 与 Reconciliation。
-- MCP Authorization 优先使用协议/SDK公开能力；Harness 不自建 OAuth Authorization Server，也不把 MCP scope taxonomy 写死进核心领域模型。
-- Secret / Credential 通过 Credential Provider 受控注入，只给目标 Tool/MCP 所需最小 scope，不进入模型上下文。
-- Tool/MCP 版本必须可识别并在 Run 创建时解析/冻结；Provider 原生 ID 只作 binding/metadata。
-- Tool/MCP 输出进入 Agent Context 时必须保留 origin，并与高信任 Instruction 分层；返回内容不能自行提升为 Policy / System Instruction。
-- Tool/MCP 调用产生 Trace/Evidence/SideEffectReceipt 时沿用现有 Observability、Retention、Failure Contracts。
-
-### 需要定义
-
-- tool/server identity and origin
-- capability / side-effect declaration
-- authorization and credential boundary
-- tool result trust / prompt-injection handling
-- network/resource scope
-- version binding and revocation semantics
-- audit/correlation minimum
-
-### 明确不在范围
-
-- 通用 MCP Marketplace / Catalog 产品
-- 自建 OAuth/OIDC Authorization Server
-- Tool package manager
-- 全局 Secret Manager 产品
-- 完整 network security platform
-- MCP Server 代码安全审计平台
+**产出：** [MCP_TRUST_OWNERSHIP_BOUNDARY.md](references/MCP_TRUST_OWNERSHIP_BOUNDARY.md)
 
 ---
 
