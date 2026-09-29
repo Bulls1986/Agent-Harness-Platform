@@ -372,6 +372,30 @@ Sandbox / Workload
 - Framework 有公开扩展点则通过 Adapter / Middleware / Hook / Provider 映射；Framework 不负责的能力放平台外围。
 - 必须 fork、monkey patch、复制内部实现或依赖私有 API 才能获得的能力，不进入平台强制基线。[R21]
 
+## 6.12 版本冻结（Version Freeze）
+
+V1 不要求建设统一 Registry 服务，只定义版本目录与 Run 版本冻结语义。
+
+~~~text
+逻辑配置 / latest / default
+        ↓
+Run 创建时 resolve
+        ↓
+确定版本
+        ↓
+Run 生命周期内 freeze
+~~~
+
+规则：
+
+- Recipe、Component/Adapter、Runtime、Policy、Tool/Capability Definition、Protocol/Schema、Environment 等必须具有可识别版本。
+- Run 启动后已解析版本不得静默变化。
+- latest/default 只能用于解析前配置，不能作为 Run 最终绑定。
+- 新版本只影响新 Run；运行中的 Run 不热升级。
+- Environment 继续使用 version + immutable OCI digest；其他对象若版本记录本身不可变，不强制额外 digest。
+- Recipe Requirement 与 Component/Runtime Capability 在 Run 开始前匹配；不满足则拒绝启动，不通过 fork/patch Framework 补齐。
+- Registry 在 V1 中是逻辑能力，不等同于 Service Discovery、Eureka/Consul、动态 Agent 寻址或通用包管理器。[R22]
+
 # 7. Harness Kernel 与组件模型
 
 ## 7.1 Kernel 核心能力
@@ -581,6 +605,7 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 | ADR-016 | 冻结恢复隔离模型：平台只定义 RecoveryPoint 与 Recovery Capability；底层 Checkpoint/Restore 由 Adapter/Provider 实现，不支持不补齐，不 fork Framework。 | Accepted |
 | ADR-017 | 公开扩展点优先：平台通过 Public Extension Point + Adapter 隔离底层框架；框架外能力放平台外围；必须侵入式修改框架的能力不作为平台强制能力。 | Accepted |
 | ADR-018 | 冻结安全信任边界：外部内容默认不可信；Instruction/Data 分层；Data Plane 不拥有业务最终状态；安全机制通过公开扩展点或外围基础设施实现。 | Accepted |
+| ADR-019 | 冻结版本管理：V1 不建设统一 Registry 服务；Run 创建时解析并冻结 Recipe/Component/Runtime/Policy/Tool/Protocol/Environment 版本，运行中不漂移。 | Accepted |
 
 # 19. MAF 扩展性验证要求
 
@@ -662,3 +687,7 @@ docs/references/CHECKPOINT_AND_SNAPSHOT_CONSISTENCY.md
 
 [R21] Agent Harness Platform - 安全信任边界与隔离契约  
 docs/references/SECURITY_THREAT_MODEL.md
+
+
+[R22] Agent Harness Platform - Registry 与版本冻结契约  
+docs/references/REGISTRY_AND_VERSIONING.md
