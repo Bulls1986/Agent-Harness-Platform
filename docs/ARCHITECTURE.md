@@ -556,6 +556,14 @@ Runtime 原生 token usage、duration、resource usage 可以继续作为 Observ
 
 max_iterations、max_replans、timeout/max_runtime 等只属于 Execution Limits，用于防止单次 Run 无限执行，不属于用户/项目额度或财务 Budget。[R28]
 
+## 6.19 Environment Supply Chain Ownership Boundary
+
+OCI provenance、SBOM、image signing、signature verification、vulnerability scanning、base image/dependency security policy 等不属于 Harness Platform 核心职责。
+
+Harness 只消费企业 CI/CD / Artifact Registry / Container Security 已提供的 Environment Profile、immutable OCI digest、capability、verification status 与可选 attestation reference，并在 Run / Execution 中冻结和记录实际环境版本与 digest。
+
+Environment correctness / reproducibility 继续由 Environment Contract 管理；Supply Chain Security 由外部基础设施负责。[R29]
+
 # 7. Harness Kernel 与组件模型
 
 ## 7.1 Kernel 核心能力
@@ -771,6 +779,7 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 | ADR-023 | 冻结 Artifact/Evidence Retention：任务事实与 Payload 分离；大 Payload 默认进入 OSS/Object Storage；Raw Log 短期保留；Recoverable Run 依赖必须 PIN；清理 Payload 后保留 Metadata/Tombstone 与 Lineage。 | Accepted |
 | ADR-024 | 冻结 Observability：OpenTelemetry 为统一 telemetry baseline；Runtime 原生 instrumentation 优先；Run:Trace=1:N；统一 Harness correlation；关键路径优先保留；高基数业务 ID 不进入默认 Metric labels。 | Accepted |
 | ADR-025 | 冻结 Cost / Quota 边界：成本核算、额度账户、Billing、Chargeback/Showback 不属于 Harness；原生 usage 仅作 telemetry；Execution Limits 与 Quota/Budget 严格分离。 | Accepted |
+| ADR-026 | 冻结 Environment Supply Chain 边界：SBOM、签名、漏洞扫描、provenance 等由外部 CI/CD/Registry/Security 基础设施负责；Harness 只消费已验证 Environment metadata 与 immutable digest。 | Accepted |
 
 # 19. MAF 扩展性验证要求
 
@@ -880,3 +889,7 @@ docs/references/OBSERVABILITY_CONTRACT.md
 
 [R28] Agent Harness Platform - Cost / Quota Ownership Boundary  
 docs/references/COST_QUOTA_OWNERSHIP_BOUNDARY.md
+
+
+[R29] Agent Harness Platform - Environment Supply Chain Ownership Boundary  
+docs/references/ENVIRONMENT_SUPPLY_CHAIN_OWNERSHIP_BOUNDARY.md
