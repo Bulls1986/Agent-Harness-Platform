@@ -396,6 +396,28 @@ Run 生命周期内 freeze
 - Recipe Requirement 与 Component/Runtime Capability 在 Run 开始前匹配；不满足则拒绝启动，不通过 fork/patch Framework 补齐。
 - Registry 在 V1 中是逻辑能力，不等同于 Service Discovery、Eureka/Consul、动态 Agent 寻址或通用包管理器。[R22]
 
+## 6.13 Execution Ownership / Lease / Fencing
+
+平台只治理自身 ExecutionScheduler → Executor 边界上的 Execution ownership，不重复实现 MAF / Durable Task、Temporal、CubeSandbox 等底层系统内部的 Worker coordination。
+
+~~~text
+Execution
+├─ owner_id
+├─ fencing_token
+├─ lease_expires_at
+└─ last_heartbeat_at
+~~~
+
+规则：
+
+- Lease 表示当前 Execution 的执行资格。
+- Heartbeat 只负责 Owner 活性与 Lease 续期，不承担 Observability / Runtime Topology / Durable Workflow 调度。
+- Fencing Token 随合法 ownership transfer 单调递增；旧 token 永久失效。
+- 只有当前有效 Owner 可以更新 Execution、提交结果和申请新的平台控制副作用。
+- RUNNING Execution 丢失 Lease 后不得直接 blind handoff；若无法证明尚未产生副作用，则进入 UNKNOWN → Reconciliation。
+- Fencing 只阻止 stale Worker 后续写入，不能判断或撤销已经发出的外部副作用。
+- V1 优先使用 ExecutionScheduler 已有权威持久化层做原子 claim / renew / fencing，不新增独立 Redis/etcd/ZooKeeper 锁服务。[R23]
+
 # 7. Harness Kernel 与组件模型
 
 ## 7.1 Kernel 核心能力
@@ -606,6 +628,7 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 | ADR-017 | 公开扩展点优先：平台通过 Public Extension Point + Adapter 隔离底层框架；框架外能力放平台外围；必须侵入式修改框架的能力不作为平台强制能力。 | Accepted |
 | ADR-018 | 冻结安全信任边界：外部内容默认不可信；Instruction/Data 分层；Data Plane 不拥有业务最终状态；安全机制通过公开扩展点或外围基础设施实现。 | Accepted |
 | ADR-019 | 冻结版本管理：V1 不建设统一 Registry 服务；Run 创建时解析并冻结 Recipe/Component/Runtime/Policy/Tool/Protocol/Environment 版本，运行中不漂移。 | Accepted |
+| ADR-020 | 冻结 Execution ownership：Lease/Fencing 仅治理平台自有 Execution；Fencing Token 拒绝 stale Worker；Lease 丢失不能替代 UNKNOWN/Reconciliation；底层 Framework/Runtime ownership 不重复实现。 | Accepted |
 
 # 19. MAF 扩展性验证要求
 
@@ -691,3 +714,7 @@ docs/references/SECURITY_THREAT_MODEL.md
 
 [R22] Agent Harness Platform - Registry 与版本冻结契约  
 docs/references/REGISTRY_AND_VERSIONING.md
+
+
+[R23] Agent Harness Platform - Execution Lease / Fencing / Heartbeat 契约  
+docs/references/EXECUTION_LEASE_FENCING_HEARTBEAT.md
