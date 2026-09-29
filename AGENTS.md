@@ -345,10 +345,10 @@ Local / Remote CubeSandbox 必须遵守统一 Execution Environment Contract。
 
 必须遵守：
 
-- Repository、Tool、MCP、Web、Model Output 等外部内容默认不可信。
+- Repository、Web、Model Output，以及 Tool/MCP 返回的外部业务内容默认不能提升为高信任指令；Tool/MCP Server 是否准入由外部 Governance 负责，平台可调用即视为已治理准入。
 - Instruction 与 Data 必须分层，低信任内容不得自行升级为高信任指令。
 - Data Plane 只产生 Result / Evidence / Artifact / Event / Failure，不拥有 Run/Step 最终状态控制权。
-- Secret 默认不直接进入模型上下文；Network Access 属于 Capability / Policy 边界。
+- Secret 默认不直接进入模型上下文；Secret/Network enforcement 由外部 Credential/Network/Sandbox 基础设施负责，Harness 只表达当前 Execution 的 Capability / Policy 约束并消费结果。
 - 单一 Sandbox / Agent Runtime / Tool Runtime 被攻破，不应天然获得 Control Plane 或全局组织/其他项目权限。
 - 安全能力优先通过 Framework 公开扩展点映射；Framework 外能力放平台外围；需要侵入式修改 Framework 的能力不进入强制基线。
 
@@ -398,7 +398,7 @@ docs/references/EXECUTION_LEASE_FENCING_HEARTBEAT.md
 - Run 固化 Initiator Identity，但敏感 Execution 必须按当前有效权限重新授权。
 - RBAC / ABAC / Group / Claim 只作为 Policy 输入，Harness 拥有 Authorization Decision，不复制企业 IAM。
 - 用户长期 Token / Secret 默认不得传播到 Agent、Model、Sandbox。
-- 外部访问优先通过 Credential Provider 获取短期、最小权限、资源范围明确的 Credential。
+- 外部访问通过 Credential Provider Adapter 对接企业现有 Credential/Secret Infrastructure，获取当前 Execution 所需的短期、最小权限、资源范围明确的 Credential；Harness 不拥有 Credential 生命周期。
 - Approval 必须绑定真实 Principal / Resource / Action / Policy；Agent / Worker / Sandbox 不得自行伪造 Approval。
 - Repository 权限不得因 Project Manifest 存在而自动获得；通过 Policy + Provider Credential 组合授权。
 
