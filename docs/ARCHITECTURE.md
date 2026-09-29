@@ -263,11 +263,11 @@ Capability 表示组件具备的技术能力；Policy 决定当前用户/租户/
 
 # 15. 推荐部署拓扑
 
-推荐采用“企业平台控制层 + 独立 Agent Runtime 服务”的服务边界。现有 Java/Spring 体系可以继续承担 Tenant、IAM、Policy、Recipe、Artifact、API Gateway；Agent Runtime 可按框架语言以独立容器部署。
+推荐采用“企业平台控制层 + 独立 Agent Runtime 服务”的服务边界。Platform Layer 负责 Tenant、IAM、Policy、Recipe、Artifact、API Gateway；具体实现语言不作为本轮架构选型因素，Agent Runtime 可按框架最适合的语言以独立容器部署。
 
 | **层**              | **建议技术职责**                                    | **说明**             |
 |---------------------|-----------------------------------------------------|----------------------|
-| Java Platform Layer | Tenant/IAM/Policy/Recipe/Artifact/Portal API        | 保持企业既有技术体系 |
+| Platform Layer      | Tenant/IAM/Policy/Recipe/Artifact/Portal API        | 语言中立，由企业自行实现 |
 | Durable Control     | MAF Workflow / ADK orchestration / Temporal         | 由 POC 决定          |
 | Agent Runtime       | MAF / ADK / OpenAI Agents / Strands / Codex Adapter | 独立进程/容器        |
 | Sandbox             | Docker 为基线；E2B/K8s 为可选 Provider              | 不把云 Sandbox 写死  |
