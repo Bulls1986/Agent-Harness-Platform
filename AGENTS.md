@@ -372,6 +372,23 @@ docs/references/EXECUTION_LEASE_FENCING_HEARTBEAT.md
 
 docs/references/IDENTITY_AND_AUTHORIZATION_PROPAGATION.md
 
+# 10.7 Task Recovery 边界
+
+必须遵守：
+
+- 平台持久化任务执行事实与底层 Recovery Reference，不复制 Runtime 内部 checkpoint/history。
+- WAITING_INPUT / WAITING_APPROVAL 必须恢复同一个 Run 的等待状态。
+- 无可用 Runtime checkpoint 时，只能恢复到可证明安全的 Step Boundary，并创建 New Attempt。
+- 有真实 checkpoint/resume 能力时，允许 Same Run + Same Step + Same Attempt Resume；Resume 不得记作 Retry。
+- Runtime State、Workspace State、Sandbox State 独立；Sandbox 实例不是任务恢复硬依赖。
+- RUNNING Execution 故障后不得 blind resume/retry；结果不确定必须进入 UNKNOWN → Reconciliation。
+- 恢复优先选择最深且安全的恢复点，不默认从整个 Run 起点重跑。
+- 数据库、磁盘、对象存储、K8s/Region Backup/DR 不属于 Harness Task Recovery 责任。
+
+详见：
+
+docs/references/TASK_RECOVERY_COVERAGE_AND_SEMANTICS.md
+
 # 11. POC 原则
 
 POC 必须：
