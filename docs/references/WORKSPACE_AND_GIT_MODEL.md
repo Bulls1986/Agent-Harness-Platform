@@ -96,6 +96,8 @@ dependencies:
 
 但它只作为 Metadata / Context，不作为平台强制执行的任务 DAG。
 
+Manifest 中的 `access: read/write` 只表示该 Repository 在当前 Project/Recipe 中的期望访问模式或 Capability Requirement，不是 ACL，也不授予任何 Repository 权限；实际授权仍由外部 Repository Provider / Credential Infrastructure + Harness 当前 Execution Policy Decision 决定。
+
 ## 4. 多仓与单仓模型
 
 ### 4.1 单仓（Monorepo）
