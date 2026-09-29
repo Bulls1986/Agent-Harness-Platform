@@ -412,7 +412,7 @@ Fail / Wait Human
 
 ## ARCH-TODO-011 Artifact / Evidence / Log Retention
 
-**状态：TODO**
+**状态：DISCUSSING**
 
 范围：
 
