@@ -197,7 +197,7 @@ Runtime Topology 主要服务：
 
 Topology 提供“谁属于谁”的关系上下文。
 
-具体调用明细仍进入 Trace / Event / Evidence。
+具体调用明细仍进入 Trace / Event / Evidence。Trace / Log 的 correlation 与 sampling 规则详见 OBSERVABILITY_CONTRACT.md。
 
 ### 9.4 UI 运行态展示
 
@@ -255,6 +255,6 @@ Runtime Topology
 
 - Sandbox / MCP Server 等基础设施对象属于 Participant。
 - Topology 只记录参与者身份、生命周期和稳定关系。
-- 高频调用明细进入 Trace / Log，不进入 Topology。
+- 高频调用明细进入 Trace / Log，不进入 Topology；Observability correlation 通过 participant_id / execution_id 等字段完成，详见 OBSERVABILITY_CONTRACT.md。
 - Topology 用于控制定位、故障分析、Trace/Cost 关联和 UI 展示。
 - 具体保留周期由 ARTIFACT_EVIDENCE_LOG_RETENTION.md 的 Retention Policy 统一约束。
