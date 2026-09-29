@@ -476,7 +476,7 @@ Harness 只消费已准备好的 Environment Profile、immutable OCI digest、ca
 
 ## ARCH-TODO-015 Tool / MCP Trust Model
 
-**状态：TODO**
+**状态：DISCUSSING**
 
 范围：
 
