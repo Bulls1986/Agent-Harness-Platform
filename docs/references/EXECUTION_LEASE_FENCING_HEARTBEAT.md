@@ -216,10 +216,10 @@ ARCH-TODO-008 不负责：
 - Leader election；
 - Runtime Topology；
 - Observability；
-- Cancellation / Timeout 传播协议；
+- Cancellation / Timeout 传播协议（由 CANCELLATION_TIMEOUT_PROPAGATION.md 定义）；
 - 外部副作用的具体 Reconciliation 实现。
 
-Cancellation / Timeout 传播继续由 ARCH-TODO-016 讨论。
+Cancellation / Timeout 传播已由 CANCELLATION_TIMEOUT_PROPAGATION.md 冻结。取消可以使当前 Owner 停止继续执行，但不能替代 Fencing 对 stale owner 的拒绝，也不能证明已发出的副作用未发生。
 
 ## 13. Accepted Rules
 
