@@ -33,6 +33,7 @@
 25. [Artifact / Evidence / Log Retention 契约](ARTIFACT_EVIDENCE_LOG_RETENTION.md)
 26. [Observability Contract](OBSERVABILITY_CONTRACT.md)
 27. [Cost / Quota Ownership Boundary](COST_QUOTA_OWNERSHIP_BOUNDARY.md)
+28. [Environment Supply Chain Ownership Boundary](ENVIRONMENT_SUPPLY_CHAIN_OWNERSHIP_BOUNDARY.md)
 
 ## 使用原则
 
