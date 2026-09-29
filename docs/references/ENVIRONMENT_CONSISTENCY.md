@@ -26,7 +26,7 @@ immutable digest sha256:...
         ↓
 Environment Registry
       /            \
-Local Template    Remote Template
+Local Cube Template    Remote Cube Template
 ~~~
 
 本地与远程不要求底层 VM snapshot 字节一致，但应来自相同 OCI digest 和同一 Environment Profile。
@@ -61,10 +61,12 @@ source:
   digest: sha256:ABC
 
 targets:
-  cube:
-    template: cube-coding-node24-1.3
-  e2b:
-    template: e2b-coding-node24-1.3
+  cube_local:
+    cluster: cube-local
+    template: coding-node24-1.3
+  cube_remote:
+    cluster: cube-remote
+    template: coding-node24-1.3
 
 capabilities:
   - node24
@@ -165,7 +167,7 @@ Run 启动后应 freeze 该版本，避免一次长任务中途切换 Template�
 
 ## 10. 当前结论
 
-Local/Remote 双 Provider 能否真正无感切换，关键不在 API 名称是否一致，而在：
+Local/Remote CubeSandbox 集群能否真正无感切换，关键不在 endpoint 是否一致，而在：
 
 1. Environment Contract
 2. Immutable OCI digest
