@@ -34,6 +34,7 @@
 26. [Observability Contract](OBSERVABILITY_CONTRACT.md)
 27. [Cost / Quota Ownership Boundary](COST_QUOTA_OWNERSHIP_BOUNDARY.md)
 28. [Environment Supply Chain Ownership Boundary](ENVIRONMENT_SUPPLY_CHAIN_OWNERSHIP_BOUNDARY.md)
+29. [MCP Trust Ownership Boundary](MCP_TRUST_OWNERSHIP_BOUNDARY.md)
 
 ## 使用原则
 
