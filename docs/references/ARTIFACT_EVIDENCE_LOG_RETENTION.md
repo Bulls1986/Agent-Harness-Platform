@@ -169,19 +169,16 @@ Physical Storage Object
 
 ## 10. Retention Policy
 
-Harness 不硬编码固定保留天数。
+Harness 不拥有企业 Retention Governance，也不硬编码固定保留天数。
 
-平台只需要支持可配置 Retention Policy / Retention Class，例如：
+平台只需要保存 retention_policy_ref / retention_hold 等最小引用，并消费部署环境、项目配置或企业合规系统给出的保留/清理决策。
 
-- SHORT；
-- STANDARD；
-- LONG；
-- PRESERVE；
-- external retention_policy_ref。
+Harness 自己只拥有与任务正确性直接相关的强约束：
 
-具体 7/30/90/180 天或永久保留，由部署环境、项目 Policy 或企业合规策略决定。
+- Recoverable Run 仍依赖的 Payload 必须 PIN；
+- Payload 被清理后仍保留最小 Metadata / Tombstone / Lineage。
 
-V1 不建设完整 Legal Hold / eDiscovery 系统；最多允许外部 Policy 将对象标记为不可清理。
+具体 7/30/90/180 天、永久保留、Legal Hold / eDiscovery 均属于外部治理策略。
 
 ## 11. Task Facts
 
@@ -195,7 +192,7 @@ V1 不建设完整 Legal Hold / eDiscovery 系统；最多允许外部 Policy �
 - Artifact / Evidence metadata 与 lineage；
 - final Runtime Topology snapshot / key lifecycle events（按其独立 retention policy）。
 
-这些事实的最终保留周期由平台 Policy 决定，但逻辑上与大对象 Payload 生命周期分离。
+这些事实的最终保留周期由部署/外部治理策略决定；Harness 只保证任务正确性所需事实在有效生命周期内不会被错误清理，并保持其与大对象 Payload 生命周期分离。
 
 ## 11.1 Observability Retention Boundary
 
@@ -222,6 +219,6 @@ Observability 产生的 Trace / Log 默认属于诊断数据，其 schema、corr
 4. Artifact / Evidence 是逻辑身份，物理对象可以按 content_digest 去重，但不能合并逻辑 Lineage。
 5. Recoverable Run 所依赖的 checkpoint、workspace state、evidence、snapshot reference 等必须 PIN，不能被 GC。
 6. Workspace / Sandbox Snapshot 生命周期由其对应 Provider/Contract 管理，011 只定义引用与 GC 约束。
-7. Retention 时长由 Policy / 部署配置决定，Harness Kernel 不硬编码具体天数。
+7. 企业 Retention Governance 不属于 Harness；Harness 只消费 retention reference/decision，不硬编码具体天数。
 8. Payload 清理后保留最小 Metadata/Tombstone，使历史 Verification、Recovery 与 Audit 仍可解释。
 9. Object Storage 是 Artifact/Evidence Payload Store，不替代平台数据库中的任务事实与 Lineage。
