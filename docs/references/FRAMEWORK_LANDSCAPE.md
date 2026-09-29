@@ -25,11 +25,19 @@
 
 风险：
 
-- Python/.NET 为主
 - Durable/Hosting 部分需要关注版本成熟度
+- 生产 Session/Checkpoint Store 需要补齐
+- Sandbox 仍建议保留平台自有 SPI
 - 使用 Foundry 等托管能力后平台绑定上升
 
-首轮结论：**进入 POC**
+补充结论：
+
+- 不再把 Java Native 作为评分项。
+- MAF Memory/Context、Middleware、Storage、Workflow、Hosting 的公开扩展面与目标架构高度匹配。
+- 当前 POC 前估算：原生覆盖约 80%，架构适配约 89%（±5%，待 POC 验证）。
+- 第一优先验证点是：企业补齐能力能否全部通过 public extension points 完成，不 fork、不 monkey patch、不依赖 Foundry。
+
+首轮结论：**进入 POC，当前第一优先**
 
 ## 2. Google ADK
 
@@ -45,8 +53,8 @@
 
 优势：
 
-- Java 适配度高
-- 容易与现有 Java 平台整合
+- Agent / Runner / Session / Event 基础完整
+- A2A / MCP / Streaming 能力较好
 - 协议边界较清晰
 
 风险：
@@ -166,7 +174,17 @@ Temporal 不是 Agent Framework，而是 Durable Execution 基础设施。
 - CrewAI：业务 Agent/Flow 层更高，存在 OSS → AMP 的生产平台断层风险。
 - PydanticAI：轻量、类型安全，适合 Runtime/应用开发，但不作为当前平台 Control Plane 主候选。
 
-## 9. 首轮最终 POC
+## 9. POC 前匹配度估算
+
+| 方案 | 原生覆盖率 | 架构适配率 | 当前优先级 |
+|---|---:|---:|---|
+| Microsoft Agent Framework | ~80% | ~89% | 1 |
+| Temporal + 可替换 Agent Runtime | ~72% | ~92% | 2 |
+| Google ADK | ~68% | ~75% | 3 |
+
+> 以上为架构映射估算，按 ±5 个百分点理解，最终结论只以统一 POC 实测为准。
+
+## 10. 首轮最终 POC
 
 ~~~text
 POC-A: Microsoft Agent Framework
