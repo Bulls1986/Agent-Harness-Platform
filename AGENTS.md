@@ -79,6 +79,21 @@ TODO
 
 未完成以上动作，不得口头宣称“架构已收口”。
 
+# 3.1 公开扩展点优先原则
+
+这是当前架构设计的重要参考点，适用于 MAF 以及后续所有 Runtime / Framework / Provider：
+
+> **Framework 有公开扩展点（Public Extension Point）的，平台通过 Adapter 映射；Framework 不负责的基础设施能力放在平台外围；如果某项能力必须修改 Framework 内部实现才能获得，则不把该能力作为平台强制能力。**
+
+必须遵守：
+
+- 优先使用官方 Public API / SPI / Middleware / Provider / Hook / Adapter 等稳定扩展面。
+- 平台可以统一领域语义和接口，但不得因此重写 Framework 内核。
+- Framework 职责之外的 Sandbox、Network、Secret、Storage、IAM 等能力放在平台外围。
+- 如果能力只能通过 fork、monkey patch、复制内部代码或依赖私有实现获得，则该能力应降级为 unsupported / optional，而不是反向要求平台补齐。
+- POC 必须验证关键企业能力能否仅通过公开扩展点完成。
+- 任何需要 Framework 内部改造的设计，必须视为架构风险，而不是默认实现路径。
+
 # 4.1 架构边界控制
 
 所有架构讨论、POC 和实现都必须控制职责边界，避免“顺手设计”导致平台膨胀。
