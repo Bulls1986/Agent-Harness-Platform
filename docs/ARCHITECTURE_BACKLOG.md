@@ -488,7 +488,7 @@ Harness 仍负责具体 Execution 的 Capability / Policy / Approval / Credentia
 
 ## ARCH-TODO-016 Cancellation / Timeout Propagation
 
-**状态：TODO**
+**状态：DISCUSSING**
 
 范围：
 
@@ -503,6 +503,36 @@ UI Cancel
 ~~~
 
 需要定义 graceful / force kill、timeout 层级、cleanup 与最终状态。
+
+### 当前讨论边界
+
+- Cancel 与 Timeout 都是 Harness 执行控制信号，但语义不同：Cancel 来自显式撤销意图，Timeout 来自 Execution Limits / deadline 到期。
+- Propagation 只沿 Harness 已知 ownership / invocation 链传播，不建设通用分布式进程管理系统。
+- 优先 graceful cancellation；超过 grace period 后，可由 Adapter/Provider 执行 force termination。
+- Harness 只能保证“不再发起新的平台控制执行”；对已经 dispatch 到外部系统的副作用，Cancel/Timeout 不能证明其未发生。
+- 非 PURE Execution 在 Cancel/Timeout 时若结果未知，必须进入 UNKNOWN → Reconciliation，而不是直接标记 CANCELLED/FAILED。
+- Runtime/Tool/Sandbox 若有公开 cancel/abort API，Adapter 优先使用；不支持则显式降级，不 fork/patch Framework。
+- WAITING_INPUT / WAITING_APPROVAL 等未在执行副作用的等待状态可直接取消并收口。
+- Cancel/Timeout 最终状态必须由 Control Plane 依据实际终止结果决定，Data Plane 只返回 termination result / evidence。
+
+### 需要定义
+
+- Run / Step / Attempt / Execution 的 cancel propagation
+- user cancel vs deadline/timeout
+- graceful cancel vs force terminate
+- grace period 与 escalation
+- cancellation acknowledgement
+- already-dispatched side effect handling
+- WAITING state cancellation
+- cleanup 与 resource release
+- provider/runtime unsupported behavior
+
+### 明确不在范围
+
+- Kubernetes / OS 通用进程管理产品
+- Runtime 内部 worker cancellation protocol 的重新实现
+- Sandbox Provider 内部节点调度/kill 机制
+- 外部系统 transaction rollback engine
 
 # 4. P2：明确延后但需要保留
 
