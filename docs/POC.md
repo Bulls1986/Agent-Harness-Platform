@@ -51,6 +51,30 @@ P2 Backlog 整体标记为 **DEFERRED / NON-BLOCKING FOR POC**，不作为 POC �
 
 当前优先级转为执行 POC、收集实测证据、验证 Framework/Provider public extension points 与既有 Contracts；不为了“架构完整”继续设计外围能力。
 
+## 1.2 首轮 POC Scope Boundary
+
+首轮 POC **不扩展为企业治理/基础设施产品 POC**。其核心判定对象是 Harness 能否稳定拥有任务生命周期，并通过薄 Adapter / Reference 边界消费外部能力。
+
+核心验证范围：
+
+- Plan → Execute → Verify → Replan 与确定性状态迁移；
+- Run / Plan / Step / Attempt / Execution 等任务事实持久化；
+- Task-level Recovery、WAITING_APPROVAL / HITL 与故障后的安全继续；
+- Responses-compatible + Harness Event Protocol；
+- Runtime / Model / Sandbox 的 Adapter 解耦；
+- 完全自托管核心链路与 Public Extension Point 可行性。
+
+非首轮 POC 产品建设范围：
+
+- 企业 IAM / SSO / User Directory；
+- MCP Governance / Marketplace / Trust Engine；
+- Cost / Quota / Billing / Chargeback；
+- Secret Manager、DLP、SIEM；
+- APM / Logging Backend / Alerting 产品；
+- PostgreSQL / Object Storage / Disk / K8s / Region Backup/DR。
+
+这些外围能力只做 Ownership Boundary / Adapter / Reference / telemetry integration 验证。除非实测证明其边界无法成立，并直接破坏 correctness、recoverability、replaceability 或 production viability，否则不得升级为首轮 POC blocker。
+
 # 2. 明确排除项
 
 **LangGraph / Deep Agents 不进入本轮 POC。**
@@ -62,11 +86,11 @@ P2 Backlog 整体标记为 **DEFERRED / NON-BLOCKING FOR POC**，不作为 POC �
 | **主题**          | **约定**                                                                                                     |
 |-------------------|--------------------------------------------------------------------------------------------------------------|
 | G1 自托管         | 不使用厂商托管 Agent Platform，必须可在本地 Docker 或企业 K8s 运行核心流程。                                 |
-| G2 状态自主       | 核心 Run/Session/Checkpoint/Artifact 必须可以落自有存储或企业掌控的持久化层。                                |
+| G2 状态自主       | Run/Session/RecoveryPoint/Checkpoint Reference/Artifact-Evidence Metadata 等任务事实必须落企业掌控的持久化层；大 Payload 通过 ArtifactStore/ObjectStorage Adapter 外置到 OSS/S3-compatible。 |
 | G3 协议可桥接     | 必须能映射到平台自有 Responses-compatible + Harness Event Protocol。                                         |
 | G4 模型可替换     | 至少证明模型调用层不是框架不可替换的单一云模型绑定；优先验证 LiteLLM/OpenAI-compatible 或 Provider Adapter。 |
-| G5 Sandbox 可替换 | Shell/Code Execution 通过 SandboxProvider SPI；生产候选以 CubeSandbox 为基线，Docker 仅作开发/兼容 fallback。 |
-| G6 恢复           | 中途杀 Worker/Runtime 后，能够恢复任务或明确定位由哪一层负责恢复。                                           |
+| G5 Sandbox 可替换 | Shell/Code Execution 通过 SandboxProvider SPI；生产候选以 CubeSandbox 为基线。可用 Docker/其他 Adapter 做兼容性 smoke，第二套 production-grade Sandbox 不是首轮通过条件。 |
+| G6 任务级恢复     | Worker/Runtime 故障后，必须基于持久化任务事实与真实 Runtime Capability 恢复到可证明安全的边界，或明确返回 unsupported/failure；不要求 Harness 承担数据库、OSS、磁盘、K8s/Region Backup/DR。 |
 | G7 HITL           | 能够暂停等待人工审批，并在批准后继续。                                                                       |
 | G8 License Cliff  | POC 记录从 OSS 到生产是否存在关键 Enterprise/Cloud-only 功能断层。                                           |
 
@@ -77,12 +101,12 @@ P2 Backlog 整体标记为 **DEFERRED / NON-BLOCKING FOR POC**，不作为 POC �
 | **主题** | **约定**                                                                                 |
 |----------|------------------------------------------------------------------------------------------|
 | 部署     | Docker Compose 为最低基线；有条件追加企业 K8s。                                          |
-| 存储     | PostgreSQL；对象存储可使用 MinIO/S3-compatible。                                         |
+| 存储     | PostgreSQL 保存 Task Facts / metadata / lineage / references；Artifact/Evidence 大 Payload 使用企业 OSS/S3-compatible Object Storage。底层 HA/Backup/DR 不在本 POC。 |
 | 模型     | 优先通过企业现有 Model Gateway/LiteLLM；若框架限制则记录为 Gap。                         |
 | Sandbox  | CubeSandbox 为生产 POC 基线；Local/Remote 使用不同 Cube cluster；Docker 作为开发/兼容对照。 |
 | 代码仓   | 准备统一 Demo Repo，包含可复现缺陷、单测、E2E/集成测试与 lint。                          |
 | UI       | 统一测试页面消费自有 SSE Event Protocol；不直接使用框架自带 Dev UI 作为最终结论。        |
-| 观测     | 至少输出 run_id、step_id、model call、tool call、command、duration、status、token usage。 |
+| 观测     | 优先复用 Runtime/Framework 原生 OpenTelemetry 并输出 OTLP；Harness 只补 run/step/attempt/execution correlation 与平台边界缺口，不建设 APM/Logging Backend。 |
 
 # 5. 统一测试场景
 
@@ -94,10 +118,10 @@ P2 Backlog 整体标记为 **DEFERRED / NON-BLOCKING FOR POC**，不作为 POC �
 | S04      | Execute                 | 在 Sandbox 中读取 repo、修改文件、运行 shell。                           |
 | S05      | Verify                  | 单测/lint/自定义验收失败时输出 Evidence，不允许只用 Agent 自我宣告成功。 |
 | S06      | Replan                  | 制造错误实现，验证失败分类与 replan。                                    |
-| S07      | Recovery                | 执行中杀 Worker/容器，再启动并观察是否从正确位置继续。                   |
+| S07      | Task Recovery           | 执行中杀 Worker/Runtime/容器，验证同一 Run 能按真实 Capability 恢复到最深且安全的任务边界；不测试底层 Storage Backup/DR。 |
 | S08      | HITL                    | 模拟 git push / 高风险操作，进入 WAITING_APPROVAL 后跨进程恢复。         |
 | S09      | Provider Swap           | 切换第二种模型/provider，不改 Harness 领域模型。                         |
-| S10      | Sandbox Swap            | CubeSandbox → Docker/K8s fallback Adapter，业务 workflow 不改；生产主路径仍为 CubeSandbox。 |
+| S10      | Sandbox Adapter Swap    | CubeSandbox → Docker/其他兼容 Adapter 做 smoke，业务 workflow/领域模型不改；验证 SPI 边界即可，第二套 production-grade Sandbox 不作为首轮通过条件。 |
 | S11      | UI Protocol             | 事件映射为 run/plan/tool/verification/artifact typed events。            |
 | S12      | Deployment Independence | 完全禁用厂商托管平台后仍通过核心链路。                                   |
 
@@ -168,13 +192,13 @@ ADK 的重点不再是 Java 原生优势，而是 Agent、Runner、Session、Eve
 - A2A / ADK SSE 作为框架边界，外部再转换为统一 Conversation Protocol。
 - 代码执行优先 ContainerCodeExecutor / Docker，不使用 Vertex Agent Runtime 作为通过条件。
 - 模型层至少尝试 Gemini + 第二 Provider；如果第二 Provider 需要额外适配，记录真实工作量。
-- 自有 PostgreSQL/Artifact Storage 接入；框架内置 Dev UI 仅用于调试。
+- Session/Event 等任务状态映射到企业掌控的持久化层；Artifact/Evidence Payload 通过平台 ArtifactStore/ObjectStorage Adapter 外置，框架内置 Dev UI 仅用于调试。
 
 ## 8.3 必测项
 
 1. Agent/Runner/Session/Event 完整性、生命周期和并发模型。
 2. Sequential/Parallel/Loop 等编排能否表达 Plan/Execute/Verify/Replan，还是需要外置状态机。
-3. Session、Artifact、Event 是否可替换为企业自有存储。
+3. Session/Event 状态能否映射到企业掌控的持久化层；Artifact/Evidence 是否能只保留平台 metadata/reference，而将 Payload 外置到 Object Storage。
 4. A2A、SSE、MCP/Tool 与企业 Gateway 的协议适配成本。
 5. Container Code Executor 的安全边界、网络、文件挂载和资源限制。
 6. 不使用 GCP Agent Runtime、Cloud Run/GKE 特有服务时是否仍具备完整核心能力。
@@ -191,7 +215,7 @@ Temporal 不提供 Agent Harness，而提供 Durable Execution。该路线验证
 
 ## 9.2 建议拓扑
 
-- Platform Service：Platform API、Recipe、Policy、Artifact、SSE Gateway；实现语言不计入评分。
+- Platform Service：Platform API、Recipe、Policy、Artifact/Evidence Metadata、SSE Gateway；Artifact/Evidence Payload 通过外部 Object Storage Adapter 承载；实现语言不计入评分。
 - Temporal Workflow：Plan → Execute → Verify → Replan 状态机；选择团队最合适的官方 SDK 完成 POC。
 - Activity：调用独立 Agent Runtime Service；POC 可选择 OpenAI Agents SDK 或极简自研 Adapter。
 - Sandbox SPI：CubeSandbox 为生产默认候选；Local/Remote 通过不同 Cube cluster/endpoint 承载；Docker 作为开发/兼容 fallback。
@@ -206,7 +230,7 @@ Temporal 不提供 Agent Harness，而提供 Durable Execution。该路线验证
 
 ## 9.4 必测项
 
-1. 杀死 Agent Worker、Temporal Worker、API 服务，分别观察恢复行为。
+1. 杀死 Agent Worker、Temporal Worker、API 服务，分别验证任务级恢复位置、Same Attempt Resume / New Attempt / Reconciliation 的真实边界；不把基础设施 Backup/DR 纳入结论。
 2. Activity retry 与业务 Replan 的边界：基础设施失败自动 retry，语义失败进入 Verifier/Replan。
 3. WAITING_APPROVAL 跨小时/跨进程恢复。
 4. Workflow versioning / replay 对 Agent 平台长期升级的约束。
@@ -287,7 +311,17 @@ Temporal 不提供 Agent Harness，而提供 Durable Execution。该路线验证
 
 > 按 ±5 个百分点理解。POC 结束后必须用实测替换该表。
 
-# 16. CubeSandbox / Execution Plane 专项 POC
+# 16. 专项 POC / Integration Gates
+
+本章保留既有专项 Gate，但**不把所有 Gate 等价为首轮框架选型硬门禁**。
+
+- **Core correctness / recovery gates**：直接影响任务正确性、恢复与状态控制，失败时可升级为 blocker。
+- **Production viability / replaceability gates**：用于评估生产可行性和 Adapter 边界，形成 PASS/FAIL/Gap 与成本结论。
+- **Ownership-boundary checks**：只证明 Harness 不需要吸收外围企业产品；不得要求为了通过 POC 自建对应治理系统。
+
+G1/G2/G3/G6 仍是首轮架构硬门禁。其他专项 Gate 只有在实测问题直接破坏 correctness、recoverability、replaceability 或 production viability 时，才升级为 blocker。
+
+CubeSandbox / Execution Plane 专项仍可并行推进，但除 G5/S04/S10 所需的 Adapter 与执行正确性证据外，不作为 MAF / Temporal / ADK 三条框架路线开始比较的前置条件。
 
 该专项与 MAF/Temporal/ADK 框架 POC 解耦，目标是确认 Coding Execution 的生产底座，而不是重新选择 Agent Framework。
 
@@ -496,7 +530,7 @@ MAF Durable POC 若宣称 Same Attempt Resume，必须用真实 Durable backend 
 
 POC 记录 Runtime 原生能观测到的真实范围；某项 Runtime 原生 telemetry 不存在时，只在确有平台诊断价值且有公开扩展点时补充，不 fork / patch Framework。
 
-## 16.15 Cost / Quota Ownership Gate
+## 16.15 Cost / Quota Ownership Boundary Check（Non-blocking）
 
 至少验证：
 
@@ -508,7 +542,7 @@ POC 记录 Runtime 原生能观测到的真实范围；某项 Runtime 原生 tel
 
 该 Gate 只验证职责边界，不建设计费/额度功能。
 
-## 16.16 MCP Trust Ownership Gate
+## 16.16 MCP Trust Ownership Boundary Check（Non-blocking）
 
 至少验证：
 
@@ -541,14 +575,21 @@ POC 记录 Runtime 原生能观测到的真实范围；某项 Runtime 原生 tel
 
 # 17. POC 完成定义（DoD）
 
-- 12 个统一框架场景全部有 PASS/FAIL/Gap 结论。
-- 6 个故障注入场景均有可重复证据。
-- 部署独立性 8 个硬门禁有明确结论。
+## 17.1 首轮 Framework / Harness POC DoD
+
+- 12 个统一框架场景全部有 PASS/FAIL/Gap 结论，并明确 Gap 是否触发 G1/G2/G3/G6 硬门禁。
+- 6 个故障注入场景均有可重复证据；Recovery 结论限定为 Task-level Recovery，不扩展到 Storage/Cluster/Region DR。
+- G1～G8 均有结论，其中只有 G1/G2/G3/G6 作为首轮架构硬阻断；G4/G5/G7/G8 若失败必须给出替代实现与真实成本。
 - 三组都完成统一 UI Event 映射。
-- 三组均给出从开发到生产的额外基础设施清单。
-- CubeSandbox / Execution Plane 12 个专项 Gate 均有 PASS/FAIL/Gap 与压测证据。
-- Local/Remote Cube 环境一致性 conformance test 有可重复结果。
+- 三组均给出从开发到生产的额外基础设施清单，并清楚标注哪些属于 Harness、哪些属于 External Enterprise Services。
+- Artifact/Evidence 验证必须证明 Metadata/Lineage/Reference 与 Payload 分层，不能以 Harness 数据库保存全部大对象作为通过方式。
+- Observability 验证必须优先复用 Runtime/Framework 原生 OpenTelemetry；Harness 只补 correlation 与平台边界缺口。
+- Cost/Quota 与 MCP Trust 只完成 Ownership Boundary Check，不建设对应产品，也不作为首轮完成阻断条件。
 - 最终 ADR 明确“Control Plane 选什么、Agent Runtime 选什么、ExecutionScheduler/SandboxProvider 如何落地、哪些能力继续保留 SPI”。
+
+## 17.2 Execution Plane 专项 DoD
+
+CubeSandbox / Execution Plane 容量、Local/Remote 一致性、压测与专项 Gate 独立形成 PASS/FAIL/Gap 证据。该专项可以与 Framework POC 并行推进；除非其结果直接否定 G5、执行隔离、任务正确性或 production viability，否则不阻塞三条 Framework 路线的首轮对比结论。
 
 # 参考资料与事实基线
 
