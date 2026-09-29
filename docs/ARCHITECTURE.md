@@ -614,6 +614,28 @@ Harness 仍负责当前 Execution 的：
 
 MCP 返回的业务数据仍遵守统一 Instruction / Data 隔离规则，不因 Server 已受信任而自动获得 Platform/System Instruction 权限。[R30]
 
+## 6.21 Cancellation / Timeout Propagation
+
+Cancel Request 不等于 terminal CANCELLED。活动执行收到取消意图后先进入 CANCELLING，并沿 Harness 已知执行链传播：
+
+~~~text
+Run
+→ Step / Attempt
+→ active Execution
+→ Runtime / Tool / MCP / Sandbox Adapter
+~~~
+
+核心规则：
+
+- 未开始工作停止 dispatch；已完成节点不重新打开。
+- 优先 graceful cancellation；Provider 支持时可在 grace period 后 force terminate。
+- ACKNOWLEDGED 只表示下游收到取消信号，TERMINATED 才能证明执行已经停止。
+- Timeout 是 Failure Type / termination cause，不是 CANCELLED 的别名。
+- 已经 dispatch 的非 PURE Execution 在 Cancel/Timeout 后如果结果未知，必须进入 UNKNOWN → Reconciliation。
+- Cancellation 不是 rollback，不自动删除 Workspace、Artifact、Evidence 或已经发生的副作用。
+- Runtime/Provider 不支持 cancel 时显式降级，不 fork/patch Framework。
+- Run 只有在已知 active Execution 已安全收口后才能进入 terminal CANCELLED。[R31]
+
 # 7. Harness Kernel 与组件模型
 
 ## 7.1 Kernel 核心能力
@@ -647,6 +669,7 @@ Recipe 是组件组合层，而不是新的 Agent。示例：software-developmen
 - VERIFYING → RETRY → EXECUTING
 - VERIFYING → REPLANNING → EXECUTING
 - 任意受控节点 → WAITING_APPROVAL → RESUME
+- 活动 Run → CANCELLING → CANCELLED / UNKNOWN / FAILED
 - 不可恢复错误 → FAILED / ABORTED
 
 Plan、Step、Attempt 均需要 ID、版本、状态、时间戳、输入摘要、产物引用与失败分类。Replan 不是“重新问一次模型”的同义词，应由 FailureClassifier + ReplanPolicy 决定重试层级。
@@ -831,6 +854,7 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 | ADR-025 | 冻结 Cost / Quota 边界：成本核算、额度账户、Billing、Chargeback/Showback 不属于 Harness；原生 usage 仅作 telemetry；Execution Limits 与 Quota/Budget 严格分离。 | Accepted |
 | ADR-026 | 冻结 Environment Supply Chain 边界：SBOM、签名、漏洞扫描、provenance 等由外部 CI/CD/Registry/Security 基础设施负责；Harness 只消费已验证 Environment metadata 与 immutable digest。 | Accepted |
 | ADR-027 | 冻结 MCP Trust 边界：MCP 准入与信任由外部 Governance 负责；Harness 对可调用 MCP 视为已准入，不建立 Trust Score/二次审核，只负责当前 Execution 的 Policy、Credential、SideEffect、Audit 与版本绑定。 | Accepted |
+| ADR-028 | 冻结 Cancellation/Timeout：Cancel Request 先进入 CANCELLING 并下传；ACK 不等于停止；Timeout 是 Failure Type；已 dispatch 副作用不确定时 UNKNOWN→Reconciliation；取消不隐式回滚。 | Accepted |
 
 # 19. MAF 扩展性验证要求
 
@@ -948,3 +972,7 @@ docs/references/ENVIRONMENT_SUPPLY_CHAIN_OWNERSHIP_BOUNDARY.md
 
 [R30] Agent Harness Platform - MCP Trust Ownership Boundary  
 docs/references/MCP_TRUST_OWNERSHIP_BOUNDARY.md
+
+
+[R31] Agent Harness Platform - Cancellation / Timeout Propagation 契约  
+docs/references/CANCELLATION_TIMEOUT_PROPAGATION.md
