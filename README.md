@@ -20,6 +20,8 @@
 
 本轮不把 Java 原生支持作为评分项。
 
+首轮 POC 的判定对象是 **Harness 任务生命周期与集成边界**，不是企业治理/基础设施产品的完整复刻。核心验收聚焦 Plan → Execute → Verify → Replan、任务级持久化与恢复、HITL、协议桥接、自托管，以及 Runtime / Model / Sandbox 的解耦；IAM、MCP Governance、Cost/Quota/Billing、Secret、APM Backend、Storage Backup/DR 等只验证 Adapter / Ownership Boundary，不要求在 Harness 内实现。
+
 LangGraph / Deep Agents 因企业生产部署平台绑定与 Managed Feature Cliff 风险，不进入本轮 POC。
 
 ## 架构原则
