@@ -35,7 +35,7 @@
 1. 建立统一 Harness Kernel，负责 Run 生命周期、状态迁移、调度、恢复和事件。
 2. 将 Planner、Executor、Verifier、Replanner、Context、Sandbox、Model、Artifact 等能力定义为可替换组件。
 3. 建立 UI/平台统一交互协议，能够承载文本、图片、文件、Reasoning Summary、Tool、Plan、Artifact 和审批。
-4. 支持企业私有环境、Docker/Kubernetes、自有数据库及自有 IAM，不以任何厂商托管控制平面为必选条件。
+4. 支持企业私有环境、Docker/Kubernetes、企业掌控的状态存储，并消费企业现有 IAM / Governance 能力；不以任何厂商托管控制平面为必选条件。
 5. 支持面向 Coding、Document、Data、Ops 等不同场景通过 Recipe 组合，而不是复制多套 Agent 平台。
 
 ## 1.3 非目标
@@ -109,6 +109,18 @@ Define minimal Harness contract
 ~~~
 
 不因为某项能力“平台会使用”就自动把它纳入 Harness Domain。
+
+## 2.3 首轮 POC 验证边界
+
+正式架构中的 Accepted Contract 不等于首轮 POC 的每一项都成为同等级硬门禁。首轮 POC 只验证 Harness 核心生命周期和关键集成边界：
+
+- Plan → Execute → Verify → Replan 与确定性状态迁移；
+- Run / Step / Attempt 等任务事实持久化，以及任务级 Recovery / HITL；
+- Responses-compatible + Harness Event Protocol 桥接；
+- Runtime / Model / Sandbox Adapter 的可替换边界；
+- 完全自托管核心链路与公开扩展点可行性。
+
+IAM、MCP Governance、Cost/Quota/Billing、Secret、APM/Logging Backend、Object Storage Backup/DR 等外围能力只验证 Ownership Boundary 与 Adapter/Reference 接入是否成立，不要求 Harness 在 POC 中建设对应产品。只有当外围集成失败直接破坏 correctness、recoverability、replaceability 或 production viability 时，才升级为 POC blocker。
 
 # 3. 总体目标架构
 
@@ -787,11 +799,11 @@ Capability 表示组件具备的技术能力；Policy 只负责 Harness 当前 E
 
 # 15. 推荐部署拓扑
 
-推荐采用“Harness Control Plane + 独立 Agent Runtime 服务 + 外部企业治理/基础设施”的服务边界。Harness Platform Layer 负责 Run/Policy/Recipe/Artifact/API 等任务执行语义；IAM、Credential、MCP Governance、APM、Storage DR 等继续由外部企业能力负责。具体实现语言不作为本轮架构选型因素，Agent Runtime 可按框架最适合的语言以独立容器部署。
+推荐采用“Harness Control Plane + 独立 Agent Runtime 服务 + 外部企业治理/基础设施”的服务边界。Harness Platform Layer 负责 Run/Policy/Recipe/Artifact Metadata/API 等任务执行语义；Artifact/Evidence 大 Payload 由外部 Object Storage 承载；IAM、Credential、MCP Governance、APM、Storage DR 等继续由外部企业能力负责。具体实现语言不作为本轮架构选型因素，Agent Runtime 可按框架最适合的语言以独立容器部署。
 
 | **层**              | **建议技术职责**                                    | **说明**             |
 |---------------------|-----------------------------------------------------|----------------------|
-| Harness Platform Layer | Run/Policy/Recipe/Artifact/API                      | 任务编排与执行控制；不拥有企业 IAM/治理产品 |
+| Harness Platform Layer | Run/Policy/Recipe/Artifact Metadata/API             | 任务编排与执行控制；不拥有企业 IAM/治理产品 |
 | External Enterprise Services | IdP/IAM/Credential/Governance/Observability      | 外部能力；Harness 仅通过 Adapter/Reference/Decision 接入 |
 | Durable Control     | MAF Workflow / ADK orchestration / Temporal         | 由 POC 决定          |
 | Agent Runtime       | MAF / ADK / OpenAI Agents / Strands / Codex Adapter | 独立进程/容器        |
