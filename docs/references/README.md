@@ -26,6 +26,8 @@
 18. [Checkpoint 与恢复隔离契约](CHECKPOINT_AND_SNAPSHOT_CONSISTENCY.md)
 19. [安全信任边界与隔离契约](SECURITY_THREAT_MODEL.md)
 20. [Registry 与版本冻结契约](REGISTRY_AND_VERSIONING.md)
+21. [MAF Python Durable 私有化部署约束](MAF_PYTHON_DURABLE_PRIVATE_DEPLOYMENT.md)
+22. [Execution Lease / Fencing / Heartbeat 契约](EXECUTION_LEASE_FENCING_HEARTBEAT.md)
 
 ## 使用原则
 
@@ -33,5 +35,3 @@
 - 正式架构文档只保留当前有效决策和接口边界。
 - 任何引用到具体框架当前能力、许可证或托管方式的内容，在正式选型前必须重新核验。
 - 当参考资料中的结论被 ADR 正式接受后，应在 ADR 中建立反向链接。
-
-21. [MAF Python Durable 私有化部署约束](MAF_PYTHON_DURABLE_PRIVATE_DEPLOYMENT.md)
