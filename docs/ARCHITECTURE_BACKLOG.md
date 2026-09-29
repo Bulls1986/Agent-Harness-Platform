@@ -438,7 +438,7 @@ Fail / Wait Human
 
 - Observability signals 不拥有 Run / Step 最终业务状态。
 - MAF 原生 traces / logs / metrics 直接接入，不重复包同等粒度埋点。
-- Cost / Quota / Chargeback 由 ARCH-TODO-013 处理。
+- Cost / Quota / Chargeback 已由 ARCH-TODO-013 明确为 Harness 外部治理职责。
 - 不建设 Prometheus/Grafana/Loki/APM/Alerting 产品。
 
 ---
@@ -527,12 +527,12 @@ UI Cancel
 - subagent recursion limit
 - convergence
 
-原则：先把 Run / Step / Executor / Topology / Budget / Capability 做正确，再扩展 Multi-Agent。
+原则：先把 Run / Step / Executor / Topology / Execution Limits / Capability 做正确，再扩展 Multi-Agent。
 
 **已记录的讨论方向：**
 
 - 子 Agent 作为运行时参与者（Participant），不新建一套顶层业务领域模型。
-- 子 Agent 必须有 Owner、Run/Step 归属、预算边界和取消传播。
+- 子 Agent 必须有 Owner、Run/Step 归属、执行限制和取消传播。
 - 子 Agent 不得擅自扩大父任务目标。
 - 只读子 Agent 可以共享只读基线；可写子 Agent 默认使用独立 Worktree。
 - Agent 不拥有 Worktree，Repository Workspace 才拥有 Worktree。
