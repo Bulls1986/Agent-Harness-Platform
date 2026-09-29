@@ -224,7 +224,11 @@ Sandbox ≠ Workspace
 
 ## ARCH-TODO-005 Harness Checkpoint / Sandbox Snapshot Consistency
 
-**状态：DISCUSSING**
+**状态：CLOSED**
+
+**Decision：** 已冻结轻量恢复隔离模型：平台只拥有恢复点（RecoveryPoint）与恢复能力契约（Recovery Capability）；Runtime Checkpoint、Workspace Restore、Sandbox Snapshot 均由对应 Adapter/Provider 实现；runtime checkpoint 对平台保持 Opaque；不支持的能力显式声明为不支持，平台不模拟、不 fork、不 patch，也不建立跨组件分布式事务。
+
+**产出：** [CHECKPOINT_AND_SNAPSHOT_CONSISTENCY.md](references/CHECKPOINT_AND_SNAPSHOT_CONSISTENCY.md)
 
 ### 问题
 
