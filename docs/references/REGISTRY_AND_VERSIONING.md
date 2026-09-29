@@ -147,3 +147,9 @@ CAPABILITY_NOT_SATISFIED
 5. 运行中 Run 不热升级。
 6. 新版本只影响新 Run。
 7. Capability 在 Run 开始前匹配，不支持即拒绝，不补齐 Framework 内部能力。
+
+## 10. MCP / Tool Governance Boundary
+
+Tool / MCP 的 trust/admission 生命周期不由本 Registry Contract 管理。外部 MCP Governance 决定哪些 Tool/Server 可以进入平台可用范围；Harness 只要求其 definition/version/binding 可识别，并在 Run 创建时解析为具体版本后冻结。
+
+详见 MCP_TRUST_OWNERSHIP_BOUNDARY.md。
