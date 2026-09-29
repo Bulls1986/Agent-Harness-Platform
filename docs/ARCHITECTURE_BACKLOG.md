@@ -373,6 +373,13 @@ Threat
 
 ---
 
+
+### 已确认的相邻约束（不并入 008 设计）
+
+- MAF Python Durable 的生产私有化 backend 问题已单独记录于 `references/MAF_PYTHON_DURABLE_PRIVATE_DEPLOYMENT.md`。
+- 008 不为弥补 MAF/Durable Task backend 缺口而建设 Durable Scheduler、TaskHub backend 或 replay engine。
+- Framework 内部 durable worker ownership 继续由 Framework/Durable Engine 自己负责；008 只讨论平台自有 Execution 的 Lease / Fencing / Heartbeat。
+
 ## ARCH-TODO-009 Multi-Tenant Identity & Authorization Propagation
 
 **状态：TODO**
