@@ -122,11 +122,11 @@ Data Plane 不得绕过 Policy / Approval 自行扩大权限或修改平台业�
 
 - Participant 只能获得当前任务所需最小权限。
 - Sandbox 不能天然访问 Control Plane 内部权限。
-- Agent Runtime 不能天然读取全部 Tenant / Project Secret。
+- Agent Runtime 不能天然读取组织级或其他 Project 的 Secret。
 - Tool / MCP / Repo 内容不能自动升级权限。
 - 外部副作用仍必须经过 Capability / Policy / Approval 边界。
 
-具体身份传播与授权模型由 ARCH-TODO-009 定义。
+具体身份传播与授权模型已由 ARCH-TODO-009 冻结，详见 IDENTITY_AND_AUTHORIZATION_PROPAGATION.md。
 
 ## 8. Secret 与网络边界
 
@@ -163,7 +163,7 @@ Threat
 
 以下主题继续由独立待办处理：
 
-- Identity / RBAC / ABAC / Delegated Credential → ARCH-TODO-009
+- Identity / RBAC / ABAC / Delegated Credential → IDENTITY_AND_AUTHORIZATION_PROPAGATION.md
 - Environment / OCI Supply Chain Security → ARCH-TODO-014
 - Tool / MCP Trust → ARCH-TODO-015
 - Data Residency / DLP / PII → ARCH-TODO-018
