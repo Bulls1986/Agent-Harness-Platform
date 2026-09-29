@@ -110,6 +110,8 @@ Run 是平台最核心的执行边界。
 
 Run 可以暂停和恢复，但只有非终态 Run 可以 Resume。
 
+取消请求到达后，活动 Run 可以进入 `CANCELLING` 非终态控制状态；只有已知 active Execution 安全收口后才能进入 terminal `CANCELLED`。详见 CANCELLATION_TIMEOUT_PROPAGATION.md。
+
 ### 4.1 终态不可重新打开
 
 终态至少包括：
