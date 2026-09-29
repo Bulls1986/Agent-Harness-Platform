@@ -418,6 +418,36 @@ Execution
 - Fencing 只阻止 stale Worker 后续写入，不能判断或撤销已经发出的外部副作用。
 - V1 优先使用 ExecutionScheduler 已有权威持久化层做原子 claim / renew / fencing，不新增独立 Redis/etcd/ZooKeeper 锁服务。[R23]
 
+## 6.14 Identity & Authorization Propagation
+
+V1 面向企业内部单组织信任域，不引入 Tenant 一等领域模型，也不建设第二套企业 IAM。
+
+~~~text
+Enterprise IdP / IAM
+        ↓
+Platform Gateway
+        ↓
+SecurityContext
+        ↓
+Harness Policy
+        ↓
+Execution / Tool / Sandbox
+        ↓
+External Service
+~~~
+
+核心规则：
+
+- Authentication 由企业现有 IdP / IAM 负责；Harness 只消费可信认证结果。
+- 平台保留发起者（Initiator）身份，并将其与具体 Execution 的 Executor / Service Principal 分离。
+- Run 固化 Initiator Identity 作为不可变审计事实，但敏感 Execution 必须基于当前有效权限重新授权。
+- RBAC / ABAC / Group / Claim 是 Policy 输入；平台只形成 ALLOW / DENY / REQUIRE_APPROVAL 等 Authorization Decision，不复制完整 IAM。
+- 用户长期登录 Token / Secret 默认不得进入 Agent、Model、Sandbox 或 Artifact。
+- 外部系统访问通过 Credential Provider 获取短期、最小权限、资源范围明确的 Credential；只有确有 On-Behalf-Of 需求时才使用 Delegated Credential。
+- Approval 必须绑定真实 Principal、Resource、Action 与 Policy，Agent / Worker / Sandbox 不能自行伪造 Approval。
+- Project Manifest 只定义项目资源边界，不等于 Principal 自动获得所有 Repository 权限；Repository 授权通过 Policy + scoped provider credential 完成。
+- 若未来出现多组织共享平台需求，再通过独立 ADR 引入 Tenant / Organization Partition、数据隔离、Quota 与跨组织管理。[R24]
+
 # 7. Harness Kernel 与组件模型
 
 ## 7.1 Kernel 核心能力
@@ -629,6 +659,7 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 | ADR-018 | 冻结安全信任边界：外部内容默认不可信；Instruction/Data 分层；Data Plane 不拥有业务最终状态；安全机制通过公开扩展点或外围基础设施实现。 | Accepted |
 | ADR-019 | 冻结版本管理：V1 不建设统一 Registry 服务；Run 创建时解析并冻结 Recipe/Component/Runtime/Policy/Tool/Protocol/Environment 版本，运行中不漂移。 | Accepted |
 | ADR-020 | 冻结 Execution ownership：Lease/Fencing 仅治理平台自有 Execution；Fencing Token 拒绝 stale Worker；Lease 丢失不能替代 UNKNOWN/Reconciliation；底层 Framework/Runtime ownership 不重复实现。 | Accepted |
+| ADR-021 | 冻结身份与授权传播：V1 单组织、不引入 Tenant 模型；企业 IdP 负责认证；Initiator 与 Executor Identity 分离；Policy 负责当前授权，Credential Provider 提供最小权限凭据。 | Accepted |
 
 # 19. MAF 扩展性验证要求
 
@@ -718,3 +749,7 @@ docs/references/REGISTRY_AND_VERSIONING.md
 
 [R23] Agent Harness Platform - Execution Lease / Fencing / Heartbeat 契约  
 docs/references/EXECUTION_LEASE_FENCING_HEARTBEAT.md
+
+
+[R24] Agent Harness Platform - Identity & Authorization Propagation 契约  
+docs/references/IDENTITY_AND_AUTHORIZATION_PROPAGATION.md
