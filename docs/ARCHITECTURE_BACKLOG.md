@@ -356,7 +356,7 @@ Threat
 
 ## ARCH-TODO-008 Execution Lease / Fencing / Heartbeat
 
-**状态：TODO**
+**状态：DISCUSSING**
 
 范围：
 
