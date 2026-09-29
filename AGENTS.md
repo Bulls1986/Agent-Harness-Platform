@@ -453,6 +453,20 @@ docs/references/COST_QUOTA_OWNERSHIP_BOUNDARY.md
 
 docs/references/ENVIRONMENT_SUPPLY_CHAIN_OWNERSHIP_BOUNDARY.md
 
+# 10.12 MCP Trust Ownership 边界
+
+必须遵守：
+
+- MCP Server / Tool 的准入、可信度、安全审查、发布、升级、撤销与下线由外部 MCP Governance / Enterprise Tool Governance 负责。
+- Harness 可调用到的 MCP 默认视为已经治理准入，不建立 Trust Score、Risk Level、Marketplace Approval 或二次审核模型。
+- Harness 仍负责具体 Execution 的 Capability / Policy / Approval / Credential / SideEffect / Audit 与版本绑定。
+- MCP 返回的业务数据仍遵守统一 Instruction / Data 隔离规则，不自动获得 Platform/System Instruction 权限。
+- 不得把 MCP Governance 产品能力重新实现进 Harness Kernel。
+
+详见：
+
+docs/references/MCP_TRUST_OWNERSHIP_BOUNDARY.md
+
 # 11. POC 原则
 
 POC 必须：
