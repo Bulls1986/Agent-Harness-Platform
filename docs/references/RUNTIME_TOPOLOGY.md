@@ -46,7 +46,7 @@ Sandbox、MCP Server 等基础设施对象属于 Participant，因为它们需�
 - 取消定位
 - 故障定位
 - Trace 关联
-- 成本归属
+- 诊断归属
 - 审计
 - UI 运行态展示
 
@@ -193,7 +193,7 @@ Runtime Topology 主要服务：
 - 哪个 Sandbox 已失效。
 - 哪个 Subagent 仍在等待。
 
-### 9.3 Trace / Cost / Evidence 关联
+### 9.3 Trace / Evidence 关联
 
 Topology 提供“谁属于谁”的关系上下文。
 
@@ -256,5 +256,5 @@ Runtime Topology
 - Sandbox / MCP Server 等基础设施对象属于 Participant。
 - Topology 只记录参与者身份、生命周期和稳定关系。
 - 高频调用明细进入 Trace / Log，不进入 Topology；Observability correlation 通过 participant_id / execution_id 等字段完成，详见 OBSERVABILITY_CONTRACT.md。
-- Topology 用于控制定位、故障分析、Trace/Cost 关联和 UI 展示。
+- Topology 用于控制定位、故障分析、Trace/Evidence 关联和 UI 展示。
 - 具体保留周期由 ARTIFACT_EVIDENCE_LOG_RETENTION.md 的 Retention Policy 统一约束。
