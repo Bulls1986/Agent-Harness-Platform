@@ -63,7 +63,11 @@
 
 ## ARCH-TODO-002 Failure / Idempotency / Side Effect Contract
 
-**状态：DISCUSSING**
+**状态：CLOSED**
+
+**Decision：** 已冻结执行结果（Outcome）、失败分类（Failure Classification）、副作用类型（Side Effect Class）与恢复决策（Recovery Decision）四层语义；UNKNOWN 禁止盲目重试；Retry 与 Replan 严格分离；所有非 PURE 执行必须声明副作用契约并形成副作用回执；高风险未知结果默认进入人工介入或 Fail Safe。
+
+**产出：** [FAILURE_IDEMPOTENCY_AND_RECOVERY.md](references/FAILURE_IDEMPOTENCY_AND_RECOVERY.md)
 
 ### 问题
 
