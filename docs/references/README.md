@@ -35,6 +35,7 @@
 27. [Cost / Quota Ownership Boundary](COST_QUOTA_OWNERSHIP_BOUNDARY.md)
 28. [Environment Supply Chain Ownership Boundary](ENVIRONMENT_SUPPLY_CHAIN_OWNERSHIP_BOUNDARY.md)
 29. [MCP Trust Ownership Boundary](MCP_TRUST_OWNERSHIP_BOUNDARY.md)
+30. [Cancellation / Timeout Propagation 契约](CANCELLATION_TIMEOUT_PROPAGATION.md)
 
 ## 使用原则
 
