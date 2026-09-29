@@ -55,7 +55,7 @@ flowchart TB
 | G2 状态自主       | 核心 Run/Session/Checkpoint/Artifact 必须可以落自有存储或企业掌控的持久化层。                                |
 | G3 协议可桥接     | 必须能映射到平台自有 Responses-compatible + Harness Event Protocol。                                         |
 | G4 模型可替换     | 至少证明模型调用层不是框架不可替换的单一云模型绑定；优先验证 LiteLLM/OpenAI-compatible 或 Provider Adapter。 |
-| G5 Sandbox 可替换 | Shell/Code Execution 不得强制绑定唯一云 Sandbox；Docker 必须可作为基线。                                     |
+| G5 Sandbox 可替换 | Shell/Code Execution 通过 SandboxProvider SPI；生产候选以 CubeSandbox 为基线，Docker 仅作开发/兼容 fallback。 |
 | G6 恢复           | 中途杀 Worker/Runtime 后，能够恢复任务或明确定位由哪一层负责恢复。                                           |
 | G7 HITL           | 能够暂停等待人工审批，并在批准后继续。                                                                       |
 | G8 License Cliff  | POC 记录从 OSS 到生产是否存在关键 Enterprise/Cloud-only 功能断层。                                           |
@@ -69,7 +69,7 @@ flowchart TB
 | 部署     | Docker Compose 为最低基线；有条件追加企业 K8s。                                          |
 | 存储     | PostgreSQL；对象存储可使用 MinIO/S3-compatible。                                         |
 | 模型     | 优先通过企业现有 Model Gateway/LiteLLM；若框架限制则记录为 Gap。                         |
-| Sandbox  | DockerSandbox 为基线；E2B 作为可选 Provider，不作为通过条件。                            |
+| Sandbox  | CubeSandbox 为生产 POC 基线；Local/Remote 使用不同 Cube cluster；Docker 作为开发/兼容对照。 |
 | 代码仓   | 准备统一 Demo Repo，包含可复现缺陷、单测、E2E/集成测试与 lint。                          |
 | UI       | 统一测试页面消费自有 SSE Event Protocol；不直接使用框架自带 Dev UI 作为最终结论。        |
 | 观测     | 至少输出 run_id、step_id、model call、tool call、command、duration、status、cost/token。 |
@@ -87,7 +87,7 @@ flowchart TB
 | S07      | Recovery                | 执行中杀 Worker/容器，再启动并观察是否从正确位置继续。                   |
 | S08      | HITL                    | 模拟 git push / 高风险操作，进入 WAITING_APPROVAL 后跨进程恢复。         |
 | S09      | Provider Swap           | 切换第二种模型/provider，不改 Harness 领域模型。                         |
-| S10      | Sandbox Swap            | Docker → 第二 Sandbox Adapter，业务 workflow 不改。                      |
+| S10      | Sandbox Swap            | CubeSandbox → Docker/K8s fallback Adapter，业务 workflow 不改；生产主路径仍为 CubeSandbox。 |
 | S11      | UI Protocol             | 事件映射为 run/plan/tool/verification/artifact typed events。            |
 | S12      | Deployment Independence | 完全禁用厂商托管平台后仍通过核心链路。                                   |
 
@@ -113,7 +113,7 @@ MAF 的价值在于 HarnessAgent、Workflow、Self-host、Responses/A2A/AG-UI �
 - Self-host：FastAPI/ASP.NET 仅作为宿主，不使用 Foundry Hosted Agent。
 - SessionStore：实现 PostgreSQL-backed store，避免仅使用 in-memory。
 - 协议：优先暴露 Responses-compatible endpoint；可补 AG-UI/A2A。
-- 执行：Docker shell/自定义 Sandbox Adapter；所有命令输出形成 Evidence。
+- 执行：自定义 Sandbox Adapter 对接 CubeSandbox；生产 Coding 命令默认进入 Cube MicroVM，Docker 仅作为开发/兼容对照；所有命令输出形成 Evidence。
 
 ## 7.3 必测项
 
@@ -170,7 +170,7 @@ Temporal 不提供 Agent Harness，而提供 Durable Execution。该路线验证
 - Platform Service：Platform API、Recipe、Policy、Artifact、SSE Gateway；实现语言不计入评分。
 - Temporal Workflow：Plan → Execute → Verify → Replan 状态机；选择团队最合适的官方 SDK 完成 POC。
 - Activity：调用独立 Agent Runtime Service；POC 可选择 OpenAI Agents SDK 或极简自研 Adapter。
-- Sandbox SPI：Docker 为默认实现；E2B 作为可选第二实现。
+- Sandbox SPI：CubeSandbox 为生产默认候选；Local/Remote 通过不同 Cube cluster/endpoint 承载；Docker 作为开发/兼容 fallback。
 - Temporal Service：优先本地/self-host 基线，确保不是 Temporal Cloud 才能运行。
 - HITL：使用 Signal/Update 等模式暂停并恢复。
 
@@ -200,7 +200,7 @@ Temporal 不提供 Agent Harness，而提供 Durable Execution。该路线验证
 | 部署     | 组件数量、镜像数量、外部依赖、配置项、启动时间、K8s 对象数量 |
 | 可靠性   | 恢复成功率、重复执行次数、幂等问题、丢事件/丢状态情况        |
 | 开发效率 | 核心场景代码量、Adapter 代码量、框架特殊代码占比             |
-| 运行效率 | TTFT、总时延、额外 orchestration 开销、内存/CPU              |
+| 运行效率 | TTFT、总时延、额外 orchestration 开销、内存/CPU、queue wait、sandbox create/resume latency |
 | 可替换性 | 换模型/换 Sandbox/换 Runtime 的改动文件数与代码行            |
 | 协议     | 映射到统一 Event Protocol 的字段损失与自定义事件数量         |
 | 治理     | IAM/Policy/Approval/Secret/审计接入点完整度                  |
@@ -260,14 +260,81 @@ Temporal 不提供 Agent Harness，而提供 Durable Execution。该路线验证
 
 > 按 ±5 个百分点理解。POC 结束后必须用实测替换该表。
 
-# 16. POC 完成定义（DoD）
+# 16. CubeSandbox / Execution Plane 专项 POC
 
-- 12 个统一场景全部有 PASS/FAIL/Gap 结论。
+该专项与 MAF/Temporal/ADK 框架 POC 解耦，目标是确认 Coding Execution 的生产底座，而不是重新选择 Agent Framework。
+
+## 16.1 拓扑
+
+~~~text
+Harness / MAF / Temporal / ADK
+          ↓
+ExecutionScheduler
+          ↓
+SandboxProvider SPI
+          ↓
+CubeSandboxProvider
+      /               \
+Local Cube Cluster   Remote Cube Cluster
+~~~
+
+E2B 不作为独立 Provider。POC 只验证 CubeSandbox 的 E2B-compatible API/SDK 是否覆盖平台需要的兼容面。
+
+## 16.2 必测 Gate
+
+1. **Isolation**：错误/恶意命令不得影响宿主与其他 Sandbox。
+2. **Template**：指定 immutable OCI digest 可构建可重复的 Cube Template。
+3. **Lifecycle**：create/destroy/pause/resume 稳定，资源正确回收。
+4. **Capacity**：20~30 concurrent coding runs、多个 HEAVY build 下节点调度稳定。
+5. **Burst**：Local Cube 达到容量/SLO 阈值后，无业务 Workflow 修改即可切到 Remote Cube。
+6. **Queue Isolation**：heavy queue 饱和时 interactive queue 仍满足目标 SLO。
+7. **Snapshot**：snapshot/clone/rollback 可重复，并与 Harness checkpoint 分层。
+8. **Network/Secret**：egress policy、private network deny、credential injection 满足企业策略。
+9. **E2B Compatibility**：目标兼容面通过 contract tests，但不引入 E2B Cloud 依赖。
+10. **Environment Parity**：Local/Remote Cube 均从同一 Environment Profile / OCI digest 构建，并通过 conformance suite。
+11. **Failure**：CubeMaster/Cubelet/compute node 故障不会导致 Harness Run/Plan/Step 状态丢失。
+12. **Upgrade**：版本升级后 template rebuild/redo、兼容矩阵与回滚有明确 runbook。
+
+## 16.3 容量压测
+
+至少模拟：
+
+- 100 logical sessions，低执行负载。
+- 20~30 concurrent coding runs。
+- 多个 full build / Playwright / Electron workload 同时启动。
+- Local CPU/Memory 高水位。
+- Local Cube saturation → Remote Cube burst。
+- Remote Cube 不可用 → backpressure/queue。
+- cancellation 后资源回收。
+- pause/resume 后资源配额归还。
+- Scheduler 重启后 pending/running 状态一致。
+
+初始工程观察目标可采用 interactive queue p95 < 5s、normal p95 < 15s、heavy p95 < 60s，最终以实测 workload 修正，不作为预先承诺的生产 SLA。
+
+## 16.4 环境一致性
+
+执行环境通过 Environment Registry 管理，至少包含：
+
+- profile/version
+- immutable OCI digest
+- Local/Remote Cube template mapping
+- architecture
+- toolchain capability
+- resource profile
+- verification status
+
+ExecutionResult 必须记录 environment fingerprint。Run 启动后 freeze 环境版本，禁止依赖不可追踪的 latest。
+
+# 17. POC 完成定义（DoD）
+
+- 12 个统一框架场景全部有 PASS/FAIL/Gap 结论。
 - 6 个故障注入场景均有可重复证据。
 - 部署独立性 8 个硬门禁有明确结论。
 - 三组都完成统一 UI Event 映射。
 - 三组均给出从开发到生产的额外基础设施清单。
-- 最终 ADR 明确“Control Plane 选什么、Agent Runtime 选什么、哪些能力继续保留 SPI”。
+- CubeSandbox / Execution Plane 12 个专项 Gate 均有 PASS/FAIL/Gap 与压测证据。
+- Local/Remote Cube 环境一致性 conformance test 有可重复结果。
+- 最终 ADR 明确“Control Plane 选什么、Agent Runtime 选什么、ExecutionScheduler/SandboxProvider 如何落地、哪些能力继续保留 SPI”。
 
 # 参考资料与事实基线
 
@@ -296,3 +363,12 @@ https://docs.temporal.io/ai
 
 [R8] LangGraph self-hosted model  
 https://github.com/langchain-ai/langgraphjs/blob/main/docs/docs/concepts/self_hosted.md
+
+[R9] TencentCloud CubeSandbox Repository / README  
+https://github.com/TencentCloud/CubeSandbox
+
+[R10] CubeSandbox Architecture Overview  
+https://github.com/TencentCloud/CubeSandbox/blob/master/docs/architecture/overview.md
+
+[R11] CubeSandbox Templates Overview  
+https://github.com/TencentCloud/CubeSandbox/blob/master/docs/guide/templates.md
