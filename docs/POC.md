@@ -403,7 +403,7 @@ E2E / Integration Environment 不在本 Gate 验证，单独按 ARCH-TODO-023 �
 5. **Infrastructure Separation**：Sandbox、Network、Secret 等安全能力可以由外围 Provider 承担，无需修改 Agent Framework 内核。
 6. **Bounded Blast Radius**：单个 Sandbox / Runtime / Tool 被攻破时，不应自然获得 Control Plane 或其他 Project/Resource 的全局权限。
 
-该 Gate 只验证隔离边界是否成立，不在本阶段实现完整 IAM、DLP、MCP Trust 或 Supply Chain Security。
+该 Gate 只验证 Harness 隔离与集成边界是否成立，不实现 IAM、DLP、MCP Governance、Supply Chain Security、Secret/Network 产品能力。
 
 ## 16.9 Version Freeze POC Gate
 
@@ -441,7 +441,7 @@ Lease TTL、heartbeat interval 和 grace period 由 POC 实测确定，不作为
 3. **Executor Separation**：Execution 能记录实际 Executor / Service Principal，并与 Initiator 区分。
 4. **Authorization Re-evaluation**：Run 创建后撤销用户/项目权限，后续敏感 Execution 必须重新评估并被 DENY 或 REQUIRE_APPROVAL。
 5. **No User Token Leakage**：用户长期登录 Token / Refresh Token 不进入 Model Context、Agent Prompt、Sandbox、Artifact 或普通 Tool 日志。
-6. **Scoped Credential**：外部 Git/API 等执行通过 Credential Provider 获得短期、最小权限、资源范围明确的 Credential。
+6. **Scoped Credential Integration**：外部 Git/API 等执行通过 Credential Provider Adapter 消费企业现有 Credential/Repository Provider 提供的短期、最小权限、资源范围明确的 Credential；Harness 不实现 Credential lifecycle。
 7. **Approval Attribution**：Approval 记录真实 approver、resource、action、policy version；Agent / Worker 不能伪造人工审批。
 8. **Repository Authorization**：Project Manifest 不自动授予 Repository 权限；无 repo write 权限时 git.push 必须失败在 Policy / Provider 权限边界。
 9. **Single-Organization Baseline**：V1 核心链路不依赖 tenant_id，也不要求实现 Multi-Tenant partition。
