@@ -390,44 +390,23 @@ Threat
 
 ## ARCH-TODO-010 Task Recovery Coverage & Recovery Semantics
 
-**状态：DISCUSSING**
+**状态：CLOSED**
 
-核心问题：
+**Decision：** 平台任务恢复只依赖“持久化业务执行事实 + 底层 Recovery Reference”，不复制 Runtime 内部 checkpoint。WAITING_INPUT / WAITING_APPROVAL 必须恢复同一个 Run；无 Runtime checkpoint 时最多恢复到安全 Step Boundary 并创建 New Attempt；具备真实 checkpoint/resume 能力时允许 Same Run + Same Step + Same Attempt Resume。Runtime State、Workspace State、Sandbox State 独立治理，Sandbox 实例不是恢复硬依赖。RUNNING Execution 结果不确定时必须进入 UNKNOWN → Reconciliation，不得 blind resume/retry。数据库/磁盘/集群 Backup 与 DR 不属于本契约。
 
-> 一个 Run 为了在 Worker / Runtime / Sandbox / 进程故障后安全继续，平台必须持久化哪些事实；在不同能力条件下，最多能够恢复到 Run / Step / Attempt / Execution 的哪一层。
+**产出：** [TASK_RECOVERY_COVERAGE_AND_SEMANTICS.md](references/TASK_RECOVERY_COVERAGE_AND_SEMANTICS.md)
 
-本待办只讨论**任务级恢复（Task-level Recovery）**，不讨论平台基础设施级 HA / DR / Backup。
+### 恢复降级顺序
 
-### 需要定义
-
-- Run / Plan / Step / Attempt / Execution 哪些状态必须持久化；
-- Runtime binding / checkpoint reference 需要记录什么；
-- RecoveryPoint 与当前 Run 状态如何关联；
-- Workspace / Repository Revision Set / Environment Fingerprint 需要保留到什么程度；
-- Artifact / Evidence / Approval / Side Effect Receipt 哪些属于恢复所需事实；
-- Worker / Runtime / Sandbox 故障后恢复粒度；
-- 无 checkpoint、checkpoint 不可用、workspace 不可恢复时的降级行为；
-- WAITING_INPUT / WAITING_APPROVAL 如何恢复；
-- RUNNING Execution 故障后如何结合 Lease/Fencing 与 UNKNOWN/Reconciliation；
-- 不同 Runtime Capability 下平台能承诺的 Recovery Level。
-
-### 明确不在范围
-
-- PostgreSQL / MSSQL / Object Storage 的物理备份；
-- 数据库主从、复制、快照、磁盘容灾；
-- Control Plane / Scheduler 服务级 HA；
-- K8s / Region / Cluster disaster recovery；
-- 跨 Region Active-Active；
-- 企业基础设施 RPO / RTO 设计。
-
-这些属于企业基础设施 / Storage / Deployment 责任，不属于 Harness Task Recovery Contract。
-
-### 与既有 Contract 的关系
-
-- ARCH-TODO-002：定义 UNKNOWN、Retry、Reconciliation、副作用恢复语义。
-- ARCH-TODO-005：定义 RecoveryPoint 与 Runtime / Workspace / Sandbox Adapter 隔离。
-- ARCH-TODO-008：定义 Execution Lease / Fencing，拒绝 stale Worker。
-- ARCH-TODO-010：在上述基础上冻结“平台为了任务恢复具体记录什么，以及能恢复到什么程度”。
+~~~text
+Same Attempt Resume
+        ↓ unavailable / incompatible
+Same Step + New Attempt
+        ↓ unsafe
+UNKNOWN → Reconciliation
+        ↓ cannot safely continue
+Fail / Wait Human
+~~~
 
 ---
 
