@@ -354,6 +354,20 @@ E2E / Integration Environment 不在本 Gate 验证，单独按 ARCH-TODO-023 �
 
 该 Gate 不验证 Workflow 调度、Multi-Agent 协商或长期 Retention Policy。
 
+## 16.7 Recovery Adapter POC Gate
+
+至少验证：
+
+1. **Opaque Checkpoint**：平台无需解析 Runtime checkpoint 内部结构即可保存引用并调用恢复。
+2. **Capability Declaration**：Runtime Adapter 可以明确声明 checkpoint / resume 等能力是否支持。
+3. **Unsupported Means Unsupported**：不支持的恢复能力不得由平台伪装、模拟或通过 Framework fork 补齐。
+4. **Workspace/Sandbox Separation**：Workspace Restore、Sandbox Snapshot 与 Runtime Resume 可以通过独立 Adapter/Provider 组合，而不修改平台领域模型。
+5. **Optional Snapshot**：Sandbox Snapshot 缺失时不会导致平台模型本身失效；是否能够继续恢复由 Runtime/Recipe 实际 Capability 决定。
+6. **Standard Failure Result**：checkpoint 丢失、不可用或不兼容时，Adapter 返回统一恢复失败结果，不由平台猜测 Framework 内部状态。
+7. **No Distributed Recovery Transaction**：POC 不引入 Runtime / Workspace / Sandbox 跨系统 2PC。
+
+该 Gate 验证的是隔离和可替换性，不要求所有候选 Runtime 具备相同恢复能力。
+
 # 17. POC 完成定义（DoD）
 
 - 12 个统一框架场景全部有 PASS/FAIL/Gap 结论。
