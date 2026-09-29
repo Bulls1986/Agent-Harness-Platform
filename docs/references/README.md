@@ -15,6 +15,10 @@
 7. [MAF Memory / Context 设计](MAF_MEMORY_MODEL.md)
 8. [MAF 扩展性评估](MAF_EXTENSIBILITY.md)
 9. [首轮方案架构匹配度估算](FIRST_ROUND_MATCH_ASSESSMENT.md)
+10. [Coding Execution / Sandbox 架构](EXECUTION_SANDBOX_ARCHITECTURE.md)
+11. [Coding Execution 容量模型与调度](EXECUTION_CAPACITY_AND_SCHEDULING.md)
+12. [Local / Remote Sandbox 环境一致性](ENVIRONMENT_CONSISTENCY.md)
+13. [CubeSandbox 作为本地 Agent Sandbox 的候选评估](CUBESANDBOX_ASSESSMENT.md)
 
 ## 使用原则
 
