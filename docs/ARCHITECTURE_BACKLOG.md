@@ -498,6 +498,24 @@ Harness 仍负责具体 Execution 的 Capability / Policy / Approval / Credentia
 
 # 4. P2：明确延后但需要保留
 
+## P2 当前阶段决策
+
+**状态：DEFERRED / NON-BLOCKING FOR POC**
+
+当前阶段不继续处理 P2 架构项。
+
+原因：P2 主要属于外围能力、后续治理、工程优化或增强性能力；现有已冻结的 P0/P1 架构已经足以支撑当前 POC。
+
+原则：
+
+- P2 不作为进入 POC 的前置条件。
+- POC 不因 P2 未完成而阻塞。
+- POC 期间如果某个 P2 问题实际影响 correctness、recoverability、provider replaceability 或 production viability，再将对应条目重新提升为 active backlog。
+- 不为了“架构完整”提前设计外围系统。
+- 当前优先级转为执行 POC、收集实测证据、验证 Framework/Provider public extension points 与既有 Contracts。
+
+---
+
 ## ARCH-TODO-017 Multi-Agent / Subagent Ownership
 
 **状态：DEFERRED**
