@@ -249,6 +249,38 @@ Environment Registry 至少管理 profile、version、OCI digest、cluster/templ
 
 Sandbox snapshot 只保存执行环境状态；Plan/Step/Artifact/Event 等 Harness 业务状态仍由平台持久化，不能依赖 Sandbox snapshot 代替 Control Plane checkpoint。
 
+## 6.8 项目工作空间（Project Workspace）与 Git
+
+Coding 场景采用以下代码工作模型：
+
+~~~text
+权威 Git 仓库
+   ↓
+项目仓库（Project Repository）
+   ↓
+项目工作空间（Project Workspace）
+   ↓
+仓库工作空间（Repository Workspace）
+   ↓
+工作树（Worktree）
+   ↓
+Sandbox
+~~~
+
+- Git Server 是 main/develop 等主干的唯一权威事实源。
+- Project Repository 通过静态 Project Manifest 定义项目包含的仓库、默认分支、访问模式，并承载项目级 AGENTS.md、Skills、规范与公共资源。
+- Project Workspace 可以跨多个 Turn / Run 复用；Run 启动时冻结本次 Repository Revision Set。
+- 一个 Git Repository 对应一个 Repository Workspace；Worktree 是仓库级可写隔离单元，Monorepo 的 Module 不单独创建 Worktree。
+- 并发可写 Run / 子 Agent 默认不得共享同一 Worktree。
+- Sandbox 只提供执行宿主，不拥有代码事实；Sandbox 可以销毁后重新挂载/恢复同一 Workspace。
+- 执行期间允许 fetch，但不得隐式 rebase/merge 追主干；集成前必须刷新 upstream、显式同步主干并重新 Verify。
+- 本地 commit 可在 Recipe/Policy 允许时自动执行；push/merge/tag/delete branch/force-push 属于外部副作用，必须进入 Policy 与副作用契约；force-push 默认禁止。
+- 多仓 Repository Revision Set 用于 Evidence / Recovery / Audit / Reproduce，不构建跨仓原子事务。
+- 项目研发流程与跨仓执行顺序由项目级 Skill 定义，不固化在 Harness Kernel。
+- Repository Mirror / dependency cache 仅为可重建缓存，不是代码事实源。[R18]
+
+E2E / Integration Environment 的创建、复用、生命周期和测试数据不属于本契约，单独进入架构待办。
+
 # 7. Harness Kernel 与组件模型
 
 ## 7.1 Kernel 核心能力
@@ -453,6 +485,7 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 | ADR-011 | 增加 Environment Registry，以 immutable OCI digest 管理执行环境一致性。        | Accepted for POC |
 | ADR-012 | 冻结 V1 Domain Model：Conversation→Turn→Run；Turn:Run=1:N；Plan 版本化；Step/Attempt 分离；terminal Run never reopen。 | Accepted |
 | ADR-013 | 冻结失败/幂等/副作用契约：UNKNOWN 禁止盲重试；Retry/Replan 分离；非 PURE 执行必须声明副作用契约。 | Accepted |
+| ADR-014 | 冻结 Workspace/Git 模型：Project Repository 静态定义项目；Project Workspace 管理多仓；Worktree 按 Git Repository 隔离；Git Server 为主干唯一事实源。 | Accepted |
 
 # 19. MAF 扩展性验证要求
 
@@ -518,3 +551,7 @@ docs/references/DOMAIN_MODEL_AND_STATE_CONTRACT.md
 
 [R17] Agent Harness Platform - 失败、幂等与副作用契约  
 docs/references/FAILURE_IDEMPOTENCY_AND_RECOVERY.md
+
+
+[R18] Agent Harness Platform - 工作空间、仓库与 Git 契约  
+docs/references/WORKSPACE_AND_GIT_MODEL.md
