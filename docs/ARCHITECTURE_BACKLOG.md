@@ -430,17 +430,43 @@ Fail / Wait Human
 
 **状态：DISCUSSING**
 
-范围：
+核心问题：
 
-- OpenTelemetry
-- Trace / Span naming
-- Run / Step / Attempt correlation
-- Model / Tool / Sandbox spans
-- metrics schema
-- structured logs
-- SLO / alert
-- failure diagnostics
+> 平台为了运行诊断、性能分析和跨组件定位，必须产生哪些 Telemetry；这些 Telemetry 如何与 Run / Step / Attempt / Execution / Participant 关联，而不把 Observability 反向变成新的业务事实源。
+
+### 当前边界
+
+- OpenTelemetry 作为 vendor-neutral telemetry baseline / export protocol，不拥有 Harness Domain Model。
+- Event、Trace/Span、Log、Metric 四类信号严格区分。
+- 平台业务 Event 是审计/状态事实；Trace/Log/Metric 是 observability signals，不能反向决定 Run/Step 最终业务状态。
+- run_id / step_id / attempt_id / execution_id / participant_id 作为统一 correlation attributes 贯穿 Trace/Log；Provider 原生 trace/span/session ID 只能作为 metadata。
+- metrics 禁止把 run_id / step_id / attempt_id / execution_id 等高基数 ID 作为默认 label/dimension。
+- GenAI / Provider-specific OpenTelemetry semantic conventions 可以由 Adapter 映射，但平台核心命名不依赖其稳定性。
+- Prompt / Response / Tool Payload / Repository Content 默认不进入普通 telemetry；敏感或大内容继续走 Artifact/Evidence/Log Retention 与安全边界。
+- Cost / Quota / Chargeback 的业务归因由 ARCH-TODO-013 定义；012 只提供所需 telemetry facts，不定义计费模型。
+
+### 需要定义
+
+- Event vs Trace vs Log vs Metric
+- trace/span hierarchy and naming
+- correlation attributes
+- model / tool / sandbox / workflow spans
+- structured log minimum fields
+- low-cardinality metrics schema
+- error/failure mapping
 - topology correlation
+- sampling / payload redaction boundary
+- telemetry provider/exporter abstraction
+- diagnostic minimum for recovery and failure analysis
+
+### 明确不在范围
+
+- 自建 Prometheus / Grafana / Loki / Elasticsearch / APM 产品
+- 告警平台本身
+- 全量 Prompt / Response 内容采集
+- Cost / Quota / Chargeback domain
+- Artifact / Evidence payload retention
+- SIEM / security analytics product
 
 ---
 
