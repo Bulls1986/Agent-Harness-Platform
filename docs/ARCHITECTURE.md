@@ -564,6 +564,22 @@ Harness 只消费企业 CI/CD / Artifact Registry / Container Security 已提供
 
 Environment correctness / reproducibility 继续由 Environment Contract 管理；Supply Chain Security 由外部基础设施负责。[R29]
 
+## 6.20 MCP Trust Ownership Boundary
+
+MCP Server / Tool 的准入、可信度评估、安全审查、发布、升级、撤销与下线属于外部 MCP Governance / Enterprise Tool Governance。
+
+Harness 只消费已被外部治理层准入的 MCP；只要平台可调用，就视为已通过治理，不建立 MCP Trust Score、Server Risk Level、Marketplace Approval 或二次审核模型。
+
+Harness 仍负责当前 Execution 的：
+
+- Capability / Policy / Approval；
+- Credential Provider 最小权限注入；
+- SideEffectClass / SideEffectReceipt；
+- Audit / Observability；
+- Tool/MCP version binding。
+
+MCP 返回的业务数据仍遵守统一 Instruction / Data 隔离规则，不因 Server 已受信任而自动获得 Platform/System Instruction 权限。[R30]
+
 # 7. Harness Kernel 与组件模型
 
 ## 7.1 Kernel 核心能力
@@ -780,6 +796,7 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 | ADR-024 | 冻结 Observability：OpenTelemetry 为统一 telemetry baseline；Runtime 原生 instrumentation 优先；Run:Trace=1:N；统一 Harness correlation；关键路径优先保留；高基数业务 ID 不进入默认 Metric labels。 | Accepted |
 | ADR-025 | 冻结 Cost / Quota 边界：成本核算、额度账户、Billing、Chargeback/Showback 不属于 Harness；原生 usage 仅作 telemetry；Execution Limits 与 Quota/Budget 严格分离。 | Accepted |
 | ADR-026 | 冻结 Environment Supply Chain 边界：SBOM、签名、漏洞扫描、provenance 等由外部 CI/CD/Registry/Security 基础设施负责；Harness 只消费已验证 Environment metadata 与 immutable digest。 | Accepted |
+| ADR-027 | 冻结 MCP Trust 边界：MCP 准入与信任由外部 Governance 负责；Harness 对可调用 MCP 视为已准入，不建立 Trust Score/二次审核，只负责当前 Execution 的 Policy、Credential、SideEffect、Audit 与版本绑定。 | Accepted |
 
 # 19. MAF 扩展性验证要求
 
@@ -893,3 +910,7 @@ docs/references/COST_QUOTA_OWNERSHIP_BOUNDARY.md
 
 [R29] Agent Harness Platform - Environment Supply Chain Ownership Boundary  
 docs/references/ENVIRONMENT_SUPPLY_CHAIN_OWNERSHIP_BOUNDARY.md
+
+
+[R30] Agent Harness Platform - MCP Trust Ownership Boundary  
+docs/references/MCP_TRUST_OWNERSHIP_BOUNDARY.md
