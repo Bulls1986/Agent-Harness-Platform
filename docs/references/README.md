@@ -29,6 +29,7 @@
 21. [MAF Python Durable 私有化部署约束](MAF_PYTHON_DURABLE_PRIVATE_DEPLOYMENT.md)
 22. [Execution Lease / Fencing / Heartbeat 契约](EXECUTION_LEASE_FENCING_HEARTBEAT.md)
 23. [Identity & Authorization Propagation 契约](IDENTITY_AND_AUTHORIZATION_PROPAGATION.md)
+24. [Task Recovery Coverage & Recovery Semantics 契约](TASK_RECOVERY_COVERAGE_AND_SEMANTICS.md)
 
 ## 使用原则
 
