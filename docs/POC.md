@@ -512,6 +512,23 @@ POC 记录 Runtime 原生能观测到的真实范围；某项 Runtime 原生 tel
 
 该 Gate 只验证职责边界，不建设 MCP Marketplace、Trust Engine、OAuth Server 或 Tool Certification 平台。
 
+## 16.17 Cancellation / Timeout POC Gate
+
+至少验证：
+
+1. **Cancel Is Not Immediate Terminal**：用户取消 RUNNING Run 后先进入 CANCELLING，不立即伪装成 CANCELLED。
+2. **Propagation**：取消能沿当前 Step/Attempt/Execution 传播到 Runtime/Tool/Sandbox Adapter；pending work 不再 dispatch。
+3. **Acknowledgement Semantics**：Adapter 返回 ACKNOWLEDGED 时平台仍保持 CANCELLING，只有 TERMINATED 或安全收口后才进入 CANCELLED。
+4. **Graceful / Force**：支持 graceful cancel 的 Provider 先协作取消；支持 force terminate 的 Provider 可在 grace period 后升级，具体 kill 机制由 Provider 承担。
+5. **Timeout Before Dispatch**：未 dispatch 或可证明未发生副作用的 timeout 形成 FAILED + TIMEOUT。
+6. **Timeout After Dispatch**：已 dispatch 的非 PURE Execution 如果结果未知，形成 UNKNOWN + TIMEOUT_AFTER_DISPATCH → Reconciliation。
+7. **Side Effect Safety**：取消 git push / external write 等场景时，不因为 cancel 信号而假设副作用未发生。
+8. **Waiting Cancel**：WAITING_INPUT / WAITING_APPROVAL 可以取消原 Run，历史 request 仍可审计。
+9. **No Implicit Rollback**：取消后 Workspace 修改、Artifact/Evidence、SideEffectReceipt 不被自动删除。
+10. **Unsupported Provider**：Runtime/Tool/Sandbox 不支持 cancellation 时显式返回 unsupported，Harness 不 fork/patch。
+
+至少在 MAF 与一个 Sandbox/Tool 路径上验证公开 cancellation capability 的真实行为，并记录 cooperative/best-effort 的限制。
+
 # 17. POC 完成定义（DoD）
 
 - 12 个统一框架场景全部有 PASS/FAIL/Gap 结论。
