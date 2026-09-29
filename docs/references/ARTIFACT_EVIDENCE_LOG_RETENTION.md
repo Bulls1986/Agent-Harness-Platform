@@ -197,6 +197,12 @@ V1 不建设完整 Legal Hold / eDiscovery 系统；最多允许外部 Policy �
 
 这些事实的最终保留周期由平台 Policy 决定，但逻辑上与大对象 Payload 生命周期分离。
 
+## 11.1 Observability Retention Boundary
+
+Observability 产生的 Trace / Log 默认属于诊断数据，其 schema、correlation 与 sampling 由 OBSERVABILITY_CONTRACT.md 定义；本契约只负责其 Payload 保留与 GC 边界。
+
+如果某段 Trace / Log 内容被 Verification、Reconciliation 或 Audit 明确作为长期依据，应提升为 Evidence 或形成稳定 Evidence Reference，再按 Evidence Retention 处理。
+
 ## 12. 不在本契约范围
 
 - Object Storage 产品选型与底层副本机制；
@@ -206,7 +212,7 @@ V1 不建设完整 Legal Hold / eDiscovery 系统；最多允许外部 Policy �
 - 通用日志平台 / SIEM；
 - 完整 Legal Hold / eDiscovery；
 - DLP / PII；
-- Observability schema。
+- Observability schema（由 OBSERVABILITY_CONTRACT.md 定义）。
 
 ## 13. Accepted Rules
 
