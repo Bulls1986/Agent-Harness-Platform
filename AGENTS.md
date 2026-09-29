@@ -261,6 +261,21 @@ Local / Remote CubeSandbox 必须遵守统一 Execution Environment Contract。
 
 基础工具进入 Environment Image；项目依赖进入 Workspace。
 
+# 10.1 运行时拓扑边界
+
+必须遵守：
+
+- Runtime Topology 是运行时事实记录，不是 Plan / Workflow / Scheduler。
+- Sandbox、MCP Server 等基础设施对象可以作为 Participant。
+- Topology 只记录参与者身份、生命周期和稳定关系。
+- 高频 Tool / Shell / MCP 调用进入 Trace / Log，不进入 Topology。
+- 不在 Topology 中重建业务状态机、调度器或 Multi-Agent 协商机制。
+- Retention 周期由独立待办统一定义。
+
+详见：
+
+`docs/references/RUNTIME_TOPOLOGY.md`
+
 # 11. POC 原则
 
 POC 必须：
