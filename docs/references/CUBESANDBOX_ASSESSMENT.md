@@ -73,9 +73,9 @@ E2B Cloud
 调整为优先 POC：
 
 ~~~text
-CubeSandbox
+Local CubeSandbox
 +
-E2B Cloud
+Remote CubeSandbox
 ~~~
 
 Docker 降级为开发环境、兼容 fallback 与 POC 对照组。Hyperlight 保留为小型不可信代码执行的专项 Provider。
@@ -142,9 +142,9 @@ CubeSandbox 仓库公开 benchmark 宣称：
 
 这减少了平台自行拼装 sandbox orchestration/security/lifecycle 的工作量。
 
-## 8. 为什么仍保留 E2B Cloud
+## 8. 本地基线与远程弹性统一使用 CubeSandbox
 
-CubeSandbox 本地集群解决 baseline capacity，但企业硬件仍是有限资源。
+企业本地硬件仍是有限资源，因此保留 Local/Remote 两级容量池，但两级均使用 CubeSandbox。
 
 ~~~text
 ExecutionScheduler
@@ -152,27 +152,29 @@ ExecutionScheduler
       ├─ Local CubeSandbox
       │     baseline
       │
-      └─ E2B Cloud
+      └─ Remote CubeSandbox
             burst
 ~~~
 
-当出现 local resource saturation、queue wait 超 SLO、特殊 CPU/memory profile、临时并发峰值，且 Policy 允许远程执行时，进入 E2B。
+当出现 local resource saturation、queue wait 超 SLO、特殊 CPU/memory profile 或临时并发峰值，且 Policy 允许远程执行时，切换到 Remote CubeSandbox cluster。
 
-后续若企业拥有第二个 CubeSandbox 云集群，也可以形成 Local Cube + Remote Cube，并进一步降低外部服务依赖。
+E2B 不进入 Provider 列表。CubeSandbox 的 E2B-compatible API/SDK 只作为兼容协议价值，用于降低客户端/生态适配成本。
 
 ## 9. E2B Compatibility 的使用原则
 
-CubeSandbox 的 E2B-compatible API 是重要优势，但平台不能因此把 E2B API 直接当成领域模型。
+CubeSandbox 的 E2B-compatible API 是重要优势，但平台不能因此把 E2B 或其云服务变成领域模型或独立 Provider。
 
 ~~~text
 SandboxProvider SPI
       ↓
-E2B-compatible adapter
-      ├─ Cube endpoint
-      └─ E2B endpoint
+CubeSandboxProvider
+      ↓
+E2B-compatible client/adapter semantics
+      ↓
+Cube endpoint
 ~~~
 
-POC 必须实际验证 feature parity：
+POC 必须实际验证目标兼容面：
 
 - create/destroy
 - command streaming
@@ -240,7 +242,7 @@ E2B-compatible 不等于当前全部 E2B 能力永久完全一致，需要 contr
 - G-CUBE-7 E2B Compatibility：目标 SDK/API 集合通过 contract tests。
 - G-CUBE-8 Upgrade：版本升级后 Template compatibility、rebuild/redo、rolling upgrade 有明确 runbook。
 - G-CUBE-9 Failure：CubeMaster/Cubelet/compute node 故障注入后，Harness 不丢业务状态。
-- G-CUBE-10 Environment Parity：Cube 与 E2B 使用同一 Environment Profile 时通过 conformance suite。
+- G-CUBE-10 Environment Parity：Local Cube 与 Remote Cube 使用同一 Environment Profile 时通过 conformance suite。
 
 ## 13. 当前结论
 
@@ -250,8 +252,7 @@ CubeSandbox 不直接成为最终选型，但进入：
 
 | Provider | 定位 |
 |---|---|
-| CubeSandbox | Local production baseline candidate |
-| E2B Cloud | Remote elastic burst |
+| CubeSandbox | Production default candidate；Local baseline + Remote burst |
 | Docker/containerd | Dev / compatibility / fallback |
 | Hyperlight | Specialized untrusted function/WASM execution |
 | K8s Job/Pod | Future infrastructure adapter |
