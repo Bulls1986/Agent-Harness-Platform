@@ -175,6 +175,20 @@ POC 需要特别验证的是“边界是否真的薄”：
 
 如果某个 Framework 迫使 Harness 为完成这些外部能力而 fork/patch 或复制完整基础设施能力，则记为 Framework Gap，而不是扩大 Harness Scope。
 
+### 5.1 POC 验收口径收口
+
+本轮进一步确认：POC 候选路线与 12 个统一场景不需要重做，但验收口径必须按职责边界收窄。
+
+- G2「状态自主」只要求 Task Facts、Recovery Reference、Artifact/Evidence Metadata/Lineage 由企业掌控；大 Payload 外置到 OSS/Object Storage。
+- G6「恢复」明确为 Task-level Recovery；数据库、对象存储、磁盘、K8s/Region Backup/DR 不属于 Harness POC。
+- S07 只验证从持久化任务事实与真实 Runtime Capability 恢复到安全边界，不验证基础设施容灾。
+- S10 只验证 SandboxProvider SPI/Adapter 可替换性；第二套 production-grade Sandbox 不是首轮硬通过条件。
+- Observability 优先复用 Runtime/Framework 原生 OpenTelemetry，Harness 只补 correlation 与平台自有边界，不建设 APM Backend。
+- Cost/Quota 与 MCP Trust 只保留 Ownership Boundary Check，不作为首轮 Framework POC 完成阻断。
+- Accepted Contracts 中的专项 Gate 继续保留证据价值，但只有直接破坏 correctness、recoverability、replaceability 或 production viability 的问题才升级为 POC blocker。
+
+因此本轮变化是 **POC acceptance boundary narrowing**，不是候选路线扩张、核心领域模型重构或新一轮架构设计。
+
 ## 6. 最终结论
 
 当前 P0/P1 架构在完成上述对齐后，与新的 Harness Scope Boundary 一致。
