@@ -352,7 +352,7 @@ Local / Remote CubeSandbox 必须遵守统一 Execution Environment Contract。
 
 详见：
 
-\`docs/references/EXECUTION_LEASE_FENCING_HEARTBEAT.md\`
+docs/references/EXECUTION_LEASE_FENCING_HEARTBEAT.md
 
 # 10.6 Identity / Authorization 边界
 
