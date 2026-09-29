@@ -498,6 +498,20 @@ POC 记录 Runtime 原生能观测到的真实范围；某项 Runtime 原生 tel
 
 该 Gate 只验证职责边界，不建设计费/额度功能。
 
+## 16.16 MCP Trust Ownership Gate
+
+至少验证：
+
+1. Harness Domain 不存在 MCP Trust Score、Server Risk Level、Marketplace Approval 等核心对象。
+2. 已由外部治理准入的 MCP Server/Tool 可以直接被 Harness 作为可用 Capability 调用。
+3. 当前调用仍经过既有 Policy / Approval / Credential Provider 边界。
+4. 非 PURE Tool 调用继续产生 SideEffectReceipt，并服从 UNKNOWN → Reconciliation。
+5. MCP/Tool version/binding 可识别并在 Run 中冻结。
+6. MCP 返回的数据不会因为 Server 已准入而被提升为 Platform/System Instruction。
+7. 外部 MCP 被撤销后，可以通过当前 Policy/Admission 阻止后续调用，而无需 Harness 自建 MCP lifecycle governance。
+
+该 Gate 只验证职责边界，不建设 MCP Marketplace、Trust Engine、OAuth Server 或 Tool Certification 平台。
+
 # 17. POC 完成定义（DoD）
 
 - 12 个统一框架场景全部有 PASS/FAIL/Gap 结论。
