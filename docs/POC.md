@@ -210,7 +210,7 @@ Temporal 不提供 Agent Harness，而提供 Durable Execution。该路线验证
 2. Activity retry 与业务 Replan 的边界：基础设施失败自动 retry，语义失败进入 Verifier/Replan。
 3. WAITING_APPROVAL 跨小时/跨进程恢复。
 4. Workflow versioning / replay 对 Agent 平台长期升级的约束。
-5. Task Queue/Worker 隔离能否用于 tenant、priority、runtime 类型。
+5. Task Queue/Worker 隔离能否用于 project/execution class、priority、runtime 类型；不引入 Tenant Domain。
 6. Agent Runtime 从 A 实现切换到 B 实现时，Workflow 和 UI 是否保持不变。
 
 ## 9.5 Temporal 退出条件
@@ -227,7 +227,7 @@ Temporal 不提供 Agent Harness，而提供 Durable Execution。该路线验证
 | 运行效率 | TTFT、总时延、额外 orchestration 开销、内存/CPU、queue wait、sandbox create/resume latency |
 | 可替换性 | 换模型/换 Sandbox/换 Runtime 的改动文件数与代码行            |
 | 协议     | 映射到统一 Event Protocol 的字段损失与自定义事件数量         |
-| 治理     | IAM/Policy/Approval/Secret/审计接入点完整度                  |
+| 治理     | 外部 IAM/Credential 接入 + Harness Policy/Approval/Audit 边界完整度 |
 | 生产断层 | 需要商业版/托管平台才能获得的关键能力清单                    |
 
 # 11. 故障注入矩阵
@@ -316,7 +316,7 @@ E2B 不作为独立 Provider。POC 只验证 CubeSandbox 的 E2B-compatible API/
 5. **Burst**：Local Cube 达到容量/SLO 阈值后，无业务 Workflow 修改即可切到 Remote Cube。
 6. **Queue Isolation**：heavy queue 饱和时 interactive queue 仍满足目标 SLO。
 7. **Snapshot**：snapshot/clone/rollback 可重复，并与 Harness checkpoint 分层。
-8. **Network/Secret**：egress policy、private network deny、credential injection 满足企业策略。
+8. **Network/Credential Integration**：Sandbox Provider 能消费企业网络/凭据约束，验证 egress/private-network enforcement 与 scoped credential injection；Harness 不实现 Network/Secret 产品。
 9. **E2B Compatibility**：目标兼容面通过 contract tests，但不引入 E2B Cloud 依赖。
 10. **Environment Parity**：Local/Remote Cube 均从同一 Environment Profile / OCI digest 构建，并通过 conformance suite。
 11. **Failure**：CubeMaster/Cubelet/compute node 故障不会导致 Harness Run/Plan/Step 状态丢失。
@@ -514,7 +514,7 @@ POC 记录 Runtime 原生能观测到的真实范围；某项 Runtime 原生 tel
 
 1. Harness Domain 不存在 MCP Trust Score、Server Risk Level、Marketplace Approval 等核心对象。
 2. 已由外部治理准入的 MCP Server/Tool 可以直接被 Harness 作为可用 Capability 调用。
-3. 当前调用仍经过既有 Policy / Approval / Credential Provider 边界。
+3. 当前调用仍经过既有 Policy / Approval / Credential Provider Adapter / 外部 Credential Provider 边界。
 4. 非 PURE Tool 调用继续产生 SideEffectReceipt，并服从 UNKNOWN → Reconciliation。
 5. MCP/Tool version/binding 可识别并在 Run 中冻结。
 6. MCP 返回的数据不会因为 Server 已准入而被提升为 Platform/System Instruction。
