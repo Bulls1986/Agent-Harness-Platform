@@ -177,7 +177,7 @@ Project Workspace 允许跨多个 Turn / Run 复用。
 
 Run 启动时必须冻结本次使用的代码基线，不因为 Workspace 后续继续演进而改变已经形成的执行证据。
 
-Workspace 长期存在不等于永久保留；Retention / GC 由后续生命周期策略细化。
+Workspace 长期存在不等于永久保留；Workspace 自身生命周期仍由 Workspace 模型负责，但若某个 Recoverable Run / RecoveryPoint 仍依赖其 workspace state，则不得被 GC。Artifact/Evidence 载荷与 Retention 规则详见 ARTIFACT_EVIDENCE_LOG_RETENTION.md。
 
 ## 7. 仓库版本集合（Repository Revision Set）
 
