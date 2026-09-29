@@ -348,7 +348,7 @@ observed_result:
 - RecoveryPoint 跨层一致性 → ARCH-TODO-005
 - Execution Lease / Fencing / Heartbeat → ARCH-TODO-008
 - Cancellation / Timeout 向各层传播 → ARCH-TODO-016
-- Tool / MCP 的信任与副作用声明 → ARCH-TODO-015
+- Tool / MCP 的准入与信任由外部 Governance 负责；具体调用的 SideEffect 声明仍由本契约约束，详见 MCP_TRUST_OWNERSHIP_BOUNDARY.md
 
 ## 14. Accepted Rules
 
