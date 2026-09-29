@@ -127,6 +127,20 @@ MAF 的价值在于 HarnessAgent、Workflow、Self-host、Responses/A2A/AG-UI �
 8. 至少实现 Custom ContextProvider、SessionStore、CheckpointStorage、ChatClient、Workflow Executor、Middleware、Sandbox Adapter。
 9. 所有企业补齐能力是否都能仅依赖 public extension points 完成，不 fork、不 monkey patch、不复制大量内部代码。
 
+### Python Durable 私有化门禁
+
+当前 Python MAF Durable 的生产私有化能力单独作为硬门禁，不把本地 DTS Emulator 等同于生产自托管能力。
+
+必须验证：
+
+- Standalone `agent-framework-durabletask` 不被假定可以直接使用 PostgreSQL 作为 production backend。
+- 完全私有化候选优先验证 `Python MAF → Durable Functions Runtime → MSSQL Provider → SQL Server`。
+- 不自行实现 TaskHub gRPC backend、Durable Scheduler、replay engine 或 PostgreSQL compatibility layer。
+- Harness Kernel 通过 DurableRuntime Adapter 隔离 Durable Task 专有语义。
+- 如果 Functions + MSSQL 路线的运维、支持等级或私有化门禁不能接受，MAF 降级为 Agent Runtime / Harness Runtime，由其他成熟 Durable Engine 承担 Durable Control Plane。
+
+详见：`docs/references/MAF_PYTHON_DURABLE_PRIVATE_DEPLOYMENT.md`.
+
 ## 7.4 MAF 退出条件
 
 若核心 Durable、Session、协议或 Harness 生产能力必须依赖 Foundry；或自托管 Durable Task 的运维/许可成本与自建 Control Plane 相当，则 MAF 降级为 Data Plane/Harness Runtime，而不作为平台 Control Plane。
