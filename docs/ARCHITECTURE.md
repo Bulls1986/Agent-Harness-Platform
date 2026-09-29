@@ -60,6 +60,7 @@
 | P9 Coding 隔离执行    | 生产 Coding Execution 默认必须进入隔离 Sandbox；裸 LocalShell 仅限开发/显式低风险场景。 |
 | P10 执行容量独立治理  | Agent logical concurrency 与 build/test 等 Execution concurrency 分开治理。             |
 | P11 环境版本一致      | Local/Remote Sandbox 使用 Environment Registry + immutable OCI digest 建立可验证契约。   |
+| P12 Harness 职责收敛    | 只拥有任务编排、执行控制、状态/恢复、协议与 Adapter 边界；企业治理和基础设施产品保持外置。 |
 
 ## 2.1 公开扩展点优先原则
 
@@ -75,6 +76,39 @@
 - fork、monkey patch、复制大量内部实现、依赖私有 API 均视为架构风险。
 - POC 必须验证关键企业能力是否可以仅依赖公开扩展点完成。
 - 若关键能力只能通过侵入式修改底层 Framework 获得，则该 Framework 对应能力不进入平台强制基线，必要时降低其架构角色。
+
+## 2.2 Harness Platform 职责边界
+
+本平台不是企业所有 Agent 周边能力的统一实现载体。
+
+Harness 只直接拥有：
+
+~~~text
+Task / Run lifecycle
++ orchestration
++ execution control
++ state / recovery
++ failure / retry / reconciliation
++ capability / adapter composition
++ protocol translation
++ artifact / evidence / lineage
+~~~
+
+IAM、MCP Governance、Cost/Quota/Billing、Supply Chain Security、数据库/磁盘 Backup/DR、APM/Logging Backend、Secret/DLP/SIEM 等成熟企业能力继续由外围系统负责。
+
+Harness 与这些系统之间只保留必要的 Adapter、Reference、Metadata、Policy/Admission Input 或 Decision Consumption。
+
+因此架构讨论的默认判断顺序是：
+
+~~~text
+Does Harness need to own it?
+        ↓ no
+Define boundary + consume external capability
+        ↓ yes
+Define minimal Harness contract
+~~~
+
+不因为某项能力“平台会使用”就自动把它纳入 Harness Domain。
 
 # 3. 总体目标架构
 
