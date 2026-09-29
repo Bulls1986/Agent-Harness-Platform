@@ -455,7 +455,7 @@ Fail / Wait Human
 
 ## ARCH-TODO-014 Environment Supply Chain Security
 
-**状态：TODO**
+**状态：DISCUSSING**
 
 范围：
 
