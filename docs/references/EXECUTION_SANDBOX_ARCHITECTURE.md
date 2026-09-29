@@ -258,3 +258,16 @@ Sandbox 平台只决定“在哪台执行节点运行 Sandbox”，不拥有 Har
 - E2B：只保留兼容 API/SDK 语义，不作为独立 Sandbox Provider 或生产依赖。
 
 最终生产默认 Provider 必须经过容量、隔离、稳定性、升级与恢复 POC 后确定。
+
+
+## 11. 方案演进记录
+
+本轮讨论的关键收敛过程如下：
+
+1. **资源模型校正**：最初按“每个 Coding Task 一个重 Sandbox”估算过于保守；结合现有 OpenCode 使用经验，确认 Agent Session 本身不是主要资源瓶颈，build/test/browser 才是重资源区。
+2. **生产隔离收紧**：虽然 LocalShell/Worktree 很轻，但生产 Coding Harness 明确要求本地隔离执行，因此 LocalShell 不作为默认生产路径。
+3. **Hyperlight 重新定位**：Hyperlight 的 Guest/WASM 模型适合轻量不可信代码，但不适合完整 Linux Coding workstation，因此不承担主 Sandbox。
+4. **环境一致性成为硬约束**：本地与远程执行必须由同一 Environment Profile / immutable OCI digest 派生，增加 Environment Registry 与 conformance test。
+5. **E2B 自托管路线不进入最终 Provider 集**：讨论过 E2B Cloud 与本地/self-host 形态，但最终不引入 E2B Cloud 或独立 E2B Provider。
+6. **CubeSandbox 收敛**：CubeSandbox 既满足本地自托管 MicroVM，又提供 E2B-compatible API/SDK，因此生产 Provider 收敛为 CubeSandbox；Local/Remote 只是不同 Cube cluster。
+7. **最终拓扑**：Local CubeSandbox = baseline capacity；Remote CubeSandbox = burst capacity；Docker = dev/fallback；Hyperlight = specialized execution。
