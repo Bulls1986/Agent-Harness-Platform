@@ -408,6 +408,20 @@ E2E / Integration Environment 不在本 Gate 验证，单独按 ARCH-TODO-023 �
 
 该 Gate 不验证 Service Discovery、热升级或复杂依赖求解。
 
+## 16.10 Execution Lease / Fencing POC Gate
+
+至少验证：
+
+1. **Single Owner**：同一个 Execution 在任一时刻只有一个有效 Owner。
+2. **Heartbeat Renew**：当前 Owner 可以续租；停止 heartbeat 后 Lease 能按策略失效。
+3. **Monotonic Fencing**：ownership transfer 后 fencing token 单调增加，旧 token 永久失效。
+4. **Zombie Worker Rejection**：旧 Worker 恢复后，其状态更新、结果提交和新的平台控制副作用请求均被拒绝。
+5. **No Blind Handoff**：RUNNING Execution 丢失 Lease 后，如果无法证明副作用未发生，进入 UNKNOWN → Reconciliation，而不是直接重放。
+6. **No Duplicate Coordination Layer**：MAF / Temporal / CubeSandbox 内部 ownership 不由 Harness 重新实现。
+7. **Existing Store First**：POC 优先证明现有权威持久化层可以通过原子 claim / CAS 支撑 V1，不预先引入独立分布式锁服务。
+
+Lease TTL、heartbeat interval 和 grace period 由 POC 实测确定，不作为预先冻结的生产常量。
+
 # 17. POC 完成定义（DoD）
 
 - 12 个统一框架场景全部有 PASS/FAIL/Gap 结论。
