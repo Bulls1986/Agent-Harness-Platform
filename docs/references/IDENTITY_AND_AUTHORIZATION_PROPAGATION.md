@@ -14,12 +14,12 @@ V1 面向企业内部单组织使用场景，不建设多租户（Multi-Tenant�
 - 在 Run / Execution 中保留真实发起者；
 - 区分发起者身份与实际执行服务身份；
 - 将资源、动作、环境等上下文提交给 Policy 做授权决策；
-- 通过受控 Credential Provider 向执行平面提供最小权限凭据；
+- 通过 Credential Provider Adapter 对接外部企业 Credential / Secret Infrastructure，为执行平面解析当前 Execution 所需的最小权限凭据；
 - 对高风险动作形成可审计 Approval / Authorization 事实。
 
 核心原则：
 
-> Authentication 属于企业 IdP / IAM；Authorization Decision 属于平台 Policy 边界；Credential 属于受控 Provider；Agent / Worker / Sandbox 不拥有全局身份权限。
+> Authentication 属于企业 IdP / IAM；Authorization Decision 属于平台 Policy 边界；Credential 的签发、存储、轮换与生命周期属于外部 Credential / Secret Infrastructure，Harness 只通过 Adapter 消费；Agent / Worker / Sandbox 不拥有全局身份权限。
 
 ## 2. V1 信任域
 
@@ -213,14 +213,15 @@ User Login Token
 - Tool 参数日志；
 - Artifact。
 
-外部服务访问通过 Credential Provider 获取受控凭据。
+外部服务访问通过 Credential Provider Adapter 对接企业现有 Credential / Secret Infrastructure 获取受控凭据。Harness 不负责 Credential 的签发、轮换、库存或 Secret 生命周期。
 
 优先：
 
 ~~~text
 Execution Request
 → Policy Decision
-→ Credential Provider
+→ Credential Provider Adapter
+→ External Credential / Secret Infrastructure
 → short-lived / least-privilege credential
 → Tool / Sandbox / External Service
 ~~~
@@ -235,6 +236,23 @@ Credential 至少应尽可能限制：
 
 具体 Secret Manager 产品与生命周期不在本契约内冻结。
 
+## 9.1 Credential Provider Ownership Boundary
+
+Credential Provider 在 Harness 中只表示 Adapter / integration boundary，不表示平台自建 Credential 或 Secret 产品。
+
+Harness 允许：
+
+- 根据当前 Execution / Policy 请求一个 credential reference 或 scoped credential；
+- 把该 credential 安全注入指定 Tool / Sandbox / External Service；
+- 记录不含明文 Secret 的 credential reference / audit metadata。
+
+Harness 不负责：
+
+- Secret / Credential 存储；
+- credential issuance / rotation / revocation lifecycle；
+- Vault / KMS / PAM / Secret Manager 产品能力；
+- 企业级 credential inventory。
+
 ## 10. Delegated Credential
 
 只有外部系统确实要求“代表用户（On-Behalf-Of）”执行时，才使用 Delegated Credential。
@@ -246,7 +264,7 @@ Delegation 必须：
 - 有有效期；
 - 不扩大原用户权限；
 - 不允许 Agent 自行申请更高权限；
-- 通过 Credential Provider / Policy Boundary 获取。
+- 通过 Credential Provider Adapter / Policy Boundary 获取；Credential lifecycle 仍由外部系统负责。
 
 默认优先使用 Service Identity + Policy + Initiator Audit，而不是全链路 User Impersonation。
 
@@ -288,7 +306,8 @@ Initiator / Service Principal
 + Project Context
 + Repository / Branch / Action
 → Policy
-→ Credential Provider
+→ Credential Provider Adapter
+→ External Credential / Repository Provider
 → scoped repository credential
 ~~~
 
@@ -344,7 +363,7 @@ Initiator
 4. Run 固化 Initiator Identity 作为历史事实，但敏感 Execution 必须基于当前权限重新授权。
 5. RBAC / ABAC / Group / Claim 只是 Policy 输入；平台拥有 Authorization Decision，不复制企业 IAM。
 6. 用户长期登录 Token / Secret 默认不得传播到 Agent、Model、Sandbox。
-7. 外部访问优先通过 Credential Provider 提供短期、最小权限、资源范围明确的 Credential。
+7. 外部访问通过 Credential Provider Adapter 消费企业现有 Credential / Secret Infrastructure 提供的短期、最小权限、资源范围明确的 Credential；Harness 不拥有 Credential 生命周期。
 8. Delegated Credential 仅用于确有 On-Behalf-Of 需求的场景，且不得扩大原主体权限。
 9. Approval 必须绑定真实 Principal、Resource、Action 与 Policy；Agent / Worker 不能自行伪造 Approval。
-10. Project / Repository 授权通过 Policy + Provider Credential 组合完成，不建设平行 Repository ACL 系统。
+10. Project / Repository 授权通过 Harness Policy Decision + 外部 Repository/Credential Provider 组合完成，不建设平行 Repository ACL 或 Credential 管理系统。
