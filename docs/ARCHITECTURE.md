@@ -281,6 +281,30 @@ Sandbox
 
 E2E / Integration Environment 的创建、复用、生命周期和测试数据不属于本契约，单独进入架构待办。
 
+## 6.9 运行时拓扑（Runtime Topology）
+
+Runtime Topology 是运行时事实模型（Fact Model），不是 Plan、Workflow、Scheduler 或第二套 Control Plane。
+
+~~~text
+Plan / Workflow
+= 应该发生什么
+
+Runtime Topology
+= 实际正在发生 / 已经发生什么
+~~~
+
+参与者（Participant）至少包括 Workflow、Agent、Subagent、Executor、Sandbox、Tool Runtime、MCP Server、Remote Agent 与 Component。
+
+运行时关系保持克制，至少包括 OWNS、SPAWNS、CALLS、RUNS_ON、HANDOFF_TO、DEPENDS_ON。
+
+硬边界：
+
+- Sandbox、MCP Server 等基础设施对象可以作为 Participant 进入拓扑，以支持取消定位、故障分析、Trace/Cost 关联与 UI 展示。
+- Topology 只记录参与者身份、生命周期和稳定/半稳定关系。
+- 每次 Tool Call、Shell Command、MCP Invocation 等高频调用明细进入 Trace / Event / Log，不进入 Topology。
+- Topology 不拥有 Run 状态机，也不决定执行顺序。
+- Run 活跃期间必须可查询当前拓扑；Run 完成后保留最终快照和关键生命周期事件。具体 Retention Policy 由 ARCH-TODO-011 统一定义。[R19]
+
 # 7. Harness Kernel 与组件模型
 
 ## 7.1 Kernel 核心能力
@@ -486,6 +510,7 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 | ADR-012 | 冻结 V1 Domain Model：Conversation→Turn→Run；Turn:Run=1:N；Plan 版本化；Step/Attempt 分离；terminal Run never reopen。 | Accepted |
 | ADR-013 | 冻结失败/幂等/副作用契约：UNKNOWN 禁止盲重试；Retry/Replan 分离；非 PURE 执行必须声明副作用契约。 | Accepted |
 | ADR-014 | 冻结 Workspace/Git 模型：Project Repository 静态定义项目；Project Workspace 管理多仓；Worktree 按 Git Repository 隔离；Git Server 为主干唯一事实源。 | Accepted |
+| ADR-015 | 冻结 Runtime Topology：作为运行时事实图记录 Participant 及稳定关系，不承担 Plan/Workflow/Scheduler；基础设施对象可入图但高频调用不入图。 | Accepted |
 
 # 19. MAF 扩展性验证要求
 
@@ -555,3 +580,7 @@ docs/references/FAILURE_IDEMPOTENCY_AND_RECOVERY.md
 
 [R18] Agent Harness Platform - 工作空间、仓库与 Git 契约  
 docs/references/WORKSPACE_AND_GIT_MODEL.md
+
+
+[R19] Agent Harness Platform - 运行时拓扑与参与者模型  
+docs/references/RUNTIME_TOPOLOGY.md
