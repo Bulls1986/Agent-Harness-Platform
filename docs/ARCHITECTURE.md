@@ -408,6 +408,9 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 
 # 20. 后续演进
 
+未决架构问题统一维护在 [`docs/ARCHITECTURE_BACKLOG.md`](ARCHITECTURE_BACKLOG.md)。Backlog 中的条目在形成 Decision/ADR 并同步本文件后方可关闭。
+
+
 1. 完成三条 POC，以相同业务场景、相同测试集和相同部署约束进行对比。
 2. 确定 Durable Control Plane 的最终归属：框架内建还是 Temporal 独立承担。
 3. 确定 Agent Runtime SPI、Sandbox SPI、Conversation Event Protocol 的 V1 Schema。
