@@ -61,6 +61,21 @@
 | P10 执行容量独立治理  | Agent logical concurrency 与 build/test 等 Execution concurrency 分开治理。             |
 | P11 环境版本一致      | Local/Remote Sandbox 使用 Environment Registry + immutable OCI digest 建立可验证契约。   |
 
+## 2.1 公开扩展点优先原则
+
+这是当前架构设计的核心判断原则之一，适用于 MAF、Temporal、ADK、Sandbox Provider、Model Provider 以及后续引入的所有 Runtime / Framework：
+
+> **Framework 有公开扩展点（Public Extension Point）的，平台通过 Adapter 映射；Framework 不负责的基础设施能力放在平台外围；如果某项能力必须修改 Framework 内部实现才能获得，则不把该能力作为平台强制能力。**
+
+因此：
+
+- 平台统一 Domain Model / Contract / Adapter，不重新实现 Framework 内核。
+- Runtime 能力通过公开 Capability 显式声明；不支持即不支持，不做伪装补齐。
+- Sandbox、Network、Secret、Storage、IAM 等基础设施能力不要求 Agent Framework 原生提供。
+- fork、monkey patch、复制大量内部实现、依赖私有 API 均视为架构风险。
+- POC 必须验证关键企业能力是否可以仅依赖公开扩展点完成。
+- 若关键能力只能通过侵入式修改底层 Framework 获得，则该 Framework 对应能力不进入平台强制基线，必要时降低其架构角色。
+
 # 3. 总体目标架构
 
 ```mermaid
@@ -538,6 +553,7 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 | ADR-014 | 冻结 Workspace/Git 模型：Project Repository 静态定义项目；Project Workspace 管理多仓；Worktree 按 Git Repository 隔离；Git Server 为主干唯一事实源。 | Accepted |
 | ADR-015 | 冻结 Runtime Topology：作为运行时事实图记录 Participant 及稳定关系，不承担 Plan/Workflow/Scheduler；基础设施对象可入图但高频调用不入图。 | Accepted |
 | ADR-016 | 冻结恢复隔离模型：平台只定义 RecoveryPoint 与 Recovery Capability；底层 Checkpoint/Restore 由 Adapter/Provider 实现，不支持不补齐，不 fork Framework。 | Accepted |
+| ADR-017 | 公开扩展点优先：平台通过 Public Extension Point + Adapter 隔离底层框架；框架外能力放平台外围；必须侵入式修改框架的能力不作为平台强制能力。 | Accepted |
 
 # 19. MAF 扩展性验证要求
 
