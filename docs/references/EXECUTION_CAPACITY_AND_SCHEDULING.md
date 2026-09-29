@@ -131,7 +131,7 @@ Queue 应是最后一道保护，不是默认路径。
 Local Sandbox Cluster
 = baseline capacity
 
-Remote Sandbox / E2B
+Remote CubeSandbox Cluster
 = burst capacity
 ~~~
 
@@ -225,7 +225,7 @@ POC 需用真实 workload 修正。
 2. 20~30 concurrent coding runs。
 3. 多个 HEAVY build 同时开始。
 4. 本地 CPU/Memory 人工压到高水位。
-5. 本地 capacity exhaustion 后 remote burst。
+5. 本地 CubeSandbox capacity exhaustion 后切换 Remote CubeSandbox cluster。
 6. burst provider 不可用时 backpressure/queue。
 7. heavy queue 饱和时 interactive queue 仍满足 SLO。
 8. cancellation 后资源在可接受时间内释放。
