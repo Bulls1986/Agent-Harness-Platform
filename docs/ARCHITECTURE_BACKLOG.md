@@ -443,33 +443,13 @@ Fail / Wait Human
 
 ---
 
-## ARCH-TODO-013 Quota / Budget Guardrails
+## ARCH-TODO-013 Cost / Quota Ownership Boundary
 
-**状态：TODO**
+**状态：CLOSED**
 
-### 当前边界
+**Decision：** Cost、Quota、Billing、Chargeback、Showback 与资源额度账户明确不属于 Harness Platform 核心职责。Harness 不维护价格表、余额、额度、账本或财务归属。Runtime 原生 token / duration / resource usage 仅作为 Observability telemetry。若上层 Portal / Governance 系统需要额度控制，可在 Policy / Admission boundary 前后传递允许/拒绝结果，但 Harness 不拥有 quota state。max_iterations / max_replans / timeout 等只属于单次 Run 的 Execution Limits，不构成 Quota/Budget Domain。
 
-- V1 不做 Cost Accounting、Price Calculation、Chargeback、Showback 或 Billing Attribution。
-- 不维护模型价格表，不把 token / sandbox runtime / storage usage 换算为金额。
-- Observability 可保留 Runtime 原生 token / duration 等 telemetry，但这些只是诊断数据，不形成 Cost Domain。
-- 如果后续确有资源限额需求，只讨论 Quota / Budget Guardrail，例如并发、token、执行时长、资源上限；不得反向引入财务计费模型。
-
-范围（若后续需要）：
-
-- run / project / principal quota
-- max tokens / max iterations / max replans
-- execution concurrency
-- sandbox runtime / resource ceiling
-- budget enforcement semantics
-- exceeded behavior
-
-明确不在范围：
-
-- provider price table
-- currency / cost conversion
-- invoice reconciliation
-- chargeback / showback
-- financial attribution
+**产出：** [COST_QUOTA_OWNERSHIP_BOUNDARY.md](references/COST_QUOTA_OWNERSHIP_BOUNDARY.md)
 
 ---
 
