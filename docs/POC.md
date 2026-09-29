@@ -41,6 +41,16 @@ flowchart TB
 
 > 本轮不再把 Java Native / Java 原生支持作为评分或优先级因素。
 
+## 1.1 POC 架构前置状态
+
+当前 POC 以前序已冻结的 P0/P1 Contracts 为架构基线。
+
+P2 Backlog 整体标记为 **DEFERRED / NON-BLOCKING FOR POC**，不作为 POC 启动或完成的前置条件。
+
+只有当 POC 实测证明某个 P2 问题直接影响 correctness、recoverability、provider/runtime replaceability 或 production viability 时，才将对应条目重新提升为 active architecture blocker。
+
+当前优先级转为执行 POC、收集实测证据、验证 Framework/Provider public extension points 与既有 Contracts；不为了“架构完整”继续设计外围能力。
+
 # 2. 明确排除项
 
 **LangGraph / Deep Agents 不进入本轮 POC。**
