@@ -315,7 +315,7 @@ Local / Remote CubeSandbox 必须遵守统一 Execution Environment Contract。
 - Instruction 与 Data 必须分层，低信任内容不得自行升级为高信任指令。
 - Data Plane 只产生 Result / Evidence / Artifact / Event / Failure，不拥有 Run/Step 最终状态控制权。
 - Secret 默认不直接进入模型上下文；Network Access 属于 Capability / Policy 边界。
-- 单一 Sandbox / Agent Runtime / Tool Runtime 被攻破，不应天然获得 Control Plane 或全局 Tenant 权限。
+- 单一 Sandbox / Agent Runtime / Tool Runtime 被攻破，不应天然获得 Control Plane 或全局组织/其他项目权限。
 - 安全能力优先通过 Framework 公开扩展点映射；Framework 外能力放平台外围；需要侵入式修改 Framework 的能力不进入强制基线。
 
 详见：
@@ -353,6 +353,24 @@ Local / Remote CubeSandbox 必须遵守统一 Execution Environment Contract。
 详见：
 
 \`docs/references/EXECUTION_LEASE_FENCING_HEARTBEAT.md\`
+
+# 10.6 Identity / Authorization 边界
+
+必须遵守：
+
+- V1 以企业内部单组织信任域为基线，不为了未来 SaaS 可能性提前引入 Tenant 一等领域模型。
+- Authentication 由企业 IdP / IAM 负责，Harness 不自建账号、SSO、目录或完整 IAM。
+- 发起者（Initiator）身份与执行者（Executor / Service Principal）身份必须分离并可审计。
+- Run 固化 Initiator Identity，但敏感 Execution 必须按当前有效权限重新授权。
+- RBAC / ABAC / Group / Claim 只作为 Policy 输入，Harness 拥有 Authorization Decision，不复制企业 IAM。
+- 用户长期 Token / Secret 默认不得传播到 Agent、Model、Sandbox。
+- 外部访问优先通过 Credential Provider 获取短期、最小权限、资源范围明确的 Credential。
+- Approval 必须绑定真实 Principal / Resource / Action / Policy；Agent / Worker / Sandbox 不得自行伪造 Approval。
+- Repository 权限不得因 Project Manifest 存在而自动获得；通过 Policy + Provider Credential 组合授权。
+
+详见：
+
+docs/references/IDENTITY_AND_AUTHORIZATION_PROPAGATION.md
 
 # 11. POC 原则
 
