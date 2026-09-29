@@ -19,6 +19,7 @@
 11. [Coding Execution 容量模型与调度](EXECUTION_CAPACITY_AND_SCHEDULING.md)
 12. [Local / Remote Sandbox 环境一致性](ENVIRONMENT_CONSISTENCY.md)
 13. [CubeSandbox 作为本地 Agent Sandbox 的候选评估](CUBESANDBOX_ASSESSMENT.md)
+14. [Domain Model & State Contract](DOMAIN_MODEL_AND_STATE_CONTRACT.md)
 
 ## 使用原则
 
