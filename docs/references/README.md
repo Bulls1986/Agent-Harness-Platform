@@ -28,6 +28,7 @@
 20. [Registry 与版本冻结契约](REGISTRY_AND_VERSIONING.md)
 21. [MAF Python Durable 私有化部署约束](MAF_PYTHON_DURABLE_PRIVATE_DEPLOYMENT.md)
 22. [Execution Lease / Fencing / Heartbeat 契约](EXECUTION_LEASE_FENCING_HEARTBEAT.md)
+23. [Identity & Authorization Propagation 契约](IDENTITY_AND_AUTHORIZATION_PROPAGATION.md)
 
 ## 使用原则
 
