@@ -186,7 +186,7 @@ V1 只要求覆盖平台诊断所需的最小运行指标，例如：
 - Sandbox create / execute / crash / restore latency；
 - Recovery attempt / resume result / reconciliation count。
 
-具体 cost、quota、chargeback 语义由 ARCH-TODO-013 定义。
+token usage、duration 等仅作为诊断 telemetry；Cost / Quota / Billing 不属于 Harness 职责，详见 COST_QUOTA_OWNERSHIP_BOUNDARY.md。
 
 ## 10. Sampling
 
@@ -256,7 +256,7 @@ Collector、存储、Dashboard、Alerting、APM 后端属于部署/运维层。
 - 告警平台实现；
 - 具体 SLO / alert threshold；
 - Artifact / Evidence payload retention；
-- Cost / Quota / Chargeback domain；
+- Cost / Quota / Billing / Chargeback domain（明确属于 Harness 外部治理职责，详见 COST_QUOTA_OWNERSHIP_BOUNDARY.md）；
 - SIEM / Security Analytics；
 - 全量 Prompt / Response 内容采集；
 - Framework 内部私有 instrumentation。
@@ -272,4 +272,4 @@ Collector、存储、Dashboard、Alerting、APM 后端属于部署/运维层。
 7. Prompt / Response / Tool Payload / Repository Content 默认不进入普通 telemetry；敏感 telemetry 必须显式 Policy opt-in。
 8. Runtime 原生 telemetry 能观测到的能力尽量完整保留，不为了统一而丢弃；Provider-specific semantic conventions 留在 Adapter/telemetry boundary。
 9. Observability Backend 是外部部署能力，Harness 不自建 APM/日志/指标产品。
-10. Cost / Quota / Chargeback 由 ARCH-TODO-013 单独定义。
+10. Cost / Quota / Billing / Chargeback 不属于 Harness Platform 核心职责；Runtime 原生 usage 仅作为 telemetry，详见 COST_QUOTA_OWNERSHIP_BOUNDARY.md。
