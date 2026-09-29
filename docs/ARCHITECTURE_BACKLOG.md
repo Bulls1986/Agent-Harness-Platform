@@ -275,7 +275,11 @@ RecoveryPoint
 
 ## ARCH-TODO-006 Security Threat Model
 
-**状态：DISCUSSING**
+**状态：CLOSED**
+
+**Decision：** 已冻结轻量安全隔离模型：定义 Trust Boundary、默认不可信输入、Instruction/Data 分层、Control Plane/Data Plane 隔离与最小权限原则；MAF/Framework 能力仅通过公开扩展点映射，基础设施安全放平台外围；必须侵入式修改 Framework 才能获得的能力不进入平台强制基线。
+
+**产出：** [SECURITY_THREAT_MODEL.md](references/SECURITY_THREAT_MODEL.md)
 
 ### 问题
 
