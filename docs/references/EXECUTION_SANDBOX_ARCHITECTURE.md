@@ -20,8 +20,7 @@ Harness / Workflow
 ExecutionScheduler
       ↓
 SandboxProvider SPI
-      ├─ CubeSandboxProvider   ← 本地生产基线候选
-      ├─ E2BProvider           ← 远程 burst / 特殊资源
+      ├─ CubeSandboxProvider   ← 生产默认；可连接本地或远程 Cube 集群
       ├─ DockerProvider        ← 开发、兼容、fallback
       ├─ K8sProvider           ← 后续可选
       └─ HyperlightProvider    ← 小型不可信函数/WASM/CodeAct 类场景
@@ -146,17 +145,17 @@ execution_result:
 - 低网络延迟
 - 可与企业 IAM、Registry、Artifact、Secret 体系直接集成
 
-### Remote Sandbox
+### Remote CubeSandbox Cluster
 
 目标：
 
-- 本地容量不足时 burst
+- 本地 CubeSandbox 容量不足时 burst
 - 高 CPU / 高内存特殊规格
 - 临时大规模并发
 - 特殊隔离需求
 - 跨区域/临时环境
 
-因此 Remote Sandbox 不是默认路径，而是 Scheduler 的可用容量池之一。
+远程弹性仍使用 CubeSandbox，只是连接不同 cluster/endpoint。E2B 兼容能力只作为 SDK/API interoperability contract，不代表平台依赖 E2B Cloud。
 
 ## 6. Sandbox 生命周期
 
@@ -255,7 +254,7 @@ Sandbox 平台只决定“在哪台执行节点运行 Sandbox”，不拥有 Har
 - LocalShell：开发/显式低风险 fallback，不作为生产默认。
 - Docker/containerd：成熟、兼容性高，保留为开发/fallback Provider。
 - Hyperlight：专用轻量不可信代码执行，不作为完整 Coding Sandbox。
-- E2B Cloud：适合远程弹性/burst。
-- CubeSandbox：进入本地生产 Sandbox 第一候选 POC。
+- CubeSandbox：进入生产默认 Sandbox 第一候选 POC；本地与远程弹性均使用 CubeSandbox cluster。
+- E2B：只保留兼容 API/SDK 语义，不作为独立 Sandbox Provider 或生产依赖。
 
 最终生产默认 Provider 必须经过容量、隔离、稳定性、升级与恢复 POC 后确定。
