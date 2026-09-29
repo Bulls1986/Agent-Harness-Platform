@@ -4,7 +4,7 @@
 
 ## 1. 为什么需要独立协议层
 
-UI 不应该直接理解某个具体 Runtime 的事件，例如 Agents SDK、Codex、MAF、ADK、E2B 等。
+UI 不应该直接理解某个具体 Runtime / Sandbox 的事件，例如 Agents SDK、Codex、MAF、ADK、CubeSandbox 等。
 
 建议：
 
