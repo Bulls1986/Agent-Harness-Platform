@@ -488,123 +488,13 @@ Harness 仍负责具体 Execution 的 Capability / Policy / Approval / Credentia
 
 ## ARCH-TODO-016 Cancellation / Timeout Propagation
 
-**状态：DISCUSSING**
+**状态：CLOSED**
 
-范围：
+**Decision：** Cancel Request 不等于 CANCELLED；活动执行先进入 CANCELLING，沿 Run → Step/Attempt → Execution → Runtime/Tool/MCP/Sandbox Adapter 传播。优先 graceful cancellation，Provider 支持时可在 grace period 后 force terminate。ACKNOWLEDGED 只表示收到信号，TERMINATED 才能证明停止。Timeout 是 Failure Type，不是取消终态；已经 dispatch 的非 PURE Execution 若结果未知，必须 UNKNOWN → Reconciliation。Cancellation 不做隐式 rollback，也不删除 Workspace/Artifact/Evidence/SideEffect 历史。Provider 不支持 cancel 时显式降级，不 fork/patch。
 
-~~~text
-UI Cancel
-→ Run Cancel
-→ Step Cancel
-→ Agent Cancel
-→ Tool Cancel
-→ Sandbox Command Cancel
-→ subprocess kill
-~~~
+**产出：** [CANCELLATION_TIMEOUT_PROPAGATION.md](references/CANCELLATION_TIMEOUT_PROPAGATION.md)
 
-需要定义 graceful / force kill、timeout 层级、cleanup 与最终状态。
-
-### 当前讨论边界
-
-- Cancel 与 Timeout 都是 Harness 执行控制信号，但语义不同：Cancel 来自显式撤销意图，Timeout 来自 Execution Limits / deadline 到期。
-- Propagation 只沿 Harness 已知 ownership / invocation 链传播，不建设通用分布式进程管理系统。
-- 优先 graceful cancellation；超过 grace period 后，可由 Adapter/Provider 执行 force termination。
-- Harness 只能保证“不再发起新的平台控制执行”；对已经 dispatch 到外部系统的副作用，Cancel/Timeout 不能证明其未发生。
-- 非 PURE Execution 在 Cancel/Timeout 时若结果未知，必须进入 UNKNOWN → Reconciliation，而不是直接标记 CANCELLED/FAILED。
-- Runtime/Tool/Sandbox 若有公开 cancel/abort API，Adapter 优先使用；不支持则显式降级，不 fork/patch Framework。
-- WAITING_INPUT / WAITING_APPROVAL 等未在执行副作用的等待状态可直接取消并收口。
-- Cancel/Timeout 最终状态必须由 Control Plane 依据实际终止结果决定，Data Plane 只返回 termination result / evidence。
-
-### 需要定义
-
-- Run / Step / Attempt / Execution 的 cancel propagation
-- user cancel vs deadline/timeout
-- graceful cancel vs force terminate
-- grace period 与 escalation
-- cancellation acknowledgement
-- already-dispatched side effect handling
-- WAITING state cancellation
-- cleanup 与 resource release
-- provider/runtime unsupported behavior
-
-### 明确不在范围
-
-- Kubernetes / OS 通用进程管理产品
-- Runtime 内部 worker cancellation protocol 的重新实现
-- Sandbox Provider 内部节点调度/kill 机制
-- 外部系统 transaction rollback engine
-
-### 当前建议语义
-
-#### 1. Cancel Request ≠ CANCELLED
-
-显式取消先进入中间控制状态：
-
-~~~text
-RUNNING
-→ CANCELLING
-→ propagate cancel
-→ confirm termination / reconcile
-→ CANCELLED | UNKNOWN | FAILED
-~~~
-
-`CANCELLED` 只能表示平台已经能够确认该执行不再继续，且不存在尚未处理的未知副作用。
-
-#### 2. Timeout 不是 Cancel
-
-Timeout 是 Execution Limit / deadline 触发的停止原因，不是新的 terminal state：
-
-~~~text
-not dispatched / safely stopped
-→ FAILED + TIMEOUT
-
-possibly dispatched side effect
-→ UNKNOWN + TIMEOUT_AFTER_DISPATCH
-→ Reconciliation
-~~~
-
-#### 3. Propagation Chain
-
-~~~text
-Run Cancel
-→ current Step / Attempt
-→ active Execution
-→ Runtime / Tool / MCP / Sandbox Adapter
-→ underlying public cancel/abort API
-~~~
-
-只传播到 Harness 已知的活动执行链。已经 terminal 的节点不重新打开；尚未开始的 pending work 不再 dispatch。
-
-#### 4. Graceful First, Force When Supported
-
-取消优先 cooperative/graceful；超过 grace period 后可由对应 Provider 做 force terminate。
-
-Harness 只要求 Adapter 返回真实 capability/result，例如 graceful_cancel / force_terminate / unsupported，不重新实现 Runtime/Sandbox 内部 kill 机制。
-
-#### 5. Cancellation Acknowledgement
-
-Adapter 至少要能返回：
-
-~~~text
-ACKNOWLEDGED
-TERMINATED
-UNSUPPORTED
-UNKNOWN
-~~~
-
-`ACKNOWLEDGED` 仅表示已收到取消信号，不等于已经停止。
-
-#### 6. Waiting State
-
-WAITING_INPUT / WAITING_APPROVAL 尚未 dispatch 新副作用时，可以直接撤销等待并终止原 Run，不需要创建新 Run。
-
-#### 7. Cleanup
-
-取消后的 workspace/artifact/evidence 不做隐式回滚或删除。Sandbox/process 临时资源可以释放；已经产生的任务事实与 Evidence 继续保留。
-
-#### 8. MAF Mapping
-
-MAF 原生 cancellation/public API 优先直接使用。MAF 的 cooperative cancellation 或 MCP best-effort cancel 只能作为 termination signal，不能推导“副作用一定未发生”；同步 Tool 已经执行时仍可能完成，因此仍需服从 SideEffect / UNKNOWN / Reconciliation 契约。
+---
 
 # 4. P2：明确延后但需要保留
 
