@@ -161,6 +161,25 @@ MAF Python POC 必须至少验证：
 - 不把 DTS Emulator 的本地可运行性误判为 production self-host 能力。
 - Duroxide / Temporal 属于其他 Durable Runtime，不是简单替换 TaskHub connection string。
 
+## 7.1 Task Recovery Mapping
+
+MAF Durable 的任务恢复遵守平台 Task Recovery Contract：
+
+~~~text
+Platform Run / Attempt
+→ RuntimeBinding
+→ native durable instance / checkpoint reference
+→ Durable backend
+~~~
+
+- Harness 只保存 binding / reference，不复制 Durable Task history。
+- Durable backend 中实例可恢复时，可以映射为 Same Run + Same Step + Same Attempt Resume。
+- Durable instance/checkpoint 不可用时，平台只能按自身持久化事实降级到安全 Step Boundary，或进入 Reconciliation / Fail。
+- Harness 不为了提高恢复等级而实现第二套 Durable Scheduler、replay engine 或 checkpoint store。
+- SQL Server / Durable backend 的物理 Backup/DR 属于基础设施责任，不属于 Harness Task Recovery。
+
+详见：TASK_RECOVERY_COVERAGE_AND_SEMANTICS.md。
+
 ## 8. 复核要求
 
 该领域演进较快。
