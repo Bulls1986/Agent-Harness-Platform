@@ -211,7 +211,7 @@ Control Plane 负责：
 
 - Run / Plan / Step 状态机
 - Retry / Replan / Abort / Complete
-- Policy / Approval / Budget
+- Policy / Approval
 - Recovery / Checkpoint
 - 调度决策
 
@@ -423,6 +423,21 @@ docs/references/ARTIFACT_EVIDENCE_LOG_RETENTION.md
 详见：
 
 docs/references/OBSERVABILITY_CONTRACT.md
+
+# 10.10 Cost / Quota Ownership 边界
+
+必须遵守：
+
+- Cost、Quota、Billing、Chargeback、Showback 与资源额度账户不属于 Harness Platform 核心职责。
+- Harness 不维护模型价格表、余额、额度账户、账本、订阅套餐或财务归属。
+- Runtime 原生 token / duration / resource usage 可以作为 Observability telemetry，但不得因此形成 Cost Domain。
+- 外部 Portal / Governance 系统可以做 entitlement / quota decision；Harness 只通过 Policy / Admission boundary 消费允许/拒绝结果，不拥有 quota state。
+- max_iterations / max_replans / timeout / max_runtime 等属于 Execution Limits，只用于单次 Run 的运行安全，不属于 Quota/Budget。
+- 未来若要建设正式计费或额度产品，必须独立立项，不得从 Harness Domain 隐式扩张。
+
+详见：
+
+docs/references/COST_QUOTA_OWNERSHIP_BOUNDARY.md
 
 # 11. POC 原则
 
