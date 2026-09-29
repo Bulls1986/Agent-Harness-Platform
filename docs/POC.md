@@ -454,6 +454,21 @@ Lease TTL、heartbeat interval 和 grace period 由 POC 实测确定，不作为
 
 MAF Durable POC 若宣称 Same Attempt Resume，必须用真实 Durable backend 证明；普通 MAF 或其他 Runtime 若只能做到 Step Boundary Recovery，应明确记录该 Capability 差异。
 
+## 16.13 Artifact / Evidence Retention POC Gate
+
+至少验证：
+
+1. **Payload Offload**：生成文件、测试报告、截图、大 Evidence 等 Payload 可写入 OSS / Object Storage，平台数据库只保存 metadata / lineage / digest / storage reference。
+2. **Provider Neutrality**：替换一种 Object Storage Provider 不修改 Artifact / Evidence 领域模型。
+3. **Raw Log Promotion**：完整 stdout/stderr 可按短期策略保存；被 Verification 使用的关键内容能够独立提升为 Evidence。
+4. **Recovery Pin**：Run 仍可恢复时，其 RecoveryPoint 依赖的 Evidence / Workspace State / Snapshot reference 不会被 GC。
+5. **Payload Purge Tombstone**：清理 Object Storage Payload 后，数据库中仍可查询 artifact/evidence identity、content digest、lineage、verification relationship 与 purged_at。
+6. **Dedup Without Lineage Merge**：两个逻辑 Artifact/Evidence 可以引用同一 digest/object，但仍保留各自独立 run/execution lineage。
+7. **Retention Policy Externalization**：Retention 周期可通过 Policy/配置调整，不要求修改 Harness Kernel 代码。
+8. **No Storage Product Reimplementation**：Harness 不实现 OSS 副本、生命周期、Backup/DR 等底层对象存储机制。
+
+该 Gate 验证的是任务数据生命周期语义，不验证完整日志平台、SIEM、Legal Hold/eDiscovery 或对象存储产品能力。
+
 # 17. POC 完成定义（DoD）
 
 - 12 个统一框架场景全部有 PASS/FAIL/Gap 结论。
