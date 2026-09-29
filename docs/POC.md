@@ -216,6 +216,9 @@ Temporal 不提供 Agent Harness，而提供 Durable Execution。该路线验证
 | Verifier fail      | 固定测试失败         | 进入 RETRY/REPLAN              | Agent 自称成功并完成       |
 | UI disconnect      | 断开 SSE 后重连      | sequence replay                | 看不到历史活动             |
 | Approval wait      | 暂停后重启服务       | 仍保持 WAITING_APPROVAL        | 审批请求消失               |
+| Unknown side effect | 模拟 git push/外部写操作已发出但响应丢失 | Attempt 进入 UNKNOWN → Reconciliation，核验后再决策 | UNKNOWN 直接 blind retry |
+| Duplicate delivery | 重复投递同一 execution/idempotency key | 幂等/去重生效，不产生重复副作用 | 重复创建资源/重复 push |
+| Worker resurrection | 旧 Worker 在 Retry/迁移后恢复 | 旧执行被 fencing/ownership 机制拒绝；具体实现由后续待办验证 | 两个 Worker 同时产生副作用 |
 
 # 12. 评分与决策规则
 
