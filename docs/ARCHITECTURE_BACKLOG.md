@@ -428,7 +428,7 @@ Fail / Wait Human
 
 ## ARCH-TODO-012 Observability Contract
 
-**状态：TODO**
+**状态：DISCUSSING**
 
 范围：
 
