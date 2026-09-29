@@ -33,11 +33,13 @@ flowchart TB
 
 # 1. POC 范围与候选
 
-| **方案**         | **主要验证对象**                              | **运行语言**               | **核心问题**                                                        |
-|------------------|-----------------------------------------------|----------------------------|---------------------------------------------------------------------|
-| POC-A MAF        | HarnessAgent + Workflow + Self-host           | Python（优先）/ C# 可补测  | 一体化框架能否在不依赖 Foundry 的情况下满足 Harness + Workflow      |
-| POC-B Google ADK | ADK Java + Session/Event/A2A                  | Java 17+                   | Java 原生 Agent Runtime 是否足够开放、可部署、可接企业平台          |
-| POC-C Temporal   | Temporal Java Control Plane + Runtime Adapter | Java + 可替换 Agent Worker | Control Plane 与 Agent Runtime 完全解耦是否更稳、更适合企业长期建设 |
+| **方案**         | **主要验证对象**                              | **核心问题**                                                        | **当前优先级** |
+|------------------|-----------------------------------------------|---------------------------------------------------------------------|---------------|
+| POC-A MAF        | HarnessAgent + Workflow + Self-host           | 一体化框架能否在不依赖 Foundry 的情况下覆盖大部分 Harness，并通过公开扩展点补齐企业能力 | 1 |
+| POC-C Temporal   | Durable Control Plane + Runtime Adapter       | Control Plane 与 Agent Runtime 完全解耦是否更稳、更适合企业长期建设 | 2 |
+| POC-B Google ADK | Agent + Session/Event/A2A                     | 不依赖 Java 原生加分后，ADK 的 Runtime/Event/A2A 能力是否仍具有足够差异化价值 | 3 |
+
+> 本轮不再把 Java Native / Java 原生支持作为评分或优先级因素。
 
 # 2. 明确排除项
 
@@ -117,24 +119,27 @@ MAF 的价值在于 HarnessAgent、Workflow、Self-host、Responses/A2A/AG-UI �
 
 1. HarnessAgent 是否能稳定维护 plan/todo，并在多轮 session 中保持状态。
 2. Workflow 是否能承担 Verify/Replan 的确定性状态迁移，而不是把控制权全部给 Harness。
-3. SessionStore/HistoryProvider 是否可完全使用自有数据库。
-4. Self-host 模式下是否无需 Foundry 即可完成 Responses/AG-UI/A2A 接入。
-5. Durable Extension 的 self-host / BYOC 路线需要哪些 Durable Task 基础设施，运维成本多少。
-6. Python hosting/durable 相关包的 prerelease/stability 风险是否可接受。
+3. Memory/Context 分层是否清晰：Session、Working Memory、Long-Term Memory、ContextProvider、Compaction 是否可以独立替换和持久化。
+4. SessionStore/HistoryProvider 是否可完全使用自有数据库。
+5. Self-host 模式下是否无需 Foundry 即可完成 Responses/AG-UI/A2A 接入。
+6. Durable Extension 的 self-host / BYOC 路线需要哪些 Durable Task 基础设施，运维成本多少。
+7. Python hosting/durable 相关包的 prerelease/stability 风险是否可接受。
+8. 至少实现 Custom ContextProvider、SessionStore、CheckpointStorage、ChatClient、Workflow Executor、Middleware、Sandbox Adapter。
+9. 所有企业补齐能力是否都能仅依赖 public extension points 完成，不 fork、不 monkey patch、不复制大量内部代码。
 
 ## 7.4 MAF 退出条件
 
 若核心 Durable、Session、协议或 Harness 生产能力必须依赖 Foundry；或自托管 Durable Task 的运维/许可成本与自建 Control Plane 相当，则 MAF 降级为 Data Plane/Harness Runtime，而不作为平台 Control Plane。
 
-# 8. POC-B：Google ADK Java
+# 8. POC-B：Google ADK
 
 ## 8.1 验证假设
 
-ADK 的最大差异点是 Java 原生支持。官方 Java Quickstart 当前要求 Java 17+、Maven 3.9+；ADK Java 已达到 1.x，并提供 Agent、Session、Tool、Streaming 等能力。POC 重点验证是否能够在不依赖 Google Agent Runtime 的情况下，作为企业现有 Java 体系内的 Agent Runtime。[R4][R5]
+ADK 的重点不再是 Java 原生优势，而是 Agent、Runner、Session、Event、A2A、Tool、Streaming 与部署独立性。POC 重点验证：在不依赖 Google Agent Runtime / GCP 特有托管能力的情况下，ADK 是否仍值得作为通用 Agent Runtime / Orchestration 组件。[R4][R5]
 
 ## 8.2 建议拓扑
 
-- Java 17+ / Maven，独立 Spring Boot 或标准 Java Service。
+- 使用 ADK 当前主力语言实现即可，不把语言作为评分因素。
 - ADK Agent + Session/Event 模型；由平台侧生成 run_id/turn_id。
 - A2A / ADK SSE 作为框架边界，外部再转换为统一 Conversation Protocol。
 - 代码执行优先 ContainerCodeExecutor / Docker，不使用 Vertex Agent Runtime 作为通过条件。
@@ -143,7 +148,7 @@ ADK 的最大差异点是 Java 原生支持。官方 Java Quickstart 当前要�
 
 ## 8.3 必测项
 
-1. Java API 的 Agent/Runner/Session/Event 完整性与线程/并发模型。
+1. Agent/Runner/Session/Event 完整性、生命周期和并发模型。
 2. Sequential/Parallel/Loop 等编排能否表达 Plan/Execute/Verify/Replan，还是需要外置状态机。
 3. Session、Artifact、Event 是否可替换为企业自有存储。
 4. A2A、SSE、MCP/Tool 与企业 Gateway 的协议适配成本。
@@ -152,7 +157,7 @@ ADK 的最大差异点是 Java 原生支持。官方 Java Quickstart 当前要�
 
 ## 8.4 ADK 退出条件
 
-若关键 Session/Artifact/Sandbox/Observability 只能在 Google 托管能力中获得，或非 Gemini / 非 GCP 环境下适配成本明显高于收益，则 ADK 保留为 Java Agent Runtime，而不承担平台统一 Control Plane。
+若关键 Session/Artifact/Sandbox/Observability 只能在 Google 托管能力中获得，或非 Gemini / 非 GCP 环境下适配成本明显高于收益，则 ADK 仅保留为备选 Agent Runtime，而不承担平台统一 Control Plane。
 
 # 9. POC-C：Temporal + 可替换 Agent Runtime
 
@@ -220,8 +225,8 @@ Temporal 不提供 Agent Harness，而提供 Durable Execution。该路线验证
 |------------------------|--------------|--------------------------------------|
 | 部署独立性/生产断层    | 25%          | 无 Managed Platform 情况下的真实部署 |
 | 恢复与可靠性           | 20%          | 故障注入结果                         |
-| 企业 Java/现有体系适配 | 15%          | 集成改动量/运行边界                  |
-| Harness/开发效率       | 15%          | 核心流程实现复杂度                   |
+| Harness 原生覆盖率     | 15%          | Plan/Context/Memory/Workflow/HITL 等直接覆盖 |
+| 扩展稳定性             | 15%          | Public API 补齐能力；是否需要 fork/patch |
 | 协议与可替换性         | 10%          | Provider/Sandbox/UI Adapter 替换     |
 | 运维复杂度             | 10%          | 组件/依赖/升级/监控                  |
 | 生态与成熟度           | 5%           | 版本、文档、社区、长期风险           |
@@ -238,12 +243,24 @@ Temporal 不提供 Agent Harness，而提供 Durable Execution。该路线验证
 # 14. 建议实施顺序
 
 1. 先定义统一 Run/Plan/Step/Event/Artifact 数据结构和 POC Demo Task，避免三组各自发挥。
-2. POC-B ADK Java 先跑通，快速确认 Java-native 路线的能力上限。
-3. POC-A MAF 验证 Harness/Workflow 一体化能减少多少自研工作。
-4. POC-C Temporal 最后验证可靠性与 Control/Data Plane 分离，使用前两组积累的统一 Adapter 契约。
+2. **POC-A MAF 第一优先**：验证约 80% 原生覆盖是否成立，以及剩余企业能力能否只通过 public extension points 补齐。
+3. **POC-C Temporal 第二优先**：验证更纯粹的 Durable Control Plane 是否值得增加组合与运维复杂度。
+4. **POC-B ADK 第三优先**：在不计 Java-native 优势的前提下，验证其 Runtime/Event/A2A 的独立价值。
 5. 所有 POC 完成后再决定最终组合，不在过程中因某个 Demo “看起来更快”提前定框架。
 
-# 15. POC 完成定义（DoD）
+# 15. POC 前匹配度基线
+
+以下为架构映射估算，不是实测：
+
+| 方案 | 原生覆盖率 | 架构适配率 | 说明 |
+|---|---:|---:|---|
+| MAF | ~80% | ~89% | 当前完成度最高的一体化方案 |
+| Temporal + Runtime | ~72% | ~92% | 架构边界最纯粹，但组合/运维复杂度更高 |
+| Google ADK | ~68% | ~75% | Runtime 基础较好，Harness/Durable 仍需补 |
+
+> 按 ±5 个百分点理解。POC 结束后必须用实测替换该表。
+
+# 16. POC 完成定义（DoD）
 
 - 12 个统一场景全部有 PASS/FAIL/Gap 结论。
 - 6 个故障注入场景均有可重复证据。
