@@ -313,7 +313,7 @@ Agent 不拥有 Worktree。Worktree 属于 Repository Workspace。
 
 其中 force push 默认禁止，除非明确 Policy 授权。
 
-Git Credential 不进入模型上下文，应由 Secret / Credential Provider 临时注入。
+Git Credential 不进入模型上下文；Harness 通过 Credential Provider Adapter 对接外部企业 Credential / Secret Infrastructure 或 Repository Provider，按当前 Execution 临时注入 scoped credential，不拥有 credential lifecycle。
 
 ## 13. 集成路径
 
