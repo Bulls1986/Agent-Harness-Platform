@@ -391,7 +391,7 @@ E2E / Integration Environment 不在本 Gate 验证，单独按 ARCH-TODO-023 �
 3. **Control/Data Plane Boundary**：Sandbox/Agent Runtime 返回的自声明结果不能直接修改 Run/Step 最终状态。
 4. **Public Extension Point Only**：MAF 等 Runtime 的安全接入只能使用公开 Middleware / Hook / Provider / Approval / Adapter 等扩展点，不 fork、不 monkey patch。
 5. **Infrastructure Separation**：Sandbox、Network、Secret 等安全能力可以由外围 Provider 承担，无需修改 Agent Framework 内核。
-6. **Bounded Blast Radius**：单个 Sandbox / Runtime / Tool 被攻破时，不应自然获得 Control Plane 或其他 Tenant/Project 的全局权限。
+6. **Bounded Blast Radius**：单个 Sandbox / Runtime / Tool 被攻破时，不应自然获得 Control Plane 或其他 Project/Resource 的全局权限。
 
 该 Gate 只验证隔离边界是否成立，不在本阶段实现完整 IAM、DLP、MCP Trust 或 Supply Chain Security。
 
@@ -421,6 +421,22 @@ E2E / Integration Environment 不在本 Gate 验证，单独按 ARCH-TODO-023 �
 7. **Existing Store First**：POC 优先证明现有权威持久化层可以通过原子 claim / CAS 支撑 V1，不预先引入独立分布式锁服务。
 
 Lease TTL、heartbeat interval 和 grace period 由 POC 实测确定，不作为预先冻结的生产常量。
+
+## 16.11 Identity & Authorization Propagation POC Gate
+
+至少验证：
+
+1. **External Authentication**：平台可以消费企业 IdP / IAM 的认证结果，不要求自建账号或 SSO。
+2. **Initiator Attribution**：Run 能永久关联真实 Initiator Principal，Worker 代执行不会覆盖发起者身份。
+3. **Executor Separation**：Execution 能记录实际 Executor / Service Principal，并与 Initiator 区分。
+4. **Authorization Re-evaluation**：Run 创建后撤销用户/项目权限，后续敏感 Execution 必须重新评估并被 DENY 或 REQUIRE_APPROVAL。
+5. **No User Token Leakage**：用户长期登录 Token / Refresh Token 不进入 Model Context、Agent Prompt、Sandbox、Artifact 或普通 Tool 日志。
+6. **Scoped Credential**：外部 Git/API 等执行通过 Credential Provider 获得短期、最小权限、资源范围明确的 Credential。
+7. **Approval Attribution**：Approval 记录真实 approver、resource、action、policy version；Agent / Worker 不能伪造人工审批。
+8. **Repository Authorization**：Project Manifest 不自动授予 Repository 权限；无 repo write 权限时 git.push 必须失败在 Policy / Provider 权限边界。
+9. **Single-Organization Baseline**：V1 核心链路不依赖 tenant_id，也不要求实现 Multi-Tenant partition。
+
+该 Gate 不验证 SCIM、完整 Role Management UI、DLP、跨组织管理或自建 Secret Manager 产品。
 
 # 17. POC 完成定义（DoD）
 
