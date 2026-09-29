@@ -338,6 +338,22 @@ Local / Remote CubeSandbox 必须遵守统一 Execution Environment Contract。
 
 `docs/references/REGISTRY_AND_VERSIONING.md`
 
+# 10.5 Execution Ownership 边界
+
+必须遵守：
+
+- Lease / Fencing 只治理平台自有 ExecutionScheduler → Executor 边界，不接管 Framework / Durable Engine / Sandbox Infrastructure 内部 Worker ownership。
+- Lease 表示当前 Execution 执行资格；Heartbeat 只负责活性与续租。
+- Fencing Token 随 ownership epoch 单调递增，旧 token 永久失效。
+- stale Worker 不得更新 Execution、提交最终结果或申请新的平台控制副作用。
+- RUNNING Execution 丢失 Lease 后不得 blind handoff；结果不确定必须进入 UNKNOWN → Reconciliation。
+- Fencing 不能替代 idempotency、Side Effect Contract 或 Reconciliation。
+- V1 优先使用已有权威状态存储实现原子 claim / renew / fencing，不新增独立分布式锁基础设施。
+
+详见：
+
+\`docs/references/EXECUTION_LEASE_FENCING_HEARTBEAT.md\`
+
 # 11. POC 原则
 
 POC 必须：
