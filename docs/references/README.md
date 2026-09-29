@@ -22,6 +22,7 @@
 14. [Domain Model & State Contract](DOMAIN_MODEL_AND_STATE_CONTRACT.md)
 15. [失败、幂等与副作用契约](FAILURE_IDEMPOTENCY_AND_RECOVERY.md)
 16. [工作空间、仓库与 Git 契约](WORKSPACE_AND_GIT_MODEL.md)
+17. [运行时拓扑与参与者模型](RUNTIME_TOPOLOGY.md)
 
 ## 使用原则
 
