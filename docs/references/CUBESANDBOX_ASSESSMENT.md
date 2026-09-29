@@ -62,15 +62,9 @@ CubeAPI → CubeMaster → Cubelet → CubeShim/Hypervisor → MicroVM
 
 ## 4. 对当前方案的影响
 
-原讨论路线：
+此前讨论曾考虑“本地容器 + 外部云 Sandbox”的双 Provider 方式。当前收敛为统一 CubeSandbox Provider：
 
-~~~text
-Local Docker
-+
-E2B Cloud
-~~~
 
-调整为优先 POC：
 
 ~~~text
 Local CubeSandbox
