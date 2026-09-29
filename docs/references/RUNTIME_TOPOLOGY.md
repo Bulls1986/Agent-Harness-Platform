@@ -182,7 +182,7 @@ Runtime Topology 主要服务：
 
 例如 Run Cancel 时，可依据参与者关系找到仍存活的 Agent / Subagent / Executor / Sandbox。
 
-具体取消传播语义由 ARCH-TODO-016 继续讨论。
+具体取消传播语义已由 CANCELLATION_TIMEOUT_PROPAGATION.md 冻结。Topology 只用于定位仍活跃的 Participant / relation，不拥有 CANCELLING/CANCELLED 业务状态机。
 
 ### 9.2 故障定位
 
@@ -233,7 +233,7 @@ ARCH-TODO-004 不负责：
 - Service discovery
 - 分布式一致性
 - 自动负载均衡
-- 取消传播实现
+- 取消传播状态机实现（由 CANCELLATION_TIMEOUT_PROPAGATION.md 定义）
 - Retention Policy
 - 部署拓扑
 - E2E Environment
