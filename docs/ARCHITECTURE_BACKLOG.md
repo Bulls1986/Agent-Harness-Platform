@@ -370,18 +370,23 @@ Threat
 
 ---
 
-## ARCH-TODO-009 Multi-Tenant Identity & Authorization Propagation
+## ARCH-TODO-009 Identity & Authorization Propagation
 
 **状态：DISCUSSING**
+
+背景：
+
+- 当前目标是企业内部 Agent Harness Platform，V1 以单组织信任域为基线。
+- 不为了未来可能的 SaaS / 多租户场景提前引入 Tenant 一等领域模型。
+- 若未来确实出现多组织隔离需求，再通过独立架构决策引入 Tenant / Organization Partition。
 
 范围：
 
 ~~~text
-User
-→ Tenant
+User / Service Principal
 → Run
-→ Agent
-→ Tool/MCP
+→ Agent / Executor
+→ Tool / MCP
 → Sandbox
 → External Service
 ~~~
@@ -389,13 +394,21 @@ User
 需要定义：
 
 - identity propagation
+- initiator identity vs executor/service identity
 - RBAC / ABAC / Policy
-- service identity
 - delegated credential
 - secret scope
 - approval authority
-- tenant isolation
 - project/repository authorization
+- credential issuance / least privilege
+- audit attribution
+
+当前边界：
+
+- Authentication 由企业现有 IdP / IAM 负责，Harness 不自建账号认证体系。
+- V1 不要求 Tenant 模型；资源隔离优先以 User / Project / Repository / Environment / Policy Scope 表达。
+- 不把用户长期登录 Token 直接传播到 Agent / Model / Sandbox。
+- 若未来需要多租户，必须单独讨论 Tenant isolation、data partition、quota、cross-tenant admin 等问题，不在本待办提前实现。
 
 ---
 
