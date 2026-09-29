@@ -330,7 +330,11 @@ Threat
 
 ## ARCH-TODO-007 Registry & Versioning
 
-**状态：DISCUSSING**
+**状态：CLOSED**
+
+**Decision：** V1 不建设统一 Registry 服务，只冻结版本目录与 Run 版本锁定语义：组件有可识别版本；Run 创建时解析为确定版本并冻结；latest 仅用于解析前配置；运行中的 Run 不热升级；Capability 在 Run 开始前匹配，不支持即拒绝，不通过侵入式修改 Framework 补齐。
+
+**产出：** [REGISTRY_AND_VERSIONING.md](references/REGISTRY_AND_VERSIONING.md)
 
 范围：
 
