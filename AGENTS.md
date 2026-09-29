@@ -406,6 +406,24 @@ docs/references/TASK_RECOVERY_COVERAGE_AND_SEMANTICS.md
 
 docs/references/ARTIFACT_EVIDENCE_LOG_RETENTION.md
 
+# 10.9 Observability 边界
+
+必须遵守：
+
+- Event、Trace/Span、Log、Metric 严格分离；Observability signals 不得成为 Run/Step 最终业务状态事实源。
+- Runtime / Framework 原生 OpenTelemetry instrumentation 优先复用；Harness 只补平台自有边界与统一 correlation。
+- Run : Trace = 1:N；跨 Trace 使用 harness.run.id 关联，不强制长任务维持单一 trace_id。
+- Trace / Log 在适用时关联 run_id / step_id / attempt_id / execution_id / participant_id；Provider 原生 ID 只作为 metadata。
+- run_id / execution_id / user_id 等高基数值不得作为默认 Metric label。
+- 普通成功 Trace/Log 可采样；ERROR / UNKNOWN / Recovery / Reconciliation / Approval / Verification Failure 等关键诊断路径优先保留；Business Event 不受 sampling 影响。
+- Prompt / Response / Tool Payload / Repository Content 默认不进入普通 telemetry；敏感 telemetry 必须显式 Policy opt-in。
+- Runtime 原生能观测到的 telemetry 尽量保留，不为了表面统一而丢弃；Provider-specific semantic conventions 留在 Adapter/telemetry boundary。
+- Harness 不自建 Prometheus / Grafana / Loki / APM / Alerting 产品。
+
+详见：
+
+docs/references/OBSERVABILITY_CONTRACT.md
+
 # 11. POC 原则
 
 POC 必须：
