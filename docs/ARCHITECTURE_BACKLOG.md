@@ -394,17 +394,32 @@ Threat
 
 范围：
 
-- Control Plane HA
-- PostgreSQL / Event Store backup
-- Object Storage durability
-- CubeSandbox control/data plane failure
-- Redis loss/rebuild
-- RPO / RTO
-- region / cluster failure
-- disaster recovery drill
-- restore ordering
+- Control Plane / Scheduler / Worker 进程级 HA
+- Runtime / Checkpoint / RecoveryPoint 恢复边界
+- CubeSandbox control/data plane failure 的平台侧响应
+- Redis / Cache / Derived State 丢失后的可重建性
+- platform-owned authoritative state 与 rebuildable / ephemeral state 分类
+- cluster / runtime service failure 后的恢复顺序
+- RPO / RTO 作为部署/SLA要求的接口边界，而非平台内置备份实现
+
+明确不在范围：
+
+- PostgreSQL / MSSQL / Object Storage 的物理备份、复制、主从、快照、磁盘容灾
+- Persistent Volume / StorageClass / RAID / SAN / 云盘层面的可靠性
+- 数据库产品自身 HA / Backup / DR 方案设计
+- 跨 Region Active-Active 数据库架构
+
+这些属于企业基础设施 / Storage Platform 责任。Harness 只声明恢复依赖与失败后的系统语义，不重复建设底层存储保护能力。
 
 ---
+
+
+### 当前讨论结论
+
+- Checkpoint / Durable Backend 是 Runtime/Worker 故障后的主要恢复机制。
+- RecoveryPoint 只保存平台侧恢复引用，不复制底层 Runtime checkpoint 内容。
+- 若底层状态后端整体数据丢失，是否可恢复取决于企业基础设施是否提供该后端的备份/复制能力；Harness 不对此实现第二套备份机制。
+- 对 V1 而言，ARCH-TODO-010 的核心不是 Backup 产品设计，而是“哪些状态是权威的、哪些可以重建、进程/组件故障后如何安全恢复”。
 
 ## ARCH-TODO-011 Artifact / Evidence / Log Retention
 
