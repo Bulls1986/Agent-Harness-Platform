@@ -620,6 +620,8 @@ UI Cancel
 
 # 6. Backlog 管理规则
 
+0. 每个待办开始讨论前，先判断它是否真正属于 Harness Platform：若只是 Harness 的外部依赖、企业治理或基础设施能力，优先关闭为 Ownership Boundary，只定义消费接口/元数据，不在 Harness 内设计完整产品。
+
 1. 每次只选择少量关联项深入讨论，避免把讨论扩散成一次性大设计。
 2. 讨论过程中允许记录 Options，但在 Decision 前不得更新正式 ADR 为 Accepted。
 3. 形成结论后：
