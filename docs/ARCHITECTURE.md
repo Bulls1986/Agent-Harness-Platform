@@ -122,6 +122,37 @@ flowchart LR
 | Verification              | 根据 Acceptance Criteria / Gate 做确定性或智能验收。 |
 | Event Store / UI          | 所有状态变化形成事件并可重放到 UI。                  |
 
+## 4.1 V1 Domain Model Contract
+
+平台 V1 领域关系冻结为：
+
+~~~text
+Conversation
+  └─ Turn [1..N]
+       └─ Run [1..N]
+            ├─ Plan [v1..N]
+            │    └─ Step [1..N]
+            │         └─ Attempt [1..N]
+            ├─ RecoveryPoint [0..N]
+            ├─ Artifact / Evidence
+            └─ Terminal Result
+~~~
+
+核心规则：
+
+- Conversation 是长期用户会话；Turn 是一次新的用户意图。
+- 一个 Turn 可以有多个 Run，用于 Regenerate、Rerun 或 alternate execution。
+- Run 是预算、Policy、Trace、Cancel、Recovery 与最终状态的核心执行边界。
+- Plan 独立版本化；Replan 创建新版本，不覆盖历史 Plan。
+- Step 表示工作单元，Attempt 表示对 Step 的一次具体执行尝试。
+- Infrastructure retry 使用同一 Run 的新 Attempt；semantic verification failure 使用同一 Run 的 Replan / New Attempt。
+- WAITING_INPUT / WAITING_APPROVAL 恢复原 Run。
+- COMPLETED / FAILED / ABORTED / CANCELLED 等 terminal Run 永不 reopen。
+- Workspace、Sandbox、Runtime Session 均不等同于 Run，其详细生命周期由独立契约定义。
+- 平台拥有 conversation_id / turn_id / run_id / plan_id / step_id / attempt_id 等核心 ID；Framework/Provider 原生 ID 只作为 binding / metadata。[R16]
+
+状态存储采用 Current State Store + Append-only Event Log；V1 不要求纯 Event Sourcing。
+
 # 5. Control Plane / 控制平面设计
 
 ## 5.1 职责
@@ -384,6 +415,7 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 | ADR-009 | E2B 仅保留兼容 API/SDK 语义，不作为独立 Sandbox Provider 或生产依赖。         | Accepted for POC |
 | ADR-010 | 增加 ExecutionScheduler，独立治理重资源 build/test/browser 工作负载。          | Accepted for POC |
 | ADR-011 | 增加 Environment Registry，以 immutable OCI digest 管理执行环境一致性。        | Accepted for POC |
+| ADR-012 | 冻结 V1 Domain Model：Conversation→Turn→Run；Turn:Run=1:N；Plan 版本化；Step/Attempt 分离；terminal Run never reopen。 | Accepted |
 
 # 19. MAF 扩展性验证要求
 
@@ -441,3 +473,7 @@ https://github.com/TencentCloud/CubeSandbox/blob/master/docs/architecture/overvi
 
 [R15] CubeSandbox Templates Overview  
 https://github.com/TencentCloud/CubeSandbox/blob/master/docs/guide/templates.md
+
+
+[R16] Agent Harness Platform - Domain Model & State Contract  
+docs/references/DOMAIN_MODEL_AND_STATE_CONTRACT.md
