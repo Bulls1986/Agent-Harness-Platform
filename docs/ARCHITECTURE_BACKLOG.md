@@ -164,7 +164,7 @@ Sandbox ≠ Workspace
 
 ## ARCH-TODO-004 Runtime Topology / Participant Model
 
-**状态：TODO**
+**状态：DISCUSSING**
 
 ### 问题
 
