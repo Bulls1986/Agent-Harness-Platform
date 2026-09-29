@@ -399,11 +399,11 @@ Sandbox / Workload
 
 核心规则：
 
-- Repository、Tool、MCP、Web、Model Output 等外部内容默认不可信。
+- Repository、Web、Model Output，以及 Tool/MCP 返回的外部业务内容不能自动提升为高信任指令；Tool/MCP Server 的准入与可信治理由外部 Governance 负责，Harness 可调用即视为已准入。
 - Instruction 与 Data 必须分层，低信任数据不能覆盖高信任指令。
 - Data Plane 只产生 Result / Evidence / Artifact / Event / Failure，最终 Run/Step 状态迁移仍由 Control Plane 决定。
 - Participant 权限遵循最小权限与有限 Blast Radius。
-- Secret 默认不直接进入模型上下文；Network Access 属于 Capability / Policy 边界。
+- Secret 默认不直接进入模型上下文；Credential/Network enforcement 由外部 Credential、Sandbox 与企业网络基础设施负责，Harness 只表达当前 Execution 的 Policy/Capability 约束并消费结果。
 - Framework 有公开扩展点则通过 Adapter / Middleware / Hook / Provider 映射；Framework 不负责的能力放平台外围。
 - 必须 fork、monkey patch、复制内部实现或依赖私有 API 才能获得的能力，不进入平台强制基线。[R21]
 
@@ -478,7 +478,7 @@ External Service
 - Run 固化 Initiator Identity 作为不可变审计事实，但敏感 Execution 必须基于当前有效权限重新授权。
 - RBAC / ABAC / Group / Claim 是 Policy 输入；平台只形成 ALLOW / DENY / REQUIRE_APPROVAL 等 Authorization Decision，不复制完整 IAM。
 - 用户长期登录 Token / Secret 默认不得进入 Agent、Model、Sandbox 或 Artifact。
-- 外部系统访问通过 Credential Provider 获取短期、最小权限、资源范围明确的 Credential；只有确有 On-Behalf-Of 需求时才使用 Delegated Credential。
+- 外部系统访问通过 Credential Provider Adapter 对接企业现有 Credential / Secret Infrastructure 获取 scoped credential；Harness 不拥有 Credential 生命周期。只有确有 On-Behalf-Of 需求时才消费 Delegated Credential。
 - Approval 必须绑定真实 Principal、Resource、Action 与 Policy，Agent / Worker / Sandbox 不能自行伪造 Approval。
 - Project Manifest 只定义项目资源边界，不等于 Principal 自动获得所有 Repository 权限；Repository 授权通过 Policy + scoped provider credential 完成。
 - 若未来出现多组织共享平台需求，再通过独立 ADR 引入 Tenant / Organization Partition、数据隔离与跨组织管理；额度/计费仍由外部治理系统负责。[R24]
@@ -849,7 +849,7 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 | ADR-018 | 冻结安全信任边界：外部内容默认不可信；Instruction/Data 分层；Data Plane 不拥有业务最终状态；安全机制通过公开扩展点或外围基础设施实现。 | Accepted |
 | ADR-019 | 冻结版本管理：V1 不建设统一 Registry 服务；Run 创建时解析并冻结 Recipe/Component/Runtime/Policy/Tool/Protocol/Environment 版本，运行中不漂移。 | Accepted |
 | ADR-020 | 冻结 Execution ownership：Lease/Fencing 仅治理平台自有 Execution；Fencing Token 拒绝 stale Worker；Lease 丢失不能替代 UNKNOWN/Reconciliation；底层 Framework/Runtime ownership 不重复实现。 | Accepted |
-| ADR-021 | 冻结身份与授权传播：V1 单组织、不引入 Tenant 模型；企业 IdP 负责认证；Initiator 与 Executor Identity 分离；Policy 负责当前授权，Credential Provider 提供最小权限凭据。 | Accepted |
+| ADR-021 | 冻结身份与授权传播：V1 单组织、不引入 Tenant 模型；企业 IdP 负责认证；Initiator 与 Executor Identity 分离；Harness Policy 负责当前 Execution 授权决策；Credential 生命周期归外部基础设施，平台仅通过 Adapter 消费。 | Accepted |
 | ADR-022 | 冻结任务级恢复：平台记录业务执行事实与 Recovery Reference；按 Runtime/Workspace 能力恢复到最深安全边界；Same Attempt Resume 与 Retry 分离；不承担基础设施 Backup/DR。 | Accepted |
 | ADR-023 | 冻结 Artifact/Evidence Retention：任务事实与 Payload 分离；大 Payload 默认进入 OSS/Object Storage；Raw Log 短期保留；Recoverable Run 依赖必须 PIN；清理 Payload 后保留 Metadata/Tombstone 与 Lineage。 | Accepted |
 | ADR-024 | 冻结 Observability：OpenTelemetry 为统一 telemetry baseline；Runtime 原生 instrumentation 优先；Run:Trace=1:N；统一 Harness correlation；关键路径优先保留；高基数业务 ID 不进入默认 Metric labels。 | Accepted |
