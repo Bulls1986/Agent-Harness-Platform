@@ -390,7 +390,7 @@ Threat
 
 ## ARCH-TODO-010 HA / DR / Backup
 
-**状态：TODO**
+**状态：DISCUSSING**
 
 范围：
 
