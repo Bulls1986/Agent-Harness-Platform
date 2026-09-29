@@ -228,6 +228,17 @@ Plan、Step、Attempt 均需要 ID、版本、状态、时间戳、输入摘要�
 
 Context Engine 不等于 conversation history。每次模型调用由 ContextBuilder 根据 Task、Step、Role、Token Budget 动态组装：Instruction Context、Task Context、Plan、Working Memory、Conversation、Repo/RAG、Tool Evidence 和 Compressed History。Raw logs 默认不进入上下文，只保留引用。
 
+结合 MAF 的 ContextProvider / Memory 设计，本平台进一步把 Context/Memory 拆为：
+
+- Session Context：本轮会话历史与 Session State。
+- Working Memory：Plan、Todo、Current Step、Run State。
+- Long-Term Memory：显式长期记忆与语义历史记忆。
+- Retrieval Context：RAG、Repository、Enterprise Data。
+- User/Tenant Context：用户画像、租户策略和业务背景。
+- Compaction：Context Window 管理，不与 Long-Term Memory 混为一体。
+
+平台建议采用 ContextProvider SPI 作为统一扩展模型，通过 scope、lifecycle、retrieval、persistence、priority、token budget 和 update policy 控制不同上下文来源。
+
 # 12. Artifact、Evidence 与 Lineage
 
 - FileResource：上传文件、图片、音频等原始资源。
@@ -267,17 +278,21 @@ Capability 表示组件具备的技术能力；Policy 决定当前用户/租户/
 
 以下为架构 POC 前的初筛，不代表最终结论。评分 1~5 仅用于暴露结构性差异；最终结论由 POC 硬门禁和实测数据决定。
 
-| **候选**                  | **角色定位**                  | **部署独立性** | **Durable** | **Java适配** | **Harness成熟度** | **首轮处理**         |
-|---------------------------|-------------------------------|----------------|-------------|--------------|-------------------|----------------------|
-| Microsoft Agent Framework | Harness + Workflow            | 4              | 4           | 2            | 5                 | POC-A                |
-| Google ADK                | Agent Runtime + Orchestration | 4              | 3           | 5            | 4                 | POC-B                |
-| Temporal + Agent Runtime  | Durable Control Plane         | 5              | 5           | 5            | 2                 | POC-C                |
-| OpenAI Agents SDK         | 轻量 Agent/Sandbox Runtime    | 4              | 2           | 1            | 4                 | 保留为 Runtime 组件  |
-| Codex OSS                 | Coding Executor/Harness       | 4              | 2           | 1            | 5(编码)           | 二阶段 Executor 候选 |
-| Strands Agents            | 轻量 Agent Runtime            | 5              | 2           | 1            | 4                 | 二阶段 Runtime 候选  |
-| LangGraph / Deep Agents   | Graph/Harness                 | 2              | 4           | 1            | 5                 | 本轮排除             |
-| CrewAI                    | 业务 Agent/Flow               | 3              | 3           | 1            | 3                 | 不作为 Kernel        |
-| PydanticAI                | 类型安全 Agent Runtime        | 5              | 2           | 1            | 3                 | 观察/备选            |
+> 首轮选型不再把 Java 原生能力作为评分项。正式 POC 关注架构匹配、部署独立、Durable、扩展稳定性和企业补齐成本。
+
+| **候选**                  | **角色定位**                  | **部署独立性** | **Durable** | **Harness成熟度** | **POC前匹配估算** | **首轮处理**         |
+|---------------------------|-------------------------------|----------------|-------------|-------------------|-------------------|----------------------|
+| Microsoft Agent Framework | Harness + Workflow            | 4              | 4           | 5                 | 原生~80% / 适配~89% | POC-A，第一优先      |
+| Temporal + Agent Runtime  | Durable Control Plane         | 5              | 5           | 2                 | 原生~72% / 适配~92% | POC-C，第二优先      |
+| Google ADK                | Agent Runtime + Orchestration | 4              | 3           | 4                 | 原生~68% / 适配~75% | POC-B，第三优先      |
+| OpenAI Agents SDK         | 轻量 Agent/Sandbox Runtime    | 4              | 2           | 4                 | Runtime 候选         | 保留为 Runtime 组件  |
+| Codex OSS                 | Coding Executor/Harness       | 4              | 2           | 5(编码)           | Coding Executor      | 二阶段 Executor 候选 |
+| Strands Agents            | 轻量 Agent Runtime            | 5              | 2           | 4                 | Runtime 候选         | 二阶段 Runtime 候选  |
+| LangGraph / Deep Agents   | Graph/Harness                 | 2              | 4           | 5                 | 不进入首轮           | 本轮排除             |
+| CrewAI                    | 业务 Agent/Flow               | 3              | 3           | 3                 | 不作为 Kernel        | 不作为 Kernel        |
+| PydanticAI                | 类型安全 Agent Runtime        | 5              | 2           | 3                 | 观察                 | 观察/备选            |
+
+> 上述匹配比例为 2026-09-29 的 POC 前架构映射估算，建议按 ±5 个百分点理解，不作为最终选型结论。
 
 # 17. LangGraph 本轮排除说明
 
@@ -296,7 +311,28 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 | ADR-005 | Deployment Independence 为硬门禁，不以厂商 Managed Platform 作为生产必选项。 | Accepted for POC |
 | ADR-006 | 首轮 POC：MAF、ADK、Temporal；LangGraph 不进入。                             | Accepted for POC |
 
-# 19. 后续演进
+# 19. MAF 扩展性验证要求
+
+若 MAF 作为首选一体化路线，必须验证企业补齐能力是否可以只依赖 public extension points 完成。至少实现：
+
+- Custom ContextProvider
+- Custom SessionStore
+- Custom CheckpointStorage
+- Custom ChatClient / Model Adapter
+- Custom Workflow Executor
+- Custom Middleware
+- Custom Sandbox Adapter
+
+硬性观察项：
+
+- 不 fork MAF
+- 不 monkey patch
+- 不依赖 Foundry 才能完成核心链路
+- 不复制大量框架内部代码
+- Streaming、Persistence、HITL、Checkpoint 能同时工作
+- 升级时 public abstraction 的兼容性可控
+
+# 20. 后续演进
 
 1. 完成三条 POC，以相同业务场景、相同测试集和相同部署约束进行对比。
 2. 确定 Durable Control Plane 的最终归属：框架内建还是 Temporal 独立承担。
@@ -318,28 +354,3 @@ https://learn.microsoft.com/agent-framework/agents/harness
 https://learn.microsoft.com/en-us/agent-framework/hosting/azure-functions
 
 [R4] Google ADK Java Quickstart  
-https://adk.dev/get-started/java/
-
-[R5] Google ADK on GKE with self-hosted LLM  
-https://docs.cloud.google.com/kubernetes-engine/docs/tutorials/agentic-adk-vllm
-
-[R6] Temporal Documentation  
-https://docs.temporal.io/
-
-[R7] Temporal Durable AI  
-https://docs.temporal.io/ai
-
-[R8] Temporal Workflow Definition  
-https://docs.temporal.io/workflow-definition
-
-[R9] OpenAI Agents SDK  
-https://openai.github.io/openai-agents-python/
-
-[R10] OpenAI Agents SDK Sandbox Agents  
-https://openai.github.io/openai-agents-python/sandbox_agents/
-
-[R11] Strands Agents - A library, not a platform  
-https://strandsagents.com/docs/user-guide/quickstart/overview/
-
-[R12] LangGraph self-hosted model  
-https://github.com/langchain-ai/langgraphjs/blob/main/docs/docs/concepts/self_hosted.md
