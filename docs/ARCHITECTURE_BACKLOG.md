@@ -372,7 +372,7 @@ Threat
 
 ## ARCH-TODO-009 Multi-Tenant Identity & Authorization Propagation
 
-**状态：TODO**
+**状态：DISCUSSING**
 
 范围：
 
