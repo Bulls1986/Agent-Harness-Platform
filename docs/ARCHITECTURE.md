@@ -287,6 +287,42 @@ Recipe 是组件组合层，而不是新的 Agent。示例：software-developmen
 
 Plan、Step、Attempt 均需要 ID、版本、状态、时间戳、输入摘要、产物引用与失败分类。Replan 不是“重新问一次模型”的同义词，应由 FailureClassifier + ReplanPolicy 决定重试层级。
 
+## 8.1 失败、幂等与副作用契约
+
+平台将以下概念严格分离：
+
+~~~text
+执行结果（Execution Outcome）
+≠
+失败分类（Failure Classification）
+≠
+副作用类型（Side Effect Class）
+~~~
+
+执行尝试（Attempt）至少支持 CREATED / QUEUED / RUNNING / SUCCEEDED / FAILED / CANCELLED / UNKNOWN。UNKNOWN 表示无法确认副作用是否已经发生，是正式的一等状态。
+
+硬规则：
+
+- **未知执行结果（UNKNOWN）禁止盲目重试（Blind Retry），必须先进入状态核对（Reconciliation）。**
+- **重试（Retry）表示同一个 Step 意图下创建新的 Attempt；重规划（Replan）表示当前方案需要改变并产生新的 Plan Version。**
+- **所有非 PURE 执行动作（Execution）必须声明副作用契约（Side Effect Contract）并形成副作用回执（Side Effect Receipt）。**
+- **高风险副作用在结果未知且无法自动核实时，进入人工介入（Human Intervention）或 Fail Safe。**
+- 平台不对任意外部副作用承诺“恰好一次执行（Exactly Once Execution）”；通过幂等、去重、栅栏、状态核对与补偿实现安全恢复。[R17]
+
+副作用类型至少包括 PURE、IDEMPOTENT、DEDUPLICATED、VERIFY_BEFORE_RETRY、COMPENSATABLE、NON_RETRYABLE。
+
+执行层级进一步明确为：
+
+~~~text
+计划步骤（Step）
+   ↓
+执行尝试（Attempt）
+   ↓
+执行动作（Execution）
+~~~
+
+其中副作用语义属于具体 Execution；Attempt 是 Retry、成本、Evidence 与 Failure 的直接归属单位。
+
 # 9. Conversation / UI 交互协议
 
 ## 9.1 协议策略
@@ -416,6 +452,7 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 | ADR-010 | 增加 ExecutionScheduler，独立治理重资源 build/test/browser 工作负载。          | Accepted for POC |
 | ADR-011 | 增加 Environment Registry，以 immutable OCI digest 管理执行环境一致性。        | Accepted for POC |
 | ADR-012 | 冻结 V1 Domain Model：Conversation→Turn→Run；Turn:Run=1:N；Plan 版本化；Step/Attempt 分离；terminal Run never reopen。 | Accepted |
+| ADR-013 | 冻结失败/幂等/副作用契约：UNKNOWN 禁止盲重试；Retry/Replan 分离；非 PURE 执行必须声明副作用契约。 | Accepted |
 
 # 19. MAF 扩展性验证要求
 
@@ -477,3 +514,7 @@ https://github.com/TencentCloud/CubeSandbox/blob/master/docs/guide/templates.md
 
 [R16] Agent Harness Platform - Domain Model & State Contract  
 docs/references/DOMAIN_MODEL_AND_STATE_CONTRACT.md
+
+
+[R17] Agent Harness Platform - 失败、幂等与副作用契约  
+docs/references/FAILURE_IDEMPOTENCY_AND_RECOVERY.md
