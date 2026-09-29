@@ -240,7 +240,7 @@ Sandbox snapshot 只保存执行环境状态；Plan/Step/Artifact/Event 等 Harn
 | Verifier        | Evidence + Acceptance Criteria | VerificationResult | Test / Lint / Architecture / LLM Review     |
 | Replanner       | Failure + Current Plan         | PlanResult         | Step Replan / Subtree Replan / Human        |
 | ContextProvider | Task + Step + Budget           | ContextBundle      | Conversation / Repo / Memory / RAG          |
-| SandboxProvider | SandboxSpec                    | Workspace          | Docker / E2B / K8s / Vendor Sandbox         |
+| SandboxProvider | SandboxSpec                    | Workspace          | CubeSandbox / Docker / K8s / Vendor Sandbox  |
 
 ## 7.3 Recipe / Profile
 
