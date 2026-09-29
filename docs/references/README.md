@@ -12,6 +12,9 @@
 4. [框架与 Runtime 首轮技术比较](FRAMEWORK_LANDSCAPE.md)
 5. [部署独立性与平台绑定风险](DEPLOYMENT_INDEPENDENCE.md)
 6. [Control Plane / Data Plane 边界说明](CONTROL_DATA_PLANE.md)
+7. [MAF Memory / Context 设计](MAF_MEMORY_MODEL.md)
+8. [MAF 扩展性评估](MAF_EXTENSIBILITY.md)
+9. [首轮方案架构匹配度估算](FIRST_ROUND_MATCH_ASSESSMENT.md)
 
 ## 使用原则
 
