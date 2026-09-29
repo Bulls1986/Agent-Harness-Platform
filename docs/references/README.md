@@ -31,6 +31,7 @@
 23. [Identity & Authorization Propagation 契约](IDENTITY_AND_AUTHORIZATION_PROPAGATION.md)
 24. [Task Recovery Coverage & Recovery Semantics 契约](TASK_RECOVERY_COVERAGE_AND_SEMANTICS.md)
 25. [Artifact / Evidence / Log Retention 契约](ARTIFACT_EVIDENCE_LOG_RETENTION.md)
+26. [Observability Contract](OBSERVABILITY_CONTRACT.md)
 
 ## 使用原则
 
