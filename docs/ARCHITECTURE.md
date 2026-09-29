@@ -32,7 +32,7 @@
 
 ## 1.2 架构目标
 
-1. 建立统一 Harness Kernel，负责 Run 生命周期、状态迁移、调度、恢复、预算和事件。
+1. 建立统一 Harness Kernel，负责 Run 生命周期、状态迁移、调度、恢复和事件。
 2. 将 Planner、Executor、Verifier、Replanner、Context、Sandbox、Model、Artifact 等能力定义为可替换组件。
 3. 建立 UI/平台统一交互协议，能够承载文本、图片、文件、Reasoning Summary、Tool、Plan、Artifact 和审批。
 4. 支持企业私有环境、Docker/Kubernetes、自有数据库及自有 IAM，不以任何厂商托管控制平面为必选条件。
@@ -51,7 +51,7 @@
 |-----------------------|------------------------------------------------------------------------------------------|
 | P1 厂商无关           | 任何框架、模型、Sandbox、Tool 都必须通过 Adapter/SPI 接入，领域对象不得直接依赖厂商 ID。 |
 | P2 控制/执行分离      | Control Plane 决定做什么、谁执行、失败后如何处理；Data Plane 只负责真实执行并返回证据。  |
-| P3 状态迁移由代码控制 | LLM 参与智能判断，但最终 workflow transition、重试预算、审批和结束条件由确定性代码控制。 |
+| P3 状态迁移由代码控制 | LLM 参与智能判断，但最终 workflow transition、重试限制、审批和结束条件由确定性代码控制。 |
 | P4 事件是系统事实     | Typed Event 不仅用于 UI 推送，还用于审计、恢复、重放和状态重建。                         |
 | P5 状态外置           | Plan、Run、Artifact、Evidence、Approval 等不能只存在模型上下文中。                       |
 | P6 协议优先           | UI 与平台之间使用稳定协议；底层框架事件必须经过 Event Translator。                       |
@@ -83,7 +83,7 @@ flowchart TB
     UI[UI / Portal / Desktop] --> IG[Interaction Gateway\nResponses-compatible + Harness Extensions]
     IG --> CP[Control Plane / 控制平面]
     CP --> HK[Harness Kernel\nRun / State / Workflow / Retry / Recovery]
-    CP --> GOV[Governance\nTenant / IAM / Policy / Budget / Approval]
+    CP --> GOV[Governance\nTenant / IAM / Policy / Approval]
     HK --> CR[Component & Capability Registry]
     CR --> DP[Data Plane / 执行平面]
     DP --> AR[Agent Runtime\nMAF / ADK / Agents SDK / Codex / Strands]
@@ -128,7 +128,7 @@ flowchart LR
 | Turn / 本轮交互           | 一次用户输入及其对应输出范围。                       |
 | Run / 执行实例            | 真正执行一次 Harness 生命周期的唯一实例。            |
 | Recipe / 执行配方         | 定义使用哪些组件、策略、模型、Sandbox 和验收链。     |
-| Harness Kernel / 编排内核 | 执行状态机、预算、重试、调度、恢复、审批。           |
+| Harness Kernel / 编排内核 | 执行状态机、重试、调度、恢复、审批。           |
 | Plan / Step               | 显式计划与可追踪步骤；Plan 必须持久化并版本化。      |
 | Component / Capability    | 组件实现能力，Capability Registry 负责依赖解析。     |
 | Policy                    | 在真实执行前进行权限、租户、风险和审批判断。         |
@@ -157,7 +157,7 @@ Conversation
 
 - Conversation 是长期用户会话；Turn 是一次新的用户意图。
 - 一个 Turn 可以有多个 Run，用于 Regenerate、Rerun 或 alternate execution。
-- Run 是预算、Policy、Trace、Cancel、Recovery 与最终状态的核心执行边界。
+- Run 是 Policy、Trace、Cancel、Recovery 与最终状态的核心执行边界。
 - Plan 独立版本化；Replan 创建新版本，不覆盖历史 Plan。
 - Step 表示工作单元，Attempt 表示对 Step 的一次具体执行尝试。
 - Infrastructure retry 使用同一 Run 的新 Attempt；semantic verification failure 使用同一 Run 的 Replan / New Attempt。
@@ -175,7 +175,7 @@ Conversation
 - Task / Run 生命周期、状态机、队列、优先级和并发控制。
 - Recipe 解析、组件装配、Capability 依赖检查。
 - Plan/Step 生命周期、Retry / Replan / Abort / Complete 决策。
-- Policy、Approval、Budget、Tenant、IAM、Secret 引用。
+- Policy、Approval、Tenant、IAM、Secret 引用。
 - Checkpoint、恢复、事件存储与 Replay。
 - Artifact/Evidence 元数据与 Lineage。
 
@@ -202,7 +202,7 @@ Executor 可以在一个 Step 内部进行有限的 agent loop，但不能无限
 
 Agent Runtime 的 Session、Workflow、Context、模型 HTTP、MCP 和事件流主要属于逻辑并发与 I/O 并发；Coding 场景真正显著消耗 CPU、内存与 I/O 的通常是编译、构建、测试、浏览器、Electron、Docker build 与大型仓库分析。
 
-因此容量规划必须区分 **Agent Capacity** 与 **Execution Capacity**。100 个用户不等于 100 个永久 Sandbox，更不等于 100 个同时 heavy build；平台应按实际同时执行的重资源任务进行压测与配额。
+因此容量规划必须区分 **Agent Capacity** 与 **Execution Capacity**。100 个用户不等于 100 个永久 Sandbox，更不等于 100 个同时 heavy build；平台应按实际同时执行的重资源任务进行压测与容量规划。
 
 ## 6.4 ExecutionScheduler
 
@@ -210,7 +210,7 @@ Agent Runtime 的 Session、Workflow、Context、模型 HTTP、MCP 和事件流�
 
 - admission control
 - resource class
-- priority / quota / fair scheduling
+- priority / fair scheduling
 - local / remote placement
 - queue SLO
 - timeout / cancel
@@ -314,7 +314,7 @@ Runtime Topology
 
 硬边界：
 
-- Sandbox、MCP Server 等基础设施对象可以作为 Participant 进入拓扑，以支持取消定位、故障分析、Trace/Cost 关联与 UI 展示。
+- Sandbox、MCP Server 等基础设施对象可以作为 Participant 进入拓扑，以支持取消定位、故障分析、Trace 关联与 UI 展示。
 - Topology 只记录参与者身份、生命周期和稳定/半稳定关系。
 - 每次 Tool Call、Shell Command、MCP Invocation 等高频调用明细进入 Trace / Event / Log，不进入 Topology。
 - Topology 不拥有 Run 状态机，也不决定执行顺序。
@@ -446,7 +446,7 @@ External Service
 - 外部系统访问通过 Credential Provider 获取短期、最小权限、资源范围明确的 Credential；只有确有 On-Behalf-Of 需求时才使用 Delegated Credential。
 - Approval 必须绑定真实 Principal、Resource、Action 与 Policy，Agent / Worker / Sandbox 不能自行伪造 Approval。
 - Project Manifest 只定义项目资源边界，不等于 Principal 自动获得所有 Repository 权限；Repository 授权通过 Policy + scoped provider credential 完成。
-- 若未来出现多组织共享平台需求，再通过独立 ADR 引入 Tenant / Organization Partition、数据隔离、Quota 与跨组织管理。[R24]
+- 若未来出现多组织共享平台需求，再通过独立 ADR 引入 Tenant / Organization Partition、数据隔离与跨组织管理；额度/计费仍由外部治理系统负责。[R24]
 
 ## 6.15 Task Recovery Coverage
 
@@ -538,6 +538,24 @@ Runtime / Framework 原生 OpenTelemetry instrumentation 优先复用；Harness 
 - GenAI / Provider-specific semantic conventions 保持在 Adapter / telemetry boundary，不反向改变平台领域模型。
 - Observability Backend 属于部署能力，Harness 不自建 Prometheus/Grafana/Loki/APM/Alerting 产品。[R27]
 
+## 6.18 Cost / Quota Ownership Boundary
+
+Cost、Quota、Billing、Chargeback、Showback 与资源额度账户不属于 Harness Platform 核心职责。
+
+Harness 不维护：
+
+- provider / model price table；
+- token/runtime/storage 到金额的换算；
+- balance / quota account / cost ledger；
+- subscription / entitlement lifecycle；
+- financial attribution / invoice reconciliation。
+
+Runtime 原生 token usage、duration、resource usage 可以继续作为 Observability telemetry 暴露，但只服务诊断，不形成 Cost Domain，也不作为权威计费事实。
+
+若上层 Portal / Governance 系统需要额度控制，可在进入 Harness 前完成 entitlement/quota decision，或通过既有 Policy / Admission boundary 传递允许/拒绝结果；Harness 不拥有 quota state。
+
+max_iterations、max_replans、timeout/max_runtime 等只属于 Execution Limits，用于防止单次 Run 无限执行，不属于用户/项目额度或财务 Budget。[R28]
+
 # 7. Harness Kernel 与组件模型
 
 ## 7.1 Kernel 核心能力
@@ -546,7 +564,6 @@ Runtime / Framework 原生 OpenTelemetry instrumentation 优先复用；Harness 
 - Scheduler / Queue
 - Retry / Timeout / Cancellation
 - Checkpoint / Recovery
-- Budget
 - Event
 - Approval
 - Component Invocation
@@ -559,7 +576,7 @@ Runtime / Framework 原生 OpenTelemetry instrumentation 优先复用；Harness 
 | Executor        | ExecutionContext + Step        | ExecutionResult    | MAF / ADK / OpenAI Agents / Codex / Strands |
 | Verifier        | Evidence + Acceptance Criteria | VerificationResult | Test / Lint / Architecture / LLM Review     |
 | Replanner       | Failure + Current Plan         | PlanResult         | Step Replan / Subtree Replan / Human        |
-| ContextProvider | Task + Step + Budget           | ContextBundle      | Conversation / Repo / Memory / RAG          |
+| ContextProvider | Task + Step + Context Limits           | ContextBundle      | Conversation / Repo / Memory / RAG          |
 | SandboxProvider | SandboxSpec                    | Workspace          | CubeSandbox / Docker / K8s / Vendor Sandbox  |
 
 ## 7.3 Recipe / Profile
@@ -610,7 +627,7 @@ Plan、Step、Attempt 均需要 ID、版本、状态、时间戳、输入摘要�
 执行动作（Execution）
 ~~~
 
-其中副作用语义属于具体 Execution；Attempt 是 Retry、成本、Evidence 与 Failure 的直接归属单位。
+其中副作用语义属于具体 Execution；Attempt 是 Retry、Evidence 与 Failure 的直接归属单位。
 
 # 9. Conversation / UI 交互协议
 
@@ -647,11 +664,11 @@ Plan、Step、Attempt 均需要 ID、版本、状态、时间戳、输入摘要�
 - UI 断线后使用 sequence replay，不依赖内存中的 SSE 连接。
 - Task State、Agent RunState、Sandbox State 分层保存；服务重启不丢 Run。
 - Tool/Activity 必须考虑幂等性；至少提供 idempotency_key / attempt_id。
-- 长任务必须支持 timeout、cancellation、heartbeat、retry budget 和 wait-human。
+- 长任务必须支持 timeout、cancellation、heartbeat、retry limit 和 wait-human。
 
 # 11. Context / Memory Engine
 
-Context Engine 不等于 conversation history。每次模型调用由 ContextBuilder 根据 Task、Step、Role、Token Budget 动态组装：Instruction Context、Task Context、Plan、Working Memory、Conversation、Repo/RAG、Tool Evidence 和 Compressed History。Raw logs 默认不进入上下文，只保留引用。
+Context Engine 不等于 conversation history。每次模型调用由 ContextBuilder 根据 Task、Step、Role、Context Window Limit 动态组装：Instruction Context、Task Context、Plan、Working Memory、Conversation、Repo/RAG、Tool Evidence 和 Compressed History。Raw logs 默认不进入上下文，只保留引用。
 
 结合 MAF 的 ContextProvider / Memory 设计，本平台进一步把 Context/Memory 拆为：
 
@@ -662,7 +679,7 @@ Context Engine 不等于 conversation history。每次模型调用由 ContextBui
 - User/Tenant Context：用户画像、租户策略和业务背景。
 - Compaction：Context Window 管理，不与 Long-Term Memory 混为一体。
 
-平台建议采用 ContextProvider SPI 作为统一扩展模型，通过 scope、lifecycle、retrieval、persistence、priority、token budget 和 update policy 控制不同上下文来源。
+平台建议采用 ContextProvider SPI 作为统一扩展模型，通过 scope、lifecycle、retrieval、persistence、priority、context size limit 和 update policy 控制不同上下文来源。
 
 # 12. Artifact、Evidence 与 Lineage
 
@@ -679,11 +696,11 @@ Capability 表示组件具备的技术能力；Policy 决定当前用户/租户/
 - production.deploy 可以要求 approval.requested 后进入 WAITING_APPROVAL。
 - Sandbox 执行权限、网络出口、文件挂载、CPU/内存/PID 均由 Policy/SandboxSpec 控制。
 
-# 14. Observability、Budget 与 Evaluation
+# 14. Observability 与 Evaluation
 
 - Trace/Span：Run → Step → Agent Call → Tool Call → Sandbox Command。
-- Metrics：TTFT、总时延、token/cost、tool latency、replan count、test pass rate、sandbox failure rate。
-- Budget：max_cost、max_runtime、max_iterations、max_replans、max_subagents。
+- Metrics：TTFT、总时延、token usage、tool latency、replan count、test pass rate、sandbox failure rate。
+- Execution Limits：max_runtime、max_iterations、max_replans、max_subagents 属于单次 Run / Recipe 的运行安全边界，不属于 Cost / Quota / Budget。
 - Evaluation：Golden task、回归数据集、故障注入、稳定性/恢复性测试，禁止只用 LLM 自评。
 
 # 15. 推荐部署拓扑
@@ -753,6 +770,7 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 | ADR-022 | 冻结任务级恢复：平台记录业务执行事实与 Recovery Reference；按 Runtime/Workspace 能力恢复到最深安全边界；Same Attempt Resume 与 Retry 分离；不承担基础设施 Backup/DR。 | Accepted |
 | ADR-023 | 冻结 Artifact/Evidence Retention：任务事实与 Payload 分离；大 Payload 默认进入 OSS/Object Storage；Raw Log 短期保留；Recoverable Run 依赖必须 PIN；清理 Payload 后保留 Metadata/Tombstone 与 Lineage。 | Accepted |
 | ADR-024 | 冻结 Observability：OpenTelemetry 为统一 telemetry baseline；Runtime 原生 instrumentation 优先；Run:Trace=1:N；统一 Harness correlation；关键路径优先保留；高基数业务 ID 不进入默认 Metric labels。 | Accepted |
+| ADR-025 | 冻结 Cost / Quota 边界：成本核算、额度账户、Billing、Chargeback/Showback 不属于 Harness；原生 usage 仅作 telemetry；Execution Limits 与 Quota/Budget 严格分离。 | Accepted |
 
 # 19. MAF 扩展性验证要求
 
@@ -858,3 +876,7 @@ docs/references/ARTIFACT_EVIDENCE_LOG_RETENTION.md
 
 [R27] Agent Harness Platform - Observability Contract  
 docs/references/OBSERVABILITY_CONTRACT.md
+
+
+[R28] Agent Harness Platform - Cost / Quota Ownership Boundary  
+docs/references/COST_QUOTA_OWNERSHIP_BOUNDARY.md
