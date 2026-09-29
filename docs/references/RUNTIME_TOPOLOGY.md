@@ -220,11 +220,7 @@ Runtime Topology 属于运行控制和近期诊断数据，不是长期日志系
 - Run 结束后应能保留最终拓扑快照与关键生命周期事件。
 - 具体保留 7/30/90/180 天等企业 Retention Policy 不在本待办决定。
 
-长期保留策略统一由：
-
-ARCH-TODO-011 Artifact / Evidence / Log Retention
-
-讨论。
+长期保留策略已由 ARCH-TODO-011 Artifact / Evidence / Log Retention 冻结：Run 完成后保留最终拓扑快照与关键生命周期事实，具体 Payload/详细 Trace 的保留周期由 Retention Policy 决定。详见 ARTIFACT_EVIDENCE_LOG_RETENTION.md。
 
 ## 11. 不在本契约范围
 
@@ -261,4 +257,4 @@ Runtime Topology
 - Topology 只记录参与者身份、生命周期和稳定关系。
 - 高频调用明细进入 Trace / Log，不进入 Topology。
 - Topology 用于控制定位、故障分析、Trace/Cost 关联和 UI 展示。
-- 具体保留周期由 ARCH-TODO-011 统一定义。
+- 具体保留周期由 ARTIFACT_EVIDENCE_LOG_RETENTION.md 的 Retention Policy 统一约束。
