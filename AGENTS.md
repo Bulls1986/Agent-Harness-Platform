@@ -439,6 +439,20 @@ docs/references/OBSERVABILITY_CONTRACT.md
 
 docs/references/COST_QUOTA_OWNERSHIP_BOUNDARY.md
 
+# 10.11 Environment Supply Chain Ownership 边界
+
+必须遵守：
+
+- OCI provenance、SBOM、镜像签名、漏洞扫描、供应链证明不由 Harness Platform 实现。
+- 这些能力由企业 CI/CD、Artifact Registry、Container Security / Supply Chain Security 基础设施负责。
+- Harness 只消费 Environment Profile/version、immutable digest、capability、verification status 与可选 external attestation reference。
+- Run / Execution 仍必须冻结并记录实际 Environment version / digest。
+- 不得因为外部安全平台不存在就把 SBOM/扫描/签名引擎重新实现进 Harness Kernel。
+
+详见：
+
+docs/references/ENVIRONMENT_SUPPLY_CHAIN_OWNERSHIP_BOUNDARY.md
+
 # 11. POC 原则
 
 POC 必须：
