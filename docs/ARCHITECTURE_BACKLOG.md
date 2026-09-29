@@ -412,20 +412,17 @@ Fail / Wait Human
 
 ## ARCH-TODO-011 Artifact / Evidence / Log Retention
 
-**状态：DISCUSSING**
+**状态：CLOSED**
 
-范围：
+**Decision：** Task Facts 与 Payload 分离。Artifact / Evidence 的文件、报告、截图、大日志等 Payload 默认进入 OSS / Object Storage；平台数据库只保存 metadata、lineage、content digest、retention policy 与 storage reference。Raw Log / Trace 默认短期保留，只有被明确提升或引用的内容进入 Evidence 生命周期。Recoverable Run 所依赖的 checkpoint、workspace state、evidence、snapshot reference 必须 PIN，不得被 GC。Payload 清理后保留 Tombstone/Metadata，历史 Verification、Recovery 与 Audit Lineage 不能断裂。Retention 时长由 Policy / 部署配置决定，不在 Harness Kernel 写死。
 
-- Artifact retention
-- Evidence retention
-- raw command logs
-- build/test reports
-- Workspace retention
-- Sandbox snapshot retention
-- GC
-- legal/audit hold
-- deduplication
-- lineage after cleanup
+**产出：** [ARTIFACT_EVIDENCE_LOG_RETENTION.md](references/ARTIFACT_EVIDENCE_LOG_RETENTION.md)
+
+### 边界
+
+- Object Storage 是 Artifact / Evidence Payload Store，不替代平台任务事实数据库。
+- Workspace 与 Sandbox Snapshot 生命周期仍由对应 Contract / Provider 管理。
+- 不建设通用日志平台、Legal Hold/eDiscovery 或对象存储生命周期产品。
 
 ---
 
