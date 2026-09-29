@@ -204,9 +204,10 @@ ARCH-TODO-005 不负责：
 - Cancellation propagation
 - Workspace 实际恢复实现
 - E2E / Integration Environment 恢复
-- HA / DR
+- Task Recovery Coverage / 恢复降级语义（由 ARCH-TODO-010 定义）
+- 基础设施级 HA / DR / Backup
 
-这些分别由现有或后续 Backlog 处理。
+任务级恢复覆盖详见 TASK_RECOVERY_COVERAGE_AND_SEMANTICS.md。数据库、对象存储、磁盘与集群 HA/DR/Backup 属于基础设施责任，不在 Harness Recovery Contract 内实现。
 
 ## 11. Accepted Rules
 
