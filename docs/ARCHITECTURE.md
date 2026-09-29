@@ -57,6 +57,9 @@
 | P6 协议优先           | UI 与平台之间使用稳定协议；底层框架事件必须经过 Event Translator。                       |
 | P7 部署独立性         | 不用厂商托管平台也必须能完成核心流程；生产关键能力不能依赖不可替代的 SaaS。              |
 | P8 安全边界外置       | Capability 表示“能否做”，Policy 表示“允不允许做”，不能把安全规则只写在 Prompt。          |
+| P9 Coding 隔离执行    | 生产 Coding Execution 默认必须进入隔离 Sandbox；裸 LocalShell 仅限开发/显式低风险场景。 |
+| P10 执行容量独立治理  | Agent logical concurrency 与 build/test 等 Execution concurrency 分开治理。             |
+| P11 环境版本一致      | Local/Remote Sandbox 使用 Environment Registry + immutable OCI digest 建立可验证契约。   |
 
 # 3. 总体目标架构
 
@@ -69,7 +72,7 @@ flowchart TB
     HK --> CR[Component & Capability Registry]
     CR --> DP[Data Plane / 执行平面]
     DP --> AR[Agent Runtime\nMAF / ADK / Agents SDK / Codex / Strands]
-    DP --> SB[Sandbox\nDocker / E2B / K8s]
+    DP --> SB[Sandbox / Execution Plane\nCubeSandbox / Docker / K8s]
     DP --> TOOL[Tools / MCP / Git / Browser / Files]
     DP --> MODEL[Model Gateway / Provider]
     DP --> ART[Artifact / Evidence]
@@ -149,6 +152,72 @@ flowchart LR
 
 Executor 可以在一个 Step 内部进行有限的 agent loop，但不能无限自行修改目标、扩大范围或决定整个 Run 的最终状态。是否 Retry、Replan、等待人工、回滚或结束由 Control Plane 根据结果和策略决定。
 
+## 6.3 Coding Execution 是独立重资源区
+
+Agent Runtime 的 Session、Workflow、Context、模型 HTTP、MCP 和事件流主要属于逻辑并发与 I/O 并发；Coding 场景真正显著消耗 CPU、内存与 I/O 的通常是编译、构建、测试、浏览器、Electron、Docker build 与大型仓库分析。
+
+因此容量规划必须区分 **Agent Capacity** 与 **Execution Capacity**。100 个用户不等于 100 个永久 Sandbox，更不等于 100 个同时 heavy build；平台应按实际同时执行的重资源任务进行压测与配额。
+
+## 6.4 ExecutionScheduler
+
+平台增加独立 ExecutionScheduler，负责：
+
+- admission control
+- resource class
+- priority / quota / fair scheduling
+- local / remote placement
+- queue SLO
+- timeout / cancel
+- backpressure
+- burst / spillover
+
+ExecutionScheduler 只决定 ExecutionRequest 进入哪个容量池，不直接执行 shell。建议至少区分 LIGHT / MEDIUM / HEAVY / SPECIAL 四类资源等级，并将 interactive、normal verification、heavy verification、background queue 隔离，避免长时间 full build/E2E 阻塞秒级交互任务。[R14]
+
+## 6.5 Local CubeSandbox baseline + Remote CubeSandbox burst
+
+生产 Coding Execution 默认进入隔离 Sandbox。本地 CubeSandbox 承担 baseline capacity；当本地 CPU/内存、Sandbox slot 或 queue wait 达到阈值时，在 Policy 允许的前提下切换到 Remote CubeSandbox cluster。
+
+当前 Provider 定位：
+
+- **CubeSandboxProvider**：生产默认候选；既可连接 Local Cube cluster，也可连接 Remote Cube cluster。
+- **DockerProvider**：开发、兼容与 fallback。
+- **K8sProvider**：后续基础设施适配。
+- **HyperlightProvider**：小型不可信函数/WASM/CodeAct 类专项执行，不承担完整 Coding workstation。
+
+E2B 不作为独立 Provider 或生产依赖。CubeSandbox 的 E2B-compatible REST/SDK 能力只作为兼容协议价值，用于降低客户端和生态适配成本。[R13]
+
+CubeSandbox 自身的 CubeAPI/CubeMaster/Cubelet 属于 **Sandbox Infrastructure Control Plane**，只负责 Sandbox 节点选择、资源与生命周期；它不替代 Harness Control Plane 的 Run/Plan/Verify/Replan 状态机。
+
+## 6.6 Environment Registry 与环境一致性
+
+Local/Remote CubeSandbox cluster 不要求底层 VM snapshot 二进制完全相同，但必须遵守同一个 Execution Environment Contract。
+
+建议采用：
+
+~~~text
+Dockerfile / OCI build definition
+        ↓
+immutable OCI image digest
+        ↓
+Environment Registry
+       /             \
+Local Cube Template  Remote Cube Template
+~~~
+
+Environment Registry 至少管理 profile、version、OCI digest、cluster/template mapping、capabilities、architecture、resource profile、verification status 与 deprecation status。[R15]
+
+每个 ExecutionResult 必须记录 environment fingerprint，至少包含 environment profile/version、OCI digest、provider/cluster、template、architecture、resource profile、network policy 与关键 toolchain version。一次 Run 启动后应 freeze 环境版本，禁止使用不可追踪的 `latest` 漂移。
+
+## 6.7 Sandbox 生命周期
+
+平台至少支持：
+
+- Ephemeral：create → execute → verify → collect evidence → destroy。
+- Session：create → execute → idle → pause → resume → destroy。
+- Snapshot/Branching：在关键 Step 建 checkpoint，支持 rollback 或从同一状态 fork 多条候选执行路径。
+
+Sandbox snapshot 只保存执行环境状态；Plan/Step/Artifact/Event 等 Harness 业务状态仍由平台持久化，不能依赖 Sandbox snapshot 代替 Control Plane checkpoint。
+
 # 7. Harness Kernel 与组件模型
 
 ## 7.1 Kernel 核心能力
@@ -175,7 +244,7 @@ Executor 可以在一个 Step 内部进行有限的 agent loop，但不能无限
 
 ## 7.3 Recipe / Profile
 
-Recipe 是组件组合层，而不是新的 Agent。示例：software-development recipe 可以选择 Planner=MAF、Executor=CodexAdapter、Verifier=CompositeVerifier、Sandbox=Docker、StateStore=PostgreSQL。
+Recipe 是组件组合层，而不是新的 Agent。示例：software-development recipe 可以选择 Planner=MAF、Executor=CodexAdapter、Verifier=CompositeVerifier、Sandbox=CubeSandbox、StateStore=PostgreSQL。
 
 # 8. Run 状态机
 
@@ -270,7 +339,7 @@ Capability 表示组件具备的技术能力；Policy 决定当前用户/租户/
 | Platform Layer      | Tenant/IAM/Policy/Recipe/Artifact/Portal API        | 语言中立，由企业自行实现 |
 | Durable Control     | MAF Workflow / ADK orchestration / Temporal         | 由 POC 决定          |
 | Agent Runtime       | MAF / ADK / OpenAI Agents / Strands / Codex Adapter | 独立进程/容器        |
-| Sandbox             | Docker 为基线；E2B/K8s 为可选 Provider              | 不把云 Sandbox 写死  |
+| Sandbox / Execution | CubeSandbox 为生产默认候选；Docker/K8s 为 fallback/扩展 | Local/Remote Cube cluster 可替换，不绑定云服务 |
 | Storage             | PostgreSQL + Object Storage + Event/Audit Store     | 数据掌握在企业       |
 | Model               | LiteLLM/Provider Adapter                            | 模型可替换           |
 
@@ -310,6 +379,11 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 | ADR-004 | Run/Plan/Step/Artifact/Event 为平台自有 ID；Provider ID 仅为 metadata。      | Accepted for POC |
 | ADR-005 | Deployment Independence 为硬门禁，不以厂商 Managed Platform 作为生产必选项。 | Accepted for POC |
 | ADR-006 | 首轮 POC：MAF、ADK、Temporal；LangGraph 不进入。                             | Accepted for POC |
+| ADR-007 | Coding Execution 生产默认必须进入隔离 Sandbox；裸 LocalShell 不作为默认路径。 | Accepted for POC |
+| ADR-008 | Sandbox 生产第一候选统一为 CubeSandbox；Local/Remote 通过不同 cluster/endpoint 承载。 | Accepted for POC |
+| ADR-009 | E2B 仅保留兼容 API/SDK 语义，不作为独立 Sandbox Provider 或生产依赖。         | Accepted for POC |
+| ADR-010 | 增加 ExecutionScheduler，独立治理重资源 build/test/browser 工作负载。          | Accepted for POC |
+| ADR-011 | 增加 Environment Registry，以 immutable OCI digest 管理执行环境一致性。        | Accepted for POC |
 
 # 19. MAF 扩展性验证要求
 
@@ -337,8 +411,9 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 1. 完成三条 POC，以相同业务场景、相同测试集和相同部署约束进行对比。
 2. 确定 Durable Control Plane 的最终归属：框架内建还是 Temporal 独立承担。
 3. 确定 Agent Runtime SPI、Sandbox SPI、Conversation Event Protocol 的 V1 Schema。
-4. 进入 Coding/Document 两个真实 Recipe 试点，验证是否真正避免框架耦合。
-5. 最后再决定是否引入 Codex OSS、Strands、OpenAI Agents SDK 作为标准 Runtime Adapter。
+4. 完成 CubeSandbox、ExecutionScheduler、Environment Registry 专项 POC，验证 Local/Remote Cube cluster 切换、容量调度、环境一致性和故障恢复。
+5. 进入 Coding/Document 两个真实 Recipe 试点，验证是否真正避免框架耦合。
+6. 最后再决定是否引入 Codex OSS、Strands、OpenAI Agents SDK 作为标准 Runtime Adapter。
 
 # 参考资料与事实基线
 
@@ -354,3 +429,12 @@ https://learn.microsoft.com/agent-framework/agents/harness
 https://learn.microsoft.com/en-us/agent-framework/hosting/azure-functions
 
 [R4] Google ADK Java Quickstart  
+
+[R13] TencentCloud CubeSandbox Repository / README  
+https://github.com/TencentCloud/CubeSandbox
+
+[R14] CubeSandbox Architecture Overview  
+https://github.com/TencentCloud/CubeSandbox/blob/master/docs/architecture/overview.md
+
+[R15] CubeSandbox Templates Overview  
+https://github.com/TencentCloud/CubeSandbox/blob/master/docs/guide/templates.md
