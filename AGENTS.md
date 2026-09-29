@@ -322,6 +322,22 @@ Local / Remote CubeSandbox 必须遵守统一 Execution Environment Contract。
 
 `docs/references/SECURITY_THREAT_MODEL.md`
 
+# 10.4 版本冻结边界
+
+必须遵守：
+
+- V1 不为了版本管理建设统一 Registry 服务。
+- Recipe、Component/Adapter、Runtime、Policy、Tool、Protocol、Environment 等必须有可识别版本。
+- Run 创建时必须解析为确定版本并冻结，运行中不得静默漂移或热升级。
+- latest/default 只能用于解析前配置，不能作为 Run 最终绑定。
+- 新版本只影响新 Run；恢复已有 Run 时继续使用其冻结版本信息。
+- Capability Requirement 在 Run 开始前匹配；不支持即拒绝，不通过侵入式修改 Framework 补齐。
+- Registry 是逻辑版本目录能力，不等同于微服务注册中心或动态服务发现。
+
+详见：
+
+`docs/references/REGISTRY_AND_VERSIONING.md`
+
 # 11. POC 原则
 
 POC 必须：
