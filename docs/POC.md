@@ -469,6 +469,23 @@ MAF Durable POC 若宣称 Same Attempt Resume，必须用真实 Durable backend 
 
 该 Gate 验证的是任务数据生命周期语义，不验证完整日志平台、SIEM、Legal Hold/eDiscovery 或对象存储产品能力。
 
+## 16.14 Observability POC Gate
+
+至少验证：
+
+1. **Native Runtime Telemetry**：MAF Python 原生 OpenTelemetry traces / logs / metrics 能直接输出到 OTLP-compatible backend，Harness 不重复包同等粒度 instrumentation。
+2. **Platform Gap Telemetry**：Control Plane / Scheduler / Policy / Recovery / Verification 等平台边界存在必要的自有 Span/Metric/Log。
+3. **Correlation**：同一任务的 Runtime、Model、Tool、Sandbox、Verification telemetry 能通过 run_id，并在具体执行处通过 execution_id 关联。
+4. **Run 1:N Trace**：WAITING_APPROVAL 后 Resume 或 Worker/Runtime 重启后允许新 Trace，但仍可通过同一 run_id 查询完整任务诊断链。
+5. **Provider Native Metadata**：MAF/Runtime 原生 span operation 与属性不会因为平台统一封装而丢失。
+6. **Metric Cardinality**：run_id / step_id / attempt_id / execution_id / user_id 不作为默认 metric dimensions。
+7. **Critical-path Sampling**：普通成功链路允许 sampling；ERROR / UNKNOWN / Recovery / Reconciliation / Approval / Verification Failure 路径能够优先保留；业务 Event 不因 sampling 丢失。
+8. **Sensitive Telemetry Default Off**：默认 telemetry 不包含完整 Prompt / Response / Tool Arguments / Tool Results / Repository Content。
+9. **Evidence Separation**：需要长期作为验收依据的模型/工具输出能够提升为 Evidence/Artifact，而不依赖 Trace retention。
+10. **Backend Independence**：更换 OTLP-compatible backend 不修改 Harness Domain Model。
+
+POC 记录 Runtime 原生能观测到的真实范围；某项 Runtime 原生 telemetry 不存在时，只在确有平台诊断价值且有公开扩展点时补充，不 fork / patch Framework。
+
 # 17. POC 完成定义（DoD）
 
 - 12 个统一框架场景全部有 PASS/FAIL/Gap 结论。
