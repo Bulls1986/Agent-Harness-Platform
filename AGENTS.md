@@ -122,6 +122,40 @@ TODO
 
 禁止因为当前讨论方便而跨边界提前实现后续待办。
 
+# 4.2 Harness Platform 职责边界
+
+本项目只建设 Agent Harness Platform，不以“大包大揽”的方式复制企业已有治理与基础设施平台。
+
+进入任何架构议题前，必须先回答：
+
+> 这个问题是否直接属于 Harness 的任务编排、执行控制、状态/恢复、协议、能力装配或 Adapter 边界？
+
+如果答案是否定的，应优先定义 Ownership Boundary 并交给外部系统，而不是在 Harness 内新增领域模型或服务。
+
+Harness 核心职责聚焦于：
+
+- Run / Plan / Step / Attempt / Execution 生命周期与状态；
+- Plan → Execute → Verify → Replan；
+- Runtime / Model / Tool / Sandbox / Storage 等 Adapter 与 Capability 装配；
+- Policy / Approval 在执行边界上的应用；
+- Failure / Retry / Recovery / Reconciliation；
+- Artifact / Evidence / Event / Lineage；
+- 协议转换、版本冻结、可观测关联与执行正确性。
+
+默认不属于 Harness 的能力包括但不限于：
+
+- 企业 IAM / SSO / User Directory；
+- MCP Governance / Marketplace；
+- Cost / Quota / Billing / Chargeback；
+- OCI/SBOM/镜像供应链安全平台；
+- PostgreSQL/MSSQL/Object Storage/磁盘 Backup/DR；
+- Prometheus/Grafana/Loki/APM/Alerting 产品；
+- Secret Manager、DLP、SIEM 等独立企业基础设施产品。
+
+对这些外围能力，Harness 只定义必要的 Adapter、Reference、Metadata、Policy/Admission input 或结果消费边界。
+
+禁止因为“平台可能用得到”就把外围能力提升为 Harness 自己的领域职责。
+
 # 5. 术语规范
 
 架构文档优先采用：
