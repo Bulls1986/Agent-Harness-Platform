@@ -36,6 +36,7 @@
 28. [Environment Supply Chain Ownership Boundary](ENVIRONMENT_SUPPLY_CHAIN_OWNERSHIP_BOUNDARY.md)
 29. [MCP Trust Ownership Boundary](MCP_TRUST_OWNERSHIP_BOUNDARY.md)
 30. [Cancellation / Timeout Propagation 契约](CANCELLATION_TIMEOUT_PROPAGATION.md)
+31. [Harness Scope Alignment Review](HARNESS_SCOPE_ALIGNMENT_REVIEW.md)
 
 ## 使用原则
 
