@@ -10,7 +10,7 @@
 | A00 | Original MAF streaming smoke + offline CI | Offline public imports and unit tests already passed |
 | A01 | Pinned direct packages + public API/optional capability probe | CI must install exact versions and run `api_probe.py`; transitive `pip freeze` captured per run |
 | A02 | Versioned Coding/Document broken/reference fixtures + independent verifier | CI must prove known-good passes and broken cases fail |
-| A03 | PostgreSQL/MinIO/OTLP Compose + isolated model runtime image | Compose validation/build **plus actual container startup/health** (not yet done) |
+| A03 | PostgreSQL/OTLP Compose + optional external S3-compatible store + isolated model runtime image | Compose validation/build **plus Postgres/OTLP runtime startup/health** (not yet done) |
 | A04 | Evidence template with Gate and scenario IDs | Every later case must record real exit status, version, and evidence refs |
 | A05 | Live two-turn memory/streaming probe | Requires real provider credential and successful model response; no CI secrets assumed |
 | A31 | Durable feasibility memo | Python MAF + Functions/MSSQL in private cluster and cross-worker recovery NOT tested |
@@ -62,7 +62,7 @@ Copy the example config, replace local-only credentials (do not commit `.env`):
 ```bash
 cp poc/maf/.env.example poc/maf/.env
 docker compose --env-file poc/maf/.env -f poc/maf/compose.yml config -q
-docker compose --env-file poc/maf/.env -f poc/maf/compose.yml up -d postgres object-store otel-collector
+docker compose --env-file poc/maf/.env -f poc/maf/compose.yml up -d postgres otel-collector
 docker compose --env-file poc/maf/.env -f poc/maf/compose.yml ps
 ```
 
@@ -118,3 +118,13 @@ are recorded in [DURABLE_FEASIBILITY.md](DURABLE_FEASIBILITY.md).
 - A32/A33: real Python MAF Durable + Functions/MSSQL worker test.
 
 References: `docs/POC.md`, `docs/POC_A_TASK_PLAN.md` and Accepted Contracts.
+
+## Upstream MinIO image caveat (2026-10-08)
+
+The upstream public Docker Hub and Quay MinIO images could not be pulled in GitHub Actions, and the fixed-release binary URL returned HTTP 410. The optional `local-oss` Compose profile therefore requires an explicitly configured `POC_OBJECT_STORAGE_IMAGE` from an enterprise-approved registry. This should not block the Harness POC: ArtifactStore/S3 integration is tested at A15 against an enterprise S3-compatible endpoint, not by building a storage product. Local object-store ports 9002/9003 are exposed only if the optional profile is started. No image mirror or official upstream availability is assumed.
+
+Optional object store command after setting `POC_OBJECT_STORAGE_IMAGE` to an approved image reference:
+
+```bash
+docker compose --env-file poc/maf/.env -f poc/maf/compose.yml --profile local-oss up -d object-store
+```
