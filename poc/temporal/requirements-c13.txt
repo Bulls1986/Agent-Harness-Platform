@@ -1,0 +1,2 @@
+-r requirements-platform.txt
+opentelemetry-sdk==1.39.1
