@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "task_id": "A05",
+  "scenario_id": "S01",
+  "gate_ids": [
+    "G1"
+  ],
+  "status": "NOT_RUN",
+  "recorded_at_utc": null,
+  "commit_sha": null,
+  "sdk_versions": null,
+  "python_version": null,
+  "runtime_location": null,
+  "provider_model_alias": null,
+  "run_id": null,
+  "execution_command": null,
+  "exit_code": null,
+  "observed_result": null,
+  "reproducible_evidence_refs": [],
+  "limitations": [
+    "No real provider run has been performed"
+  ],
+  "notes": "Never record API keys, complete prompts/responses, or unredacted credentials."
+}

@@ -22,6 +22,16 @@ POC-A 必须给出三个独立结论：
 - **产品边界**：大 Payload 存 OSS/S3-compatible；PostgreSQL 存任务事实、metadata、lineage、digest、storage reference；OTel 优先复用原生 instrumentation。
 - **技术路线**：Python 优先；在不依赖 Foundry Hosted Agents 的前提下完成验证。语言本身不是评分项。
 
+## 当前执行证据快照（2026-10-08）
+
+- A00：已完成基础 MAF 官方包导入与离线双轮 Streaming Stub 测试；未发起真实模型调用。
+- A01：已固定 Core 1.20.0、OpenAI Adapter 1.15.0，并通过 [GitHub Actions #37714557447](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37715048965) 的 API/version probe；其他扩展点仍未逐一验证，保持 IN_PROGRESS。
+- A02：Coding/Document 均配置 broken/reference 两套固定样例，独立 Verifier 与离线回归通过；副作用 UNKNOWN 注入按 A28 另行实施。
+- A03：Compose 配置、MAF 镜像构建、PostgreSQL SQL 查询及 OTLP Collector 启动均已通过 CI；OSS 实际接入留给 A15，外部对象存储产品不属于 Harness。
+- A04：Evidence 模板及防止默认 PASS 的离线测试已通过 CI；后续每个 Gate 必须分别填写真实记录。
+- A05：仅提供真实模型探针；当前没有已验证的实际 Provider 会话结果，因此不标 PASS。
+- A31：已形成 [Durable preliminary findings](../poc/maf/DURABLE_FEASIBILITY.md)，但跨 Worker/Functions+MSSQL 尚未实测。
+
 ## 1. 阶段与详细任务
 
 列中“验收”描述**可以客观验证的最小完成条件**。每任务必须提交运行入口、测试及 Evidence URI/Trace/Log 摘要，并标注 MAF 公共 API 与 Adapter 边界。不得用 Agent 自我宣称成功替代验证。
@@ -31,10 +41,10 @@ POC-A 必须给出三个独立结论：
 | ID | 任务 | 依赖 | 交付物 | 可执行验收 | 状态 |
 |---|---|---|---|---|---|
 | A00 | 建立最小 HarnessAgent Smoke、双轮 Session 单测与 GitHub Actions CI | 无 | `poc/maf/smoke.py`、测试、CI、README | 官方公开 API 包导入、py_compile、离线单测在 CI PASS；**仅这些证据**，不代表真实 Runtime/Gate | PASS（offline） |
-| A01 | 固定 MAF Python 依赖/公开 API 可用性矩阵 | A00 | lock/constraints、版本和来源记录、Public API inventory | 在固定版本完成 public import + Session/stream/tool/workflow/host 扩展点探针；升级不兼容有具体记录；识别 prerelease | TODO |
-| A02 | 统一 POC 测试任务与成功标准 | 无 | `fixtures/` Coding 修复与 Document 对照、expected outputs、criteria | 两类任务输入和验收固定，Verify 由代码独立判断；能稳定注入故意失败与副作用不确定 | TODO |
-| A03 | 最小自托管环境与运行入口 | A01 | Compose/配置样例、PostgreSQL、OSS-compatible、OTLP 接收端、启动说明 | 无 Foundry 依赖能启动服务/环境；密钥环境注入，不写仓库；不要求外围生产基础设施 | TODO |
-| A04 | 建立 POC Evidence 与 Gate 记录模板 | A02 | 每任务结果清单、case id、版本、run_id、测试记录、Gap 模板 | 每条结论可反查测试命令、配置版本、退出码、事件及 Artifact/Evidence URI；失败不标 PASS | TODO |
+| A01 | 固定 MAF Python 依赖/公开 API 可用性矩阵 | A00 | lock/constraints、版本和来源记录、Public API inventory | 在固定版本完成 public import + Session/stream/tool/workflow/host 扩展点探针；升级不兼容有具体记录；识别 prerelease | IN_PROGRESS（直接依赖与公共 API 导入已在 CI 验证；扩展点行为仍待证实） |
+| A02 | 统一 POC 测试任务与成功标准 | 无 | `fixtures/` Coding 修复与 Document 对照、expected outputs、criteria | 两类任务输入和验收固定，Verify 由代码独立判断；能稳定注入故意失败与副作用不确定 | IN_PROGRESS（正反验收已验证；UNKNOWN 副作用注入仍属 A28） |
+| A03 | 最小自托管环境与运行入口 | A01 | Compose/配置样例、PostgreSQL、OSS-compatible、OTLP 接收端、启动说明 | 无 Foundry 依赖能启动服务/环境；密钥环境注入，不写仓库；不要求外围生产基础设施 | IN_PROGRESS（PostgreSQL/OTLP 实际启动及 MAF image 构建已通过；企业 OSS Adapter 和自托管 Agent API 后续 A15/A18） |
+| A04 | 建立 POC Evidence 与 Gate 记录模板 | A02 | 每任务结果清单、case id、版本、run_id、测试记录、Gap 模板 | 每条结论可反查测试命令、配置版本、退出码、事件及 Artifact/Evidence URI；失败不标 PASS | PASS（模板及离线结构验收通过；各 Gate 的真实执行证据另行采集） |
 
 **A0 Exit**：A00～A04 完成，并可以重复启动固定版本的测试环境（不宣称核心门禁通过）。
 

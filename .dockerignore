@@ -1,0 +1,9 @@
+# Strict allowlist for the POC-A runtime image: never upload .env, artifacts or repo secrets.
+*
+!poc
+!poc/maf
+!poc/maf/requirements.txt
+!poc/maf/Dockerfile
+!poc/maf/smoke.py
+!poc/maf/session_probe.py
+!poc/maf/api_probe.py

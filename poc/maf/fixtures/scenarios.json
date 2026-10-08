@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0",
+  "coding": {
+    "scenario_id": "FIX-CODE-001",
+    "task": "Repair status normalization to return an upper-case normalized status",
+    "candidate_entry": "status.py",
+    "verification": "python -m unittest discover -s poc/maf/fixtures/coding/tests -p test_status.py",
+    "expected_buggy_result": "FAIL",
+    "expected_solution_result": "PASS",
+    "side_effect_class": "PURE"
+  },
+  "document": {
+    "scenario_id": "FIX-DOC-001",
+    "task": "Read input.json and output summary.json with count, active_count and total_amount",
+    "input": "document/input.json",
+    "result": "summary.json",
+    "expected_buggy_result": "FAIL",
+    "expected_solution_result": "PASS",
+    "side_effect_class": "PURE"
+  },
+  "failure_injections": [
+    {
+      "id": "INJECT-VERIFIER-FAIL",
+      "case": "coding",
+      "expected": "VERIFICATION_FAILURE"
+    },
+    {
+      "id": "INJECT-UNKNOWN-EXTERNAL-WRITE",
+      "case": "side_effect",
+      "expected": "UNKNOWN -> RECONCILIATION",
+      "status": "PLANNED_A28_NOT_IMPLEMENTED"
+    }
+  ]
+}
