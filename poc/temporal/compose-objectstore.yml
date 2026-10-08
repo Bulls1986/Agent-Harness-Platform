@@ -1,0 +1,12 @@
+# C11 real isolated S3-compatible OSS Data Plane. Local POC only:
+# S3 gateway intentionally has no IAM and must NEVER be published publicly.
+services:
+  c11-s3:
+    image: chrislusf/seaweedfs@sha256:8d5b323911a996d5ea152115306bed468d9a849d72bcbb3800ea8d91b7728563
+    container_name: poc-c11-seaweed-s3
+    command: ["server","-dir=/data","-s3","-s3.port=8333","-ip=0.0.0.0"]
+    ports: ["127.0.0.1:17311:8333"]
+    volumes: ["s3-data:/data"]
+volumes:
+  s3-data:
+    name: poc-c11-seaweed-data
