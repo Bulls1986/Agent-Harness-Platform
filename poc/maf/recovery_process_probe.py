@@ -74,7 +74,7 @@ def main() -> int:
             result = RecoveryCoordinator(dsn).recover(run_id, interrupted_attempt_id=args.expected_attempt)
             print(json.dumps({"decision":result.outcome,"run_id":run_id}))
             return 0 if result.outcome == "RECONCILIATION" else 1
-        result = RecoveryCoordinator(dsn).recover(run_id)
+        result = RecoveryCoordinator(dsn).recover(run_id, interrupted_attempt_id=args.expected_attempt)
         if result.outcome != "STEP_BOUNDARY_RETRY" or not result.fact or not result.execution_id:
             print(json.dumps({"decision":result.outcome,"run_id":run_id}))
             return 1
