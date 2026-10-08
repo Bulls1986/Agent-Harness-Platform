@@ -156,6 +156,9 @@ class TaskLedger:
                 row = cur.fetchone()
                 if row is None or row[0] != "RUNNING":
                     raise TaskFactConflict("Run absent or no longer active")
+                cur.execute("SELECT MAX(version) FROM poc_plans WHERE run_id=%s", (fact.run_id,))
+                if cur.fetchone()[0] != fact.plan_version:
+                    raise TaskFactConflict("Cannot finalize Run using superseded Plan version")
                 cur.execute(
                     """SELECT e.execution_id FROM poc_executions e
                        JOIN poc_attempts a ON a.attempt_id=e.attempt_id
