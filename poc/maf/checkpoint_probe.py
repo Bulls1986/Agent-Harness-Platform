@@ -52,9 +52,16 @@ async def save(directory: Path) -> dict:
     checkpoints = await storage.list_checkpoints(workflow_name=workflow.name)
     if len(checkpoints) < 3:
         raise RuntimeError(f"Expected entry, first-superstep and terminal checkpoints; got {len(checkpoints)}")
-    # Select the checkpoint immediately *before* the terminal superstep.
-    # All checkpoint IDs are chosen by trusted POC code, never user-supplied.
-    checkpoint = checkpoints[-2]
+    # FileCheckpointStorage.list_checkpoints() is not ordered. Pick the unique
+    # lineage tip and its predecessor using only PUBLIC checkpoint metadata.
+    # Never guess ordering by array index, iteration_count, or filename.
+    by_id = {cp.checkpoint_id: cp for cp in checkpoints}
+    parents = {cp.previous_checkpoint_id for cp in checkpoints
+               if cp.previous_checkpoint_id is not None}
+    tips = [cp for cp in checkpoints if cp.checkpoint_id not in parents]
+    if len(tips) != 1 or tips[0].previous_checkpoint_id not in by_id:
+        raise RuntimeError("Checkpoint lineage incomplete or ambiguous")
+    checkpoint = by_id[tips[0].previous_checkpoint_id]
     manifest = {"checkpoint_id":checkpoint.checkpoint_id, "workflow":WORKFLOW_NAME}
     (directory/"probe-manifest.json").write_text(json.dumps(manifest),encoding="utf-8")
     return {"checkpoint_count":len(checkpoints),"streaming_events":len(events),"saved":True}
