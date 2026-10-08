@@ -7,3 +7,5 @@
 !poc/maf/smoke.py
 !poc/maf/session_probe.py
 !poc/maf/api_probe.py
+!poc/maf/minio
+!poc/maf/minio/Dockerfile
