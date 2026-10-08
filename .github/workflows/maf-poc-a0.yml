@@ -37,6 +37,10 @@ jobs:
           python -c "from agent_framework import create_harness_agent; from agent_framework.openai import OpenAIChatClient; agent = create_harness_agent(client=OpenAIChatClient(model='ci-fake-model')); assert agent.create_session() is not None"
       - name: Public API and version probe
         run: python poc/maf/api_probe.py
+      - name: A06/A07 public Harness provider composition
+        run: python poc/maf/harness_capabilities.py
+      - name: A11 native MAF Workflow deterministic gate
+        run: python poc/maf/workflow_probe.py
       - name: Compile Python POC entry points
         run: python -m compileall -q poc/maf
       - name: Verify compose configuration (local placeholders only)
