@@ -7,6 +7,7 @@
 > 实证与评估已由 [PR #35](https://github.com/Bulls1986/Agent-Harness-Platform/pull/35) 合并 main，
 > [Linux CI #37780673019](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37780673019) **5/5 SUCCESS**；
 > 这并不改变本文的 **生产主架构硬门禁 NO-GO**。
+> 新的实测增量：[C15 真实模型 Token SSE + Native Start RecoveryPoint](C15_REAL_G3_PROTOCOL_FINDINGS.md)、[C16 非幂等外部 Receipt 对账](C16_RECEIPT_RECOVERY_FINDINGS.md)。补证未覆盖全部 Tool/Approval/Artifact 单 Run 事件、企业可信 MCP Receipt 和最终业务恢复决策；硬门禁继续按完整范围判定。
 
 ## 1. 分层架构判断
 

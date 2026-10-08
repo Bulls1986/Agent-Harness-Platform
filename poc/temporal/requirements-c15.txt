@@ -1,0 +1,3 @@
+# Live G3 model client + self-host Protocol. No credentials installed in CI.
+-r requirements-protocol.txt
+openai==3.26.1
