@@ -142,6 +142,11 @@ async def main() -> None:
             raise AssertionError("Immutable Harness typed event sequence lost")
         if events[1][2].get("execution_id") != binding.execution_id:
             raise AssertionError("UNKNOWN event omitted Execution identity")
+        from verify_protocol_process import assert_process_restart
+        http_report=await asyncio.to_thread(
+            assert_process_restart,binding.run_id,binding.native_workflow_id)
+        if http_report["status"]!="PASS_C10_RESTRICTED_HTTP_AFTER_REAL_TEMPORAL_CRASH":
+            raise AssertionError("C10 user-facing bridge failed after native fault")
         print(json.dumps({
             "status":"PASS_C06_C07_TEMPORAL_PG_ACTIVITY_CRASH_FENCE",
             "native_history_events":len(history),
@@ -160,6 +165,7 @@ async def main() -> None:
             "fencing_token":frozen["fencing_token"],
             "one_harness_attempt":True,
             "harness_typed_events":2,
+            "c10_http_restart_result":http_report["status"],
             "native_binding_immutable":True,
             "provider":"OSS_Temporal_1.31_Postgres",
             "exactly_once_external_side_effect_proven":False
