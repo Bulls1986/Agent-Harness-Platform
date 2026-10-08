@@ -1,0 +1,5 @@
+# Direct runtime dependencies frozen for reproducible POC-A probes on 2026-10-08.
+# Transitive dependencies are resolved by pip; capture `pip freeze` as run evidence.
+# Do not infer Durable/Hosting support from these two packages.
+agent-framework-core==1.20.0
+agent-framework-openai==1.15.0
