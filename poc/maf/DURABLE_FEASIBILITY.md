@@ -1,7 +1,7 @@
 # POC-A31 Durable production route — preliminary evidence review
 
 > Date: 2026-10-08  
-> Status: **RESEARCH COMPLETE / DEPLOYMENT AND RECOVERY NOT RUN**  
+> Status: **RESEARCH UPDATED / DTS DEV EMULATOR CROSS-WORKER PASS / PRIVATE PRODUCTION BACKEND NOT RUN**  
 > This note is a POC feasibility input, NOT a new ADR, and does not revise the Accepted Durable Contract.
 
 ## What the public documentation establishes
