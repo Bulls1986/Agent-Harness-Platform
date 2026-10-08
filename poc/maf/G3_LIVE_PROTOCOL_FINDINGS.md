@@ -59,6 +59,15 @@
   **95 tests，38 PASS、57 条因未启用所需集成条件而 SKIP**；上述独立 PostgreSQL
   集成此前已另外执行 9+3 项，不把 SKIP 伪称 PASS。
   无配置启动验收 CLI 返回预期 SETUP_GAP (exit 2)，只列出缺失变量名。
+- 2026-10-09 Runner 配置：确认由 Windows 用户会话 WebCodex.exe 启动
+  webcodex-runner.exe；已将 POC_LITELLM_BASE_URL 和 POC_LITELLM_MODEL 注册到
+  Windows User Environment 并读取核验成功。Key 尚未设置，不能冒称已鉴权。
+  新增 configure_g3_windows.ps1（仅在本机隐藏输入一次 Key；明确说明
+  Windows User 环境变量非加密存储），及 run_live_g3_local.py（读取 User
+  变量、自动创建及销毁隔离 PostgreSQL，数据库临时密码不进入 argv）。
+  test_run_live_g3_local.py **2/2 PASS**；PowerShell 脚本语法校验 0 错误；
+  缺 Key 时返回 SETUP_GAP 且不启动 Docker；真实模型验收未执行。
+
 - 本轮试图通过执行工具递交聊天中已给的 API Key 受安全检查阻止；
   禁止以改写/混淆密钥规避检查，也不从聊天复制密钥到代码或 CI。
 - A05 既有独立 LiteLLM + MAF 双轮流式与 History smoke PASS，不能替代本次

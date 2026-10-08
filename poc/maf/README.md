@@ -489,6 +489,35 @@ Setting `$env:POC_LITELLM_API_KEY` in an unrelated PowerShell session does
 Runner's own launch environment and restart the Runner if needed. A `.env`
 file alone is not automatically loaded by an ordinary Python process.
 
+### Windows WebCodex Runner: one-time local configuration
+
+The locally connected WebCodex.exe launches webcodex-runner.exe in the
+interactive Windows user session. The nonsecret POC_LITELLM_BASE_URL and
+POC_LITELLM_MODEL values have already been registered in that user's Environment.
+
+Run this **locally** in PowerShell from the isolated Git worktree.
+It prompts once for the API key with hidden input, registers it for the current
+Windows user, and immediately runs the real-model G3 gate:
+
+    pwsh -NoProfile -File "poc/maf/configure_g3_windows.ps1"
+
+The Windows User environment is NOT an encrypted secret vault. Use only an
+approved, short-lived POC credential and remove or rotate it after testing.
+The API key is never part of the command-line arguments or committed files.
+The one-shot Python launcher reads newly set Windows User environment variables
+directly; an already-running WebCodex Runner does not need to restart.
+
+The one-shot launcher provisions disposable postgres:16-alpine on an ephemeral
+loopback port and removes the container on exit. A fresh per-run database
+credential travels only via process environment; no persistent PostgreSQL DSN
+or modification of the A34 database is required. Use the pinned temporary Python
+virtual environment installed during this POC. With the user variables ready:
+
+    python poc/maf/run_live_g3_local.py
+
+Add -ConfigureOnly to the PowerShell setup script to set the key without running
+the live gate. G3 stays NOT VERIFIED until an authenticated model run passes.
+
 It starts a real loopback HTTP process, streams an unpredictable nonce through
 the real model, shuts the process down, restarts without a model credential,
 then validates the same PG Run/Token SSE cursor and exact output reconstruction.

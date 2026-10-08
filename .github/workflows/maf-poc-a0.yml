@@ -100,6 +100,7 @@ jobs:
           python -m unittest discover -s poc/maf/tests -p "test_protocol_service_pg.py" -v
           python -m unittest discover -s poc/maf/tests -p "test_live_model_protocol.py" -v
           python -m unittest discover -s poc/maf/tests -p "test_live_probe_configuration.py" -v
+          python -m unittest discover -s poc/maf/tests -p "test_run_live_g3_local.py" -v
           python poc/maf/verify_selfhost_protocol.py
           # Real MAF SDK and separate HTTP/PG/SSE process; loopback fake upstream only.
           python poc/maf/verify_sdk_wire_protocol.py
