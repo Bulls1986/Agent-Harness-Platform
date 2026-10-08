@@ -88,9 +88,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install official Temporal SDK and minimal Harness PostgreSQL driver
+      - name: Install Temporal, Harness PostgreSQL and restricted HTTP protocol dependencies
         run: |
-          python -m pip install -r poc/temporal/requirements-platform.txt
+          python -m pip install -r poc/temporal/requirements-protocol.txt
           python -m pip check
           python -m compileall -q poc/temporal
       - name: Create isolated credentials for TWO independent PostgreSQL services
@@ -122,7 +122,7 @@ jobs:
           test "$(docker inspect -f '{{.State.Health.Status}}' poc-c-harness-pg)" = 'healthy'
       - name: C07 immutable platform Run/Step/Attempt/Execution native-binding PostgreSQL negative tests
         run: python -m unittest discover -s poc/temporal/tests -p "test_*.py" -v
-      - name: C06+C07 real Temporal PURE retry plus crash-after-HTTP NonRetryable fencing
+      - name: C06+C07+C10 real Temporal crash, Tool fencing and HTTP/SSE restart
         env:
           POC_C_TEMPORAL_ADDRESS: 127.0.0.1:17234
         run: |
