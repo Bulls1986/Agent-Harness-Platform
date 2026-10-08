@@ -1,6 +1,6 @@
 # POC-A: Microsoft Agent Framework implementation
 
-> Status: **A00 passed; A01 API/versions, A02 fixture-verifier, A03 local Postgres/OTLP and A04 template validated in CI; A05 real provider and A31 durable backend NOT RUN.**  
+> Status: **A00–A04 have offline/infrastructure evidence; A06/A07 and A11 public SDK probes added; A05 real provider, A07 Compaction, A11 full lifecycle and Durable recovery NOT RUN.**  
 > This is a framework evaluation harness, **not** a production Harness Control Plane.
 
 ## Current slices
@@ -16,6 +16,42 @@
 | A31 | Durable feasibility memo | Python MAF + Functions/MSSQL in private cluster and cross-worker recovery NOT tested |
 
 Verified in [GitHub Actions run #37715048965](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37715048965): pinned public SDK imports, actual HarnessAgent+native Session construction (no network model call), dependency freeze artifact, positive and negative acceptance fixtures, runtime image build, and Postgres/OTLP startup checks. These checks must not be counted as G1/G2/G3/G6 PASS.
+
+## 0.1 A06/A07 native provider and A11 Workflow probes
+
+The following commands **run actual MAF Python SDK code** without a model
+endpoint, Foundry, file-memory persistence, shell or web tools:
+
+```bash
+python poc/maf/harness_capabilities.py
+python poc/maf/workflow_probe.py
+python poc/maf/document_workflow.py
+python -m unittest discover -s poc/maf/tests -p "test_*.py" -v
+```
+
+- A06: checks native `TodoProvider`, `AgentModeProvider`, session serialization,
+  and a custom `ContextProvider` wired through documented APIs.
+- A07: exercises custom `before_run/after_run` hook contract with fixture context.
+  **This is not evidence of real conversation history, compaction, or durable
+  cross-process session restore.** Compaction is explicitly disabled in these
+  probes pending separate token-budget validation.
+- A11: executes MAF `WorkflowBuilder` + custom public `Executor/handler` chain
+  with platform-owned Run/Plan/Step/Attempt identity, and a deterministic
+  terminal decision requiring verified outcome **and** evidence reference.
+  Failure, missing evidence and invalid plan version are negative cases.
+  **No actual Planner/Executor tool invocation, PostgreSQL state transaction,
+  Retry/Replan, or crash recovery** is claimed.
+- A12 (bounded Document case): uses an actual MAF Workflow Executor to call the
+  **independent fixture verifier**; correct summary finishes, deliberately wrong
+  summary fails. This is a trusted fixture test, not Agent-produced code,
+  production sandbox execution, or permanent OSS-backed Evidence. The
+  `poc-fixture://` URI is deliberately a local test marker, not a storage reference.
+- A05 now creates a restricted HarnessAgent using the same public factory:
+  host File Memory/Web Search/Tool Auto Approval are disabled for the live
+  probe until real sandbox, authorization and persistence are integrated.
+
+The above public API extensions use documented behavior; they cannot be
+interpreted as completion of the S03/S06/S07/G2/G6 end-to-end gates.
 
 ## 1. Install and inspect (A01)
 
@@ -69,8 +105,7 @@ docker compose --env-file poc/maf/.env -f poc/maf/compose.yml ps
 ```
 
 Ports bind to **127.0.0.1 only**:
-Postgres `54329`, S3-compatible MinIO `9002`, MinIO Console `9003`,
-OTLP gRPC `14317`, OTLP HTTP `14318`. This is only an *infrastructure
+Postgres `54329`, OTLP gRPC `14317`, OTLP HTTP `14318`. Optional object-store ports `9002/9003` require a separately approved image. This is only an *infrastructure
 harness*, not a hosted HTTP Agent API (A18). Current Compose configuration
 does not claim Postgres SessionStore, durable MAF history or ArtifactStore
 are integrated — those are A15/A23/A24. OTLP receiver is not a production APM

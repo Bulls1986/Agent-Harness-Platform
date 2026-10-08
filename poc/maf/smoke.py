@@ -30,14 +30,12 @@ def resolve_model(env: Mapping[str, str], cli_model: str | None = None) -> str:
 
 def create_agent(model: str) -> Any:
     """Use only documented, public MAF Python APIs; import lazily for unit tests."""
-    from agent_framework import create_harness_agent
     from agent_framework.openai import OpenAIChatClient
+    from harness_capabilities import build_harness
 
-    # No host shell or tools here: Sandbox/Approval are separate POC gates.
-    return create_harness_agent(
-        client=OpenAIChatClient(model=model),
-        name="maf-poc-a0",
-    )
+    # A05 must not accidentally enable default host file memory, web tools,
+    # or automatic tool approval before Sandbox/Approval policies exist.
+    return build_harness(OpenAIChatClient(model=model))
 
 
 async def stream_turn(agent: Any, session: Any, prompt: str, out: TextIO) -> bool:
