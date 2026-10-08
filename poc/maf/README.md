@@ -58,7 +58,7 @@ interpreted as completion of the S03/S06/S07/G2/G6 end-to-end gates.
 The platform-owned ledger uses the same identity supplied to native MAF
 Document Workflow, never a generated MAF session ID as the platform Run ID.
 
-\`\`\`bash
+```bash
 # Install pinned SDK + psycopg in a virtualenv, then start POC Postgres:
 python -m pip install -r poc/maf/requirements.txt
 docker compose --env-file poc/maf/.env -f poc/maf/compose.yml up -d postgres
@@ -68,9 +68,9 @@ python poc/maf/persisted_document.py --case expected
 python poc/maf/persisted_document.py --case buggy
 python poc/maf/persisted_document.py --inspect "<run-id-from-first-command>"
 python -m unittest discover -s poc/maf/tests -p "test_task_ledger_pg.py" -v
-\`\`\`
+```
 
-The schema is in \`sql/001_task_facts.sql\`. It stores Conversation/Turn/Run,
+The schema is in `sql/001_task_facts.sql`. It stores Conversation/Turn/Run,
 versioned Plan, Step, Attempt, Execution, Verification, typed Event, and
 opaque RuntimeBinding/RecoveryPoint *references*. It does not store large
 Artifact or Evidence payloads, real MAF checkpoint internals, or a new
@@ -87,10 +87,10 @@ safely recovering such a Run belongs to A27–A30, **not** this slice.
 
 **Critical limitations:**
 
-- \`poc-fixture://\` evidence refs represent committed trusted test fixtures,
+- `poc-fixture://` evidence refs represent committed trusted test fixtures,
   not OSS-backed Evidence. A15 must replace them with durable object refs.
 - Session/History/Compaction is **not** persisted by this ledger (A07/A24).
-  MAF's documented \`AgentSession.to_dict/from_dict\` path is a separate,
+  MAF's documented `AgentSession.to_dict/from_dict` path is a separate,
   opaque session-state serialization capability.
 - Runtime Checkpoint/DurableTask/Worker failure resume is **not** implemented.
   A23's task facts do not by themselves satisfy G2/G6.
