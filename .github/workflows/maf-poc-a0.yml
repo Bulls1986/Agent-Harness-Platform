@@ -47,8 +47,11 @@ jobs:
         run: |
           mkdir -p /tmp/maf-a25-checkpoints
           chmod 700 /tmp/maf-a25-checkpoints
-          python poc/maf/checkpoint_probe.py --save /tmp/maf-a25-checkpoints
-          python poc/maf/checkpoint_probe.py --restore /tmp/maf-a25-checkpoints
+          for i in 1 2 3; do
+            mkdir -p "/tmp/maf-a25-checkpoints/repeat-$i"
+            python poc/maf/checkpoint_probe.py --save "/tmp/maf-a25-checkpoints/repeat-$i"
+            python poc/maf/checkpoint_probe.py --restore "/tmp/maf-a25-checkpoints/repeat-$i"
+          done
       - name: Compile Python POC entry points
         run: python -m compileall -q poc/maf
       - name: Verify compose configuration (local placeholders only)
@@ -119,6 +122,24 @@ jobs:
           python -c "import json; a=json.load(open('/tmp/maf-approval-request.json')); b=json.load(open('/tmp/maf-approval-loaded.json')); assert a==b and b['state']=='PENDING'; print('approval waiting recovered same Run in new process')"
           python poc/maf/approval_wait_probe.py --approve "$approval_id" > /tmp/maf-approval-done.json
           python -c "import json; x=json.load(open('/tmp/maf-approval-done.json')); assert x['run_state']=='RUNNING'; print('approval result persisted')"
+      - name: A26 opaque MAF request/checkpoint binding integrity
+        env:
+          POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
+        run: python -m unittest discover -s poc/maf/tests -p "test_native_hitl_binding_pg.py" -v
+      - name: A26 native MAF HITL checkpoint and platform Approval cross-process (approve and reject)
+        env:
+          POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
+        run: |
+          mkdir -p /tmp/maf-native-hitl-approve /tmp/maf-native-hitl-reject
+          chmod 700 /tmp/maf-native-hitl-approve /tmp/maf-native-hitl-reject
+          python poc/maf/native_hitl_probe.py --create --checkpoint-root /tmp/maf-native-hitl-approve > /tmp/maf-native-hitl-request-approve.json
+          run_id=$(python -c "import json; x=json.load(open('/tmp/maf-native-hitl-request-approve.json')); assert x['state']=='PENDING' and x['preapproval_execution_count']==0; print(x['run_id'])")
+          python poc/maf/native_hitl_probe.py --resume "$run_id" --decision APPROVED --checkpoint-root /tmp/maf-native-hitl-approve > /tmp/maf-native-hitl-result-approve.json
+          python -c "import json; x=json.load(open('/tmp/maf-native-hitl-result-approve.json')); assert x['same_run'] and x['native_request_matched'] and x['native_checkpoint_restored'] and x['sensitive_execution_simulated'] and x['platform_run_state']=='RUNNING'; print('MAF HITL approved across process boundary OK')"
+          python poc/maf/native_hitl_probe.py --create --checkpoint-root /tmp/maf-native-hitl-reject > /tmp/maf-native-hitl-request-reject.json
+          denied_run=$(python -c "import json; x=json.load(open('/tmp/maf-native-hitl-request-reject.json')); assert x['state']=='PENDING' and x['preapproval_execution_count']==0; print(x['run_id'])")
+          python poc/maf/native_hitl_probe.py --resume "$denied_run" --decision REJECTED --checkpoint-root /tmp/maf-native-hitl-reject > /tmp/maf-native-hitl-result-reject.json
+          python -c "import json; x=json.load(open('/tmp/maf-native-hitl-result-reject.json')); assert x['same_run'] and not x['sensitive_execution_simulated'] and x['outputs']==['DENIED_NO_EXECUTION'] and x['platform_run_state']=='FAILED'; print('MAF HITL denied across process boundary OK')"
       - name: Shutdown POC infrastructure
         if: always()
         env:

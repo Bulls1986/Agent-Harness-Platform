@@ -37,13 +37,19 @@ class ApprovalWaitStore:
 
     def request(
         self, fact: VerificationFact, *, requester_principal: str,
-        approver_principal: str, action_ref: str, resource_ref: str, policy_ref: str
+        approver_principal: str, action_ref: str, resource_ref: str, policy_ref: str,
+        native_request_id: str | None = None,
+        native_checkpoint_ref: str | None = None,
+        native_workflow_name: str | None = None,
     ) -> ApprovalRequest:
         if fact.plan_version != 1 or not all((
             fact.run_id, fact.plan_id, fact.step_id, fact.attempt_id,
             requester_principal, approver_principal, action_ref, resource_ref, policy_ref
         )):
             raise ValueError("Missing approval and platform identity bindings")
+        native_values = (native_request_id, native_checkpoint_ref, native_workflow_name)
+        if any(value is not None for value in native_values) and not all(native_values):
+            raise ValueError("Native HITL bindings must be supplied together")
         conversation_id, turn_id, approval_id = _id("conversation"), _id("turn"), _id("approval")
         with psycopg.connect(self.dsn) as conn:
             with conn.cursor() as cur:
@@ -79,6 +85,13 @@ class ApprovalWaitStore:
                     (approval_id,fact.run_id,fact.step_id,fact.attempt_id,
                      action_ref,resource_ref,policy_ref,requester_principal,approver_principal),
                 )
+                if all(native_values):
+                    cur.execute(
+                        """INSERT INTO poc_maf_approval_bindings
+                           (approval_id,run_id,native_request_id,native_checkpoint_ref,native_workflow_name)
+                           VALUES (%s,%s,%s,%s,%s)""",
+                        (approval_id,fact.run_id,*native_values),
+                    )
                 cur.execute(
                     """INSERT INTO poc_events(event_id,run_id,seq,event_type,payload)
                        VALUES (%s,%s,1,'approval.requested',%s::jsonb)""",
@@ -100,6 +113,22 @@ class ApprovalWaitStore:
             if row is None:
                 raise KeyError(run_id)
             return ApprovalRequest(**row)
+
+    def load_native_binding(self, run_id: str) -> dict:
+        """Read trusted MAF request/checkpoint refs for the *pending* platform Approval."""
+        with psycopg.connect(self.dsn,row_factory=dict_row) as conn:
+            row=conn.execute(
+                """SELECT b.approval_id,b.run_id,b.native_request_id,b.native_checkpoint_ref,
+                          b.native_workflow_name
+                   FROM poc_maf_approval_bindings b
+                   JOIN poc_approvals a ON a.approval_id=b.approval_id
+                   JOIN poc_runs r ON r.run_id=a.run_id
+                   WHERE b.run_id=%s AND a.state='PENDING' AND r.state='WAITING_APPROVAL'""",
+                (run_id,),
+            ).fetchone()
+            if row is None:
+                raise KeyError(run_id)
+            return dict(row)
 
     def decide(self, approval_id: str, *, authenticated_principal: str,
                authorized: bool, decision: str) -> str:

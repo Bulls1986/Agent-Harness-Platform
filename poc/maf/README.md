@@ -198,6 +198,36 @@ Native MAF `request_info`/pending-response checkpoint mapping and an
 actual sensitive Tool approval remain A26/G7 follow-up. This stage does not
 claim G2/G6/G7 PASS.
 
+## 0.5 Native MAF HITL / platform Approval bridge (A26 follow-up)
+
+[Final PR #9 CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37720102476): approved/rejected cross-process native HITL, two PostgreSQL binding integrity tests and three lineage-selected checkpoint restore repetitions all passed.
+
+The `native_hitl_probe.py` fixture uses **real MAF public**
+`WorkflowContext.request_info`, `@response_handler`, and
+`FileCheckpointStorage`, not a synthesized RequestInfo event.
+The request ID and opaque native checkpoint reference are stored as an
+immutable binding inside the same PostgreSQL transaction as the platform's
+WAITING_APPROVAL fact (`sql/004_native_hitl_binding.sql`).
+
+GitHub Actions runs the requester and decision responder in different Python
+processes: only the workflow that restores the exact native request ID from
+the checkpoint may accept the already-validated platform decision.
+`REJECTED` produces a deny-only output, with **zero dispatch of the
+simulated sensitive Executor**; `APPROVED` can enter the simulated
+Executor. The test requires no network model, Cloud backend or credentials.
+
+The CLI is **only a trusted test fixture**: it injects a fixed approver and
+`authorized=True` instead of an external IAM/Policy decision. It is never
+safe to expose it as an approval endpoint. Approval decision persistence and
+runtime resume are separate operations; a crash between them still requires
+explicit reconciliation of the already-recorded decision before continuing.
+The POC does not promise externally visible effects exactly once.
+
+FileCheckpointStorage is a single-machine development path and is **not**
+a production private Durable backend. Same Attempt end-to-end production
+resumption, native Agent tool approval, external Policy/IAM, multi-worker
+ownership and production storage remain open G2/G6/G7/G8 tasks.
+
 ## 1. Install and inspect (A01)
 
 Use Python 3.11+ in a clean venv:
