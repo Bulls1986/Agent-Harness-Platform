@@ -524,6 +524,17 @@ and concurrent reconciliation. The sink is a **controlled fixture**, not an
 enterprise MCP or business service and not a guarantee of Exactly Once.
 See [G6_TOOL_RECEIPT_FINDINGS.md](G6_TOOL_RECEIPT_FINDINGS.md).
 
+### G6 real Native fault and independent local Tool receipt, opt-in
+
+Run `python poc/maf/functions-mssql/verify_guarded_receipt_local.py` only on
+an isolated machine with the A34 MSSQL/PG/Azurite Docker fixtures and current
+v1 cached Guarded Worker. The test SIGKILLs Worker A while Worker B continues,
+checks exactly one actual local SQLite tool write, then calls the real platform
+ReceiptReconciler to RESOLVE its UNKNOWN/PENDING state; no business success or
+enterprise Tool Exactly Once is claimed. The wrapper uses temporary local
+Compose config and deletes the file on exit.
+See [single-chain report](G6_NATIVE_RECEIPT_SINGLE_CHAIN_FINDINGS.md).
+
 ## G3 bounded live model streaming (not yet full Gate PASS)
 
 New local-only POST /v1/live/responses accepts a text prompt with stream=true.

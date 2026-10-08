@@ -28,3 +28,7 @@
 - 没有把本轮 Receipt 逻辑与一次真实 MSSQL Durable RUNNING Worker SIGKILL 置于**同一**故障链；既有 A34 Native 断点、Binding 与受控 Sink 的局部证据不能合并成一条真实端到端验收。
 - Native /run ACK 中途网络半包及真实实例 ID 回查、生产 Runtime/Workspace RecoveryPoint 恢复和企业 OSS Payload/PIN 尚待验证。
 - **G2、G6 总体仍 PARTIAL/GAP；G3 真实 LiteLLM 模型验收另行待执行。**
+## 2026-10-09：同一官方 Native 故障链新增真实平台回执对账
+
+新增 [同链专项证据](G6_NATIVE_RECEIPT_SINGLE_CHAIN_FINDINGS.md)：官方 MAF Functions/MSSQL Worker A SIGKILL、B 原生 Handler 重入 **2 次**，PG 首轮派发成功、重派被拒；独立 SQLite 工具真实写入 **1 次**、回执 **1 条**；使用实际 `ToolReceiptReconciler.observe` 将 PG Reconciliation PENDING→**RESOLVED**，原 Attempt 仍 UNKNOWN，Native Failed。原文“未与 Native 同链”的限制是此增量前的阶段状态，已被本次本地技术验证覆盖；企业 MCP Receipt 和生产 Exactly Once 仍未验证。
+
