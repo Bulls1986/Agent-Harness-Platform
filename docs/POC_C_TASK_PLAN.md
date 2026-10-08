@@ -34,7 +34,7 @@
 | C02 | P0 | Temporal Workflow 只执行确定性编排；Agent A/B 和 Verify 由独立 Activity 实施；Verifier 失败才能 Replan | PASS (fixture) |
 | C03 | P0 | 真实 Worker A SIGKILL，B 进程接续同一 Native Instance、审批 Signal 仍可交付、无旧 Attempt 覆写 | PASS (dev-server) |
 | C04 | P0 | 真 Temporal **Server** stop/start，状态从独立持久卷恢复，同 Native Workflow/History 继续 | PASS (dev SQLite) |
-| C05 | P0 | 用开源 Temporal Service + PostgreSQL 持久后端跑相同 C02–C04（非 `start-dev`） | NEXT / **G1/G6 blocker** |
+| C05 | P0 | OSS Temporal Server + 独立 PostgreSQL（非 `start-dev`）复用 C02–C04 Worker/Server 故障实验 | **PASS（本地 OSS+PG）**，整体 G1/G6 仍 PARTIAL |
 | C06 | P0 | Activity infrastructure Retry 与业务 Replan 严格分开；非 PURE 结果不明必须平台 UNKNOWN/Receipt 对账，不把 Temporal 重放当 Exactly Once | NEXT |
 | C07 | P0 | 原生 Workflow ↔ PG 持久 Run/Step/Attempt/Execution + Reconciliation；跨进程读回，不依赖 In-memory dictionary | NEXT / G2/G6 |
 | C08 | P0 | 审批 WAITING Signal 与 REJECTED/APPROVED 均按固定 Platform Decision 继续，不合并新旧 Attempt | PASS bounded / 企业授权非范围 |
@@ -64,8 +64,7 @@
 
 ## 下一批退出条件（不扩为生产服务建设）
 
-1. C05：生产风格的 Temporal OSS Service+PostgreSQL 单机 compose
-   必须可启动、停止、恢复；以 DB/Temporal 原生数据为权威。
+1. C05 已有 [Temporal OSS Server+PostgreSQL 真实实证](../poc/temporal/C05_OSS_POSTGRES_FINDINGS.md)：同一 Workflow 通过 Worker/Server 重启，SQL History 在 Server 关闭期间仍保留。生产 TLS/HA 未因此验收。
 2. C06+C07：对 NON_RETRYABLE 与 PURE 的失败动作作不同处理；
    Task Facts 唯一性、Version Frozen、UNKNOWN 等遵守已有契约。
 3. C10：只做正确的 Harness Event/Response Adapter，外部 OSS/

@@ -37,3 +37,45 @@ jobs:
         run: |
           docker compose -f poc/temporal/compose-dev.yml logs --tail 30 || true
           docker compose -f poc/temporal/compose-dev.yml down || true
+
+  selfhost-oss-postgres-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install official Temporal SDK
+        run: python -m pip install -r poc/temporal/requirements.txt
+      - name: Generate isolated non-production database credential
+        run: |
+          python -c "import os,secrets;open(os.environ['GITHUB_ENV'],'a').write('POC_C_TEMPORAL_DB_PASSWORD='+secrets.token_hex(16)+'\n')"
+      - name: C05 independently self-host OSS Server with PostgreSQL schema
+        run: |
+          set -euo pipefail
+          docker compose -p poc-c-temporal-oss -f poc/temporal/compose-oss-postgres.yml config --quiet
+          docker compose -p poc-c-temporal-oss -f poc/temporal/compose-oss-postgres.yml up -d
+          for attempt in $(seq 1 45); do
+            state=$(docker inspect -f '{{.State.Status}}|{{.State.ExitCode}}' poc-c-temporal-oss-temporal-namespace-1)
+            if [ "$state" = 'exited|0' ]; then break; fi
+            sleep 2
+          done
+          test "$(docker inspect -f '{{.State.Status}}|{{.State.ExitCode}}' poc-c-temporal-oss-temporal-namespace-1)" = 'exited|0'
+      - name: C05 real Worker SIGKILL/HITL/replan on OSS PostgreSQL
+        env:
+          POC_C_TEMPORAL_ADDRESS: 127.0.0.1:17234
+        run: python poc/temporal/verify_local_handoff.py
+      - name: C05 real OSS Server restart, inspect independent PostgreSQL while offline
+        env:
+          POC_C_TEMPORAL_ADDRESS: 127.0.0.1:17234
+          POC_C_TEMPORAL_CONTAINER: poc-c-temporal-oss
+          POC_C_TEMPORAL_POSTGRES_CONTAINER: poc-c-temporal-pg
+        run: |
+          python poc/temporal/verify_server_restart.py
+          test "$(docker exec poc-c-temporal-pg psql -U temporal -d temporal -X -qAt -c 'SELECT COUNT(*) FROM history_node;')" -gt 0
+      - name: C05 OSS/PG isolated cleanup (preserve volume on failures)
+        if: always()
+        run: |
+          docker compose -p poc-c-temporal-oss -f poc/temporal/compose-oss-postgres.yml logs --tail 20 temporal-oss || true
+          docker compose -p poc-c-temporal-oss -f poc/temporal/compose-oss-postgres.yml down || true
