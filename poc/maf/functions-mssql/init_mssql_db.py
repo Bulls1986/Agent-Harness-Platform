@@ -34,7 +34,7 @@ def run_sql(query: str) -> subprocess.CompletedProcess[str]:
 
 def main() -> None:
     db = sys.argv[1] if len(sys.argv) == 2 else 'DurableDB'
-    if db not in ('DurableDB', 'DurableA34'):
+    if db not in ('DurableDB', 'DurableA34', 'DurableA34Running'):
         raise ValueError('Only dedicated POC databases are allowed')
     create = CREATE.replace('DurableDB', db)
     verify = VERIFY.replace('DurableDB', db)

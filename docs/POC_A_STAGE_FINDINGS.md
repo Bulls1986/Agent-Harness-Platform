@@ -29,6 +29,8 @@
 
 | A34（增量）审批决定后的 Native Response 投递 | 本地 PostgreSQL 4/4 新合约测试：审批已提交但尚未领取令牌可以重连领取；错误版本/未绑定原生请求不能派发；IN_FLIGHT 结果不明的二次 claim 转 UNKNOWN 不重投；原生 Completed 才可标 APPLIED。双库在线 Worker A SIGKILL 后 B 继续审批，2 个原生 Completed / History=42，Prepare replay=0，令牌最终均 APPLIED | UNKNOWN 故障分支目前仅 PostgreSQL 负例，无 Native HTTP 投递中途 Worker 强杀、外部副作用 Receipt/对账；RUNNING Attempt 续跑、生产 HA/版本升级继续 OPEN | [A34 双数据库增量实测](../poc/maf/functions-mssql/A34_PLATFORM_MSSQL_E2E.md) | PASS (LOCAL DELIVERY ADMISSION) / A34 OPEN |
 
+| A34（增量）原生 RUNNING Executor 崩溃重放 | **两轮独立本机实测 PASS**：自托管 Functions+MSSQL 的独立 RUNNING Workflow 真实 Executor handler 开始后强杀 A、B 原位接续；每轮 MSSQL Instance Completed/History=12，已完成 Prepare=1，Executor dispatch observer=**2**，完成=1。Native Runtime 恢复但同一未完成 Handler 被再次调用；不能用 Workflow 完成证明副作用 Exactly Once | 文件 Marker 是观测器不是业务回执，尚未把该原生 RUNNING 故障与同一 PostgreSQL Run/Attempt/Execution 的 UNKNOWN/Reconciliation 联合验收；没有真实外部写、冻结版本真实升级。**A34/G6/G8 仍 OPEN** | [A34 原生 RUNNING SIGKILL 实测](../poc/maf/functions-mssql/A34_RUNNING_EXECUTOR_CRASH.md) | PASS (LOCAL NATIVE REINVOKE) / A34 OPEN |
+
 **恢复能力完整清单**：[A30 恢复覆盖矩阵](POC_A_RECOVERY_MATRIX.md)，明确限制“单项 Fixture PASS ≠ 整体 G6 PASS”。
 
 ## 2. 不应混淆的三种恢复
