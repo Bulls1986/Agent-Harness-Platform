@@ -1,6 +1,6 @@
 # POC-C / C13 — 原生 OpenTelemetry 与 Harness 关联
 
-> 2026-10-08 | **本机 C13 OTel Trace/Corr 与部署依赖计数 PASS；CI 待核查**。
+> 2026-10-08 | **本机+Linux CI 真 Temporal Native OTel/Task Correlation scoped PASS**。
 > 本报告不代表已部署 OTLP Collector/APM，也没有生产 CPU/内存/延迟压测。
 
 ## 官方能力与边界
@@ -35,6 +35,8 @@ Harness 仅在自有 Execution/Finalize 边界追加关联属性：
 Span 属于诊断数据，PG Event 属于任务事实；不能把 OTel Trace
 当作 Run/Attempt 权威状态。Prompt/模型输出/凭据不会进入此验证
 的 telemetry；Metric 默认不使用 Run/Attempt 等高基数 label。
+
+[GitHub CI #37780673019](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37780673019) 的 **5 个作业全部 SUCCESS**，其中双 PostgreSQL 作业的 C13 原生 OTel/Compose 步骤直接 SUCCESS；[PR #35](https://github.com/Bulls1986/Agent-Harness-Platform/pull/35) 已合并 main，提交 `854e623`。已有 C05/C06/C07/C09/C10/C11/C12 回归也全部通过。此结果仍不包含生产 OTLP Collector/APM。
 
 ## 部署依赖：实际 Compose 计数
 

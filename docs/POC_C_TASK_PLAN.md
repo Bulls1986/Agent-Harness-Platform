@@ -42,7 +42,7 @@
 | C10 | P0 | 平台 Responses-compatible + Typed SSE/Replay Bridge，不暴露 Temporal Payload/History 作为领域事实 | **PASS（本地+CI 受限只读桥接）**；整体 G3 PARTIAL |
 | C11 | P1 | 两种 Docker Sandbox SPI 模式、真实 S3 Artifact/Evidence、PG Lineage/Pin/Tombstone、Temporal History 无大 Payload | **PASS（本机真实链+Linux CI 五作业）**；CubeSandbox/生产 G5 GAP |
 | C12 | P0 | Native History Replay 版本兼容门禁；实际不同 Worker 镜像升级风险 | **PASS（本地+CI Native History Replay 正负例）**；真实镜像接管/Build ID rollout GAP |
-| C13 | P1 | Temporal 官方 OTel Interceptor、Harness ID Correlation、真实 Compose 依赖数 | **本地 PASS，CI 待核**；OTLP Collector/生产成本 GAP |
+| C13 | P1 | Temporal 官方 OTel Interceptor、Harness ID Correlation、真实 Compose 依赖数 | **PASS（本地+CI 原生 OTel/PG 关联、Compose 计数）**；OTLP Collector/生产成本 GAP |
 | C14 | P0 | 同口径 G1–G8、S01–S12、MAF/Temporal 分层选型和退出条件 | **评估 CLOSED / CONDITIONAL**；生产主架构 G2/G3/G6 NO-GO |
 
 ## 第一批 C00–C04 本地证据
