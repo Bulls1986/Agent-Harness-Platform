@@ -13,6 +13,8 @@
 | A11/A12 Native Workflow | 真实 MAF WorkflowBuilder/Executor 可运行；外部独立 Document Verifier 判定正确结果 COMPLETED、错误结果 FAILED；不允许无 Evidence 成功 | 完整 Agent Plan/Execute/Replan、Coding Sandbox、OSS Evidence | [PR #5 CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37717098080) | PARTIAL |
 | A23 Platform Facts | Run/Plan/Step/Attempt/Execution/Verification/Event PostgreSQL 原子写入及进程外读取；终态不可重开、旧 Plan 迟到不能覆盖 | 所有 Recovery/Approval/Artifact 元数据、持久分布式任务调度 | [PR #6 CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37718104459) | PARTIAL |
 | A24 Native Session | MAF AgentSession 公共序列化 API、PostgreSQL 私有存储和跨 Python 进程重新加载已通过；revision/CAS 拒绝旧写 | 真实模型对话 History、Compaction、原生 Workflow Checkpoint | [PR #7 CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37718726040) | PARTIAL |
+| A25 Native Workflow Checkpoint（单机路径） | MAF FileCheckpointStorage 保存至少一个可用 Superstep Checkpoint；独立 Python 进程从 Native Checkpoint 恢复并完成 Workflow。更新后增加已完成 Executor 不应再次执行的断言 | 私有分布式 Durable Backend、生产安全审批跨 Worker、同 Attempt + 复杂工具副作用不重复 | [PR #8 CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37719247108) | PARTIAL |
+| A26 Platform Approval Waiting | WAITING_APPROVAL/Approval 事实可跨进程读取，同一 Run 不会创建 Execution；身份绑定、审批接受/拒绝、决策不可改写由 PostgreSQL 验证 | 原生 MAF request_info 持久化/响应绑定、外部 IAM/Policy 实际授权、审批后生产工具分发 | [PR #8 CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37719247108) | PARTIAL |
 | A27 Safe Step Boundary | 进程显式异常退出后，新进程仍用 Same Run + Same Step + New Attempt 验证只读 PURE Document 工作；旧 Attempt 无权提交终态 | 自动 Worker ownership/fencing、原生 Same Attempt Resume、Workspace 恢复 | [PR #7 CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37718726040) | PARTIAL |
 | A28 UNKNOWN→Reconciliation | 非 PURE 被中断时产生 UNKNOWN 和持久 PENDING Reconciliation，没有第二次自动 dispatch | 真正外部副作用及 receipt 重放、人工 Reconciliation 闭环 | [PR #7 CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37718726040) | PARTIAL |
 | A31 Durable feasibility | 区分 Python MAF Workflow Checkpoint、本地/官方 provider 与 MAF Durable/Functions 托管路线；识别私有部署组合兼容性缺口 | 私有 Durable Backend、Functions+MSSQL 实跑、跨 Worker Same Attempt 恢复 | [调查说明](../poc/maf/DURABLE_FEASIBILITY.md) | RESEARCH / NOT VERIFIED |
@@ -49,6 +51,6 @@
 
 ## 6. 下一证据门槛
 
-- **A25**：使用当前固定版 MAF 的 *原生 Workflow CheckpointStorage*，验证从可用 checkpoint 恢复且不重复已完成 Executor，Checkpoint Ref 不进入平台业务字段；缺适配能力明确标 GAP。
-- **A26**：持久化同一个 Run 的 WAITING_APPROVAL，包括真实审批请求身份与决策幂等，不可伪造 approval；重启后仍保持等待，拒绝不得执行后续动作。区分平台 Wait 和 MAF 原生 HITL 恢复。
+- **A25**：单机 FileCheckpointStorage 的原生 Superstep Checkpoint 跨进程恢复在 POC 实测通过；接下来仍需验证绑定平台 RecoveryPoint、同 Attempt 真实阻断后恢复，以及私有分布式生产存储能否接入。
+- **A26**：平台 WAITING_APPROVAL、审批事实和跨进程恢复已通过限定测试；仍需把 MAF request_info/request_id 与平台 Approval 映射，验证真实 Authorization Decision 和拒绝后绝不调用敏感工具。
 - **A32/A33**：只有在真实私有 Durable backend 上验证跨 Worker Same Attempt，才评定 MAF Durable Control Plane。
