@@ -253,6 +253,10 @@ jobs:
         env:
           POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
         run: python -m unittest discover -s poc/maf/tests -p "test_durable_approval_delivery_pg.py" -v
+      - name: A34 P1 cross-database native launch and response reconciliation PostgreSQL
+        env:
+          POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
+        run: python -m unittest discover -s poc/maf/tests -p "test_durable_cross_db_gaps_pg.py" -v
       - name: A34 runtime binding guard static contract
         run: |
           python -m py_compile poc/maf/durable_approval_binding.py poc/maf/durable_approval_delivery.py poc/maf/functions-mssql/verify_concurrent_handoff.py

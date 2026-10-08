@@ -39,6 +39,8 @@
 
 | A34（P0）实际不同工作流代码镜像、Worker 混跑与冻结版本 | V1/V2 应用镜像 SHA 不同，且 V2 的声明版本与成功输出逻辑均不同。V1 Worker A 在 Native Prepare 中 SIGKILL，在线 V2 Worker B 原生接管同一 MSSQL Instance，执行到 V2 Handler，向 Harness Gateway 发送 V2 version；PG 冻结 V1 → HTTP 412 `HARNESS_INCOMPATIBLE_WORKER_VERSION`。受控外部 Tool 写入 0，MSSQL `Failed` / History=12，PG 一个 Attempt `FAILED`。**不能信赖原生 Durable 自动版本隔离** | 测试未更换 MAF SDK；Worker 版本头为测试自我声明，生产需可信来源校验；PG 任务失败状态由 Test Driver 写入，非生产自动化 | [A34 不兼容 Worker 真镜像负例](../poc/maf/functions-mssql/A34_INCOMPATIBLE_WORKER.md) | PASS (LOCAL WORKFLOW VERSION FAIL-CLOSED) / A34 P1 OPEN |
 
+| A34 P1 跨库 Native Start/PG Binding 和 HTTP Response/PG ACK 崩溃窗口 | 新增 PG Native Launch Intent（唯一、冻结、不得盲目重复 /run）与隔离/对账决策；审批投递新增基于官方只读 Native 终态的结果确认，不重发 /respond。本机复用 Functions+MSSQL，对两个真实 Instance `c264e38ed5534c0a80155d58f44c89e6` (Running/History 11，orphan=PG UNKNOWN、无工具) 和 `2ab91024f0db4ce8855954c19040c314` (Completed/History 23，响应 1 次、动作 1 次、PG ACK 遗失后 APPLIED) 进行受控窗口验收；8 个 PG 方法合约纳入 CI | 受控窗口使用“刻意不提交绑定/ACK”而不是进程在 HTTP 中途 SIGKILL；本机状态更新来自测试 SQL、非实际生产自动 Reconciler；仅证明安全任务级处理，不证明 Exactly Once、生产级 Runtime HA | [A34 P1 跨库报告](../poc/maf/A34_CROSS_DB_GAP_FINDINGS.md) | PASS (LOCAL CONTROLLED WINDOWS) / A34 POC SCOPE COMPLETED, G6/G8 OPEN |
+
 **恢复能力完整清单**：[A30 恢复覆盖矩阵](POC_A_RECOVERY_MATRIX.md)，明确限制“单项 Fixture PASS ≠ 整体 G6 PASS”。
 
 ## 2. 不应混淆的三种恢复
