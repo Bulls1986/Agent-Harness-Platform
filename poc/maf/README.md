@@ -55,6 +55,10 @@ interpreted as completion of the S03/S06/S07/G2/G6 end-to-end gates.
 
 ## 0.2 A23 PostgreSQL task facts (integration slice)
 
+**Validated in [GitHub Actions #37717839849](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37717839849):** native MAF Workflow, 4 PostgreSQL integration tests, rejected terminal/Attempt mutations and stale Plan results, and separate-process readback for both completed and failed Runs. The generic no-DB unit-test job skips the four DB-only tests; the dedicated database step runs and passes all four. No Recovery/OSS gate is implied.
+
+
+
 The platform-owned ledger uses the same identity supplied to native MAF
 Document Workflow, never a generated MAF session ID as the platform Run ID.
 
