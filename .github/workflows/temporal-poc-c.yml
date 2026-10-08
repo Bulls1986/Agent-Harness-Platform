@@ -74,6 +74,10 @@ jobs:
         run: |
           python poc/temporal/verify_server_restart.py
           test "$(docker exec poc-c-temporal-pg psql -U temporal -d temporal -X -qAt -c 'SELECT COUNT(*) FROM history_node;')" -gt 0
+      - name: C12 native Temporal V1 replay and incompatible V2 nondeterminism
+        env:
+          POC_C_TEMPORAL_ADDRESS: 127.0.0.1:17234
+        run: python poc/temporal/verify_workflow_replay.py
       - name: C05 OSS/PG isolated cleanup (preserve volume on failures)
         if: always()
         run: |
