@@ -38,7 +38,7 @@
 | C06 | P0 | PURE Activity 重试与 NON_RETRYABLE 工具派发后的崩溃隔离 | **PASS（本地+CI 双 PG）**；真实外部 Receipt GAP |
 | C07 | P0 | 原生 Workflow ↔ 独立 Harness PostgreSQL Run/Step/Attempt/Execution + Frozen Binding/UNKNOWN Reconciliation | **PASS（本地+CI 双 PG）**；整体 G2/G6 仍 OPEN |
 | C08 | P0 | 审批 WAITING Signal 与 REJECTED/APPROVED 均按固定 Platform Decision 继续，不合并新旧 Attempt | PASS bounded / 企业授权非范围 |
-| C09 | P1 | **真实**替换两个 Agent Runtime Adapter 但平台 Run/Workflow/Events 不变；最好复用内网 LiteLLM | OPEN；固定 fixture A/B 不等于真实 Runtime Swap |
+| C09 | P1 | **真实**替换两个 Agent Runtime Adapter 而保持 Harness Run/Workflow/Event 契约 | **本地两次 Live SDK Swap PASS，CI 依赖/契约待核对**；模型供应商 G4 GAP |
 | C10 | P0 | 平台 Responses-compatible + Typed SSE/Replay Bridge，不暴露 Temporal Payload/History 作为领域事实 | **PASS（本地+CI 受限只读桥接）**；整体 G3 PARTIAL |
 | C11 | P1 | 可替换 SandboxProvider + OSS Artifact/Evidence 元数据/引用薄 Adapter，禁止在 Temporal History 存大 Payload | OPEN / G2/G5 |
 | C12 | P0 | Native History Replay 版本兼容门禁；实际不同 Worker 镜像升级风险 | **PASS（本地+CI Native History Replay 正负例）**；真实镜像接管/Build ID rollout GAP |
@@ -66,6 +66,7 @@
 
 1. C05 已有 [Temporal OSS Server+PostgreSQL 真实实证](../poc/temporal/C05_OSS_POSTGRES_FINDINGS.md)：同一 Workflow 通过 Worker/Server 重启，SQL History 在 Server 关闭期间仍保留。生产 TLS/HA 未因此验收。
 2. C06+C07 的 [真实 Temporal Activity 重试 + 独立 Harness PG 门禁](../poc/temporal/C06_C07_GUARDED_FINDINGS.md) 已完成本机验证：PURE 自动重试、非幂等派发后真实 Worker 退出、恢复拒绝重复、原 Attempt/Execution UNKNOWN + Pending 对账；真实企业 Tool Receipt 不在本轮通过范围。
+2a. C09 [MAF HarnessAgent 与 OpenAI Agents SDK 真实 LiteLLM Runtime Swap](../poc/temporal/C09_REAL_RUNTIME_FINDINGS.md)：两套 SDK 真实执行、同一 Native Workflow/Platform Run 下两 Attempt、双独立 Verify、六条平台事件；仍不等于不同模型供应商切换。
 3. C10 [受限只读 Responses/Typed SSE 真实链路](../poc/temporal/C10_PROTOCOL_FINDINGS.md)：读取 Harness PG、UNKNOWN 不误报完成、HTTP 进程重启后 `Last-Event-ID` 续播。完整 Responses/模型 Token SSE/Tool/Approval/Artifact 事件仍 GAP。
 4. C12 [Native History Replay 与不兼容 V2 负例](../poc/temporal/C12_REPLAY_FINDINGS.md)：同一真实 PostgreSQL History 用 V1 回放正常、V2 额外 Timer 触发 `NondeterminismError`。生产不兼容 Worker 镜像接管与 Build ID/patch rollout 仍需专项评估。
 5. 最终比较时记录真实部署依赖、SDK/Worker 特殊代码规模、配置、

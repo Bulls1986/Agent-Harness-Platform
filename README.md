@@ -16,6 +16,7 @@
 - [POC-C / C06/C07 双 PostgreSQL 非幂等派发故障与任务状态证据](poc/temporal/C06_C07_GUARDED_FINDINGS.md)
 - [POC-C / C10 受限 Responses/Typed SSE 跨 HTTP 进程恢复](poc/temporal/C10_PROTOCOL_FINDINGS.md)
 - [POC-C / C12 Temporal Native History Replay 与版本不兼容检测](poc/temporal/C12_REPLAY_FINDINGS.md)
+- [POC-C / C09 真实双 Agent Runtime SDK（MAF / OpenAI Agents）切换](poc/temporal/C09_REAL_RUNTIME_FINDINGS.md)
 - [POC-A 阶段性结论与证据台账](docs/POC_A_STAGE_FINDINGS.md)
 - [POC-A / A30 任务恢复覆盖矩阵](docs/POC_A_RECOVERY_MATRIX.md)
 - [架构待办 / Architecture Backlog](docs/ARCHITECTURE_BACKLOG.md)
