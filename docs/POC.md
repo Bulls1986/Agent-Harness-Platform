@@ -243,6 +243,10 @@ Temporal 不提供 Agent Harness，而提供 Durable Execution。该路线验证
 
 若引入 Temporal Service、数据库和 Worker 体系带来的运维复杂度明显高于长任务可靠性收益，或团队无法接受 Workflow 的确定性/replay 编程约束，则 Temporal 不作为默认内核；但仍可作为高可靠长任务的专用执行层。
 
+## 9.6 2026-10-09 POC-C 技术评估收口
+
+[POC-C C00–C16](POC_C_EVALUATION_CLOSEOUT.md) **EVALUATION CLOSED / CONDITIONAL**：OSS Temporal+PG、真实模型 Token SSE 和受控非幂等 Receipt 在各自约定范围验证成功，但完整 **G2/G3/G6 仍 PARTIAL / 生产 NO-GO**。仅关闭 POC-C 技术评估；不代表三组首轮 POC 均完成，也不构成正式生产选型。后续完整准入由 [ARCH-TODO-025](ARCHITECTURE_BACKLOG.md) 承接。
+
 # 10. POC 统一数据采集
 
 | **主题** | **约定**                                                     |

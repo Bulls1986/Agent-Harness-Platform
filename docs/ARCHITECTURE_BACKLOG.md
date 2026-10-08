@@ -748,3 +748,27 @@ MAF SkillsProvider
 **后续触发：** 当前核心 POC 收口后，若存在轻量 Tool/Code Execution 需求，则按同负载对照验证隔离正确性、网络/凭据、cancel/cleanup、任务恢复、环境一致性及并发性能，再决定 Adopt / Keep Candidate / Reject。
 
 **候选评估记录：** [MXC_EXECUTION_CONTAINER_CANDIDATE.md](references/MXC_EXECUTION_CONTAINER_CANDIDATE.md)
+
+---
+
+## ARCH-TODO-025 Durable Control Plane 生产架构准入
+
+**状态：POC（未通过生产硬门禁，非重启 POC-C）**
+
+**优先级：P0（完整 G2/G3/G6）；P1（G4/G5/生产成熟度）**
+
+**来源：** [POC-C 阶段评估收口](POC_C_EVALUATION_CLOSEOUT.md) / [C14 同口径评估](../poc/temporal/C14_COMPARATIVE_DECISION.md)。本条是 C00–C16 阶段性评估之后的**唯一开放行动台账**，不创建 C17/C18。
+
+### P0 实证验收（必须成功与故障注入）
+
+1. **G3 / 同一真实 Run 协议**：自托管 Responses-compatible Create/GET、真实 Token SSE、Plan/Tool/Verify/Artifact/Approval/UNKNOWN 持久 Typed Event 在同一 Run 对齐，HTTP/API/Worker 重启、Last-Event-ID 重放、游标隔离、Cancel→CANCELLING/UNKNOWN/终态的完整边界均需正反例；不支持的官方语义明确 UNSUPPORTED，不伪装完全兼容。
+2. **G2/G6 / Native Start & RecoveryPoint**：验证 Server 接受但平台 ACK 丢失、确定未启动、Timeout 导致是否启动未知等窗口；冻结 Native Binding，持久 Opaque RecoveryPoint，使用官方接口反查；未查明时拒绝盲 Start。真实 Worker 故障后按 Run/Step/Attempt/Execution 恢复到最深安全点，覆盖 WAITING_APPROVAL、UNKNOWN、Same Attempt Resume 能力限制、新 Attempt 与 terminal never reopen。
+3. **G6 / 企业非幂等工具闭环**：在可获授权的已治理企业 Tool/MCP 真实 Receipt 接口上验证单次外部效果、崩溃后只读对账、Receipt 缺失/血缘不符/effect_count>1 均安全 fail-closed 或人工介入；Reconciliation RESOLVED 不直接将历史 UNKNOWN 或 Run 标成功，必须经过独立业务 Verifier/Decision 最终裁决。无真实企业接口时保留 GAP，不以受控 POC Tool 冒充企业验收。
+
+### P1 真替换和生产成熟度
+
+- **G4/G5**：第二真实 Model/Provider；CubeSandbox↔Docker SandboxProvider SPI 最小 conformance smoke，记录修改范围、降级模式和替代成本。
+- **G1/G8**：Temporal 自托管 TLS/发布/Worker versioning 与 replay/rollout/rollback；外部 DB/OSS ownership；同负载 MAF vs Temporal TTFT/P95/CPU/Memory/依赖和运维工时对比。缺乏实测不生成分数；不自建企业 IAM、MCP Governance、APM、对象存储或数据库 Backup/DR。
+- **退出条件**：同口径 G1/G2/G3/G6 真实复跑证据与 CI、部署差异及风险；任一完整硬门禁仍 PARTIAL/GAP 则**生产 NO-GO**。P1 要明确 Adopt / Conditional / Reject 和业务成本。最终形成独立新的 Accepted Production ADR，同步 `docs/ARCHITECTURE.md` / `docs/POC.md` 后，本条才能 CLOSED。
+
+**架构边界：** Task Facts 和业务终态始终归 Harness；Temporal History/Checkpoint 不复制、不新建重复 Scheduler；MXC 属独立 P2 候选，不成为本项硬门禁。

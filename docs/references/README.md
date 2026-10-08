@@ -39,6 +39,10 @@
 31. [Harness Scope Alignment Review](HARNESS_SCOPE_ALIGNMENT_REVIEW.md)
 32. [Microsoft Execution Containers（MXC）Sandbox Backend 候选评估](MXC_EXECUTION_CONTAINER_CANDIDATE.md)
 
+## 阶段评估处置索引
+
+- [POC-C C00–C16 技术评估收口与生产 NO-GO](../POC_C_EVALUATION_CLOSEOUT.md)：是候选技术裁决，不是生产 Accepted ADR；后续行动统一由 [ARCH-TODO-025](../ARCHITECTURE_BACKLOG.md) 管理。
+
 ## 使用原则
 
 - 参考资料允许保留探索过程、候选方案和被否决思路。
