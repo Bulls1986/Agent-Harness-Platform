@@ -35,7 +35,7 @@ jobs:
           python -m pip freeze > maf-durable-python311-dependencies.txt
       - name: Start official DTS dev emulator with dedicated TaskHub
         run: |
-          docker compose -f poc/maf/compose-durable-emulator.yml up -d
+          docker compose -p maf-dts-poc -f poc/maf/compose-durable-emulator.yml up -d
           docker image inspect mcr.microsoft.com/dts/dts-emulator:latest --format '{{.Id}}' > dts-emulator-image-id.txt
           docker image inspect mcr.microsoft.com/dts/dts-emulator:latest --format '{{json .RepoDigests}}' > dts-emulator-image-digests.txt
           python - <<'PY'
@@ -120,5 +120,5 @@ jobs:
       - name: Shutdown DTS emulator
         if: always()
         run: |
-          docker compose -f poc/maf/compose-durable-emulator.yml logs --no-color --tail 100 || true
-          docker compose -f poc/maf/compose-durable-emulator.yml down --remove-orphans || true
+          docker compose -p maf-dts-poc -f poc/maf/compose-durable-emulator.yml logs --no-color --tail 100 || true
+          docker compose -p maf-dts-poc -f poc/maf/compose-durable-emulator.yml down || true
