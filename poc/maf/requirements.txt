@@ -3,3 +3,5 @@
 # Do not infer Durable/Hosting support from these two packages.
 agent-framework-core==1.20.0
 agent-framework-openai==1.15.0
+# Platform-owned PostgreSQL task facts only; not a MAF checkpoint backend.
+psycopg[binary]==3.3.6

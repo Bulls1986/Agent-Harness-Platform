@@ -62,6 +62,22 @@ jobs:
           docker compose -f poc/maf/compose.yml up --wait -d postgres otel-collector
           docker compose -f poc/maf/compose.yml exec -T postgres psql -U poc -d poc_harness -c "SELECT 1"
           test "$(docker inspect -f '{{.State.Running}}' "$(docker compose -f poc/maf/compose.yml ps -q otel-collector)")" = true
+      - name: A23 real PostgreSQL task facts / transactional guards
+        env:
+          POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
+        run: |
+          python -m unittest discover -s poc/maf/tests -p "test_task_ledger_pg.py" -v
+          echo "A23 integration tests complete"
+      - name: A23 read completed Run from a separate Python process
+        env:
+          POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
+        run: |
+          python poc/maf/persisted_document.py --case expected > /tmp/maf-a23-run.json
+          run_id=$(python -c "import json; x=json.load(open('/tmp/maf-a23-run.json')); assert x['run']['state']=='COMPLETED'; print(x['run']['run_id'])")
+          python poc/maf/persisted_document.py --inspect "$run_id" > /tmp/maf-a23-reloaded.json
+          python -c "import json; x=json.load(open('/tmp/maf-a23-reloaded.json')); assert x['run']['state']=='COMPLETED'; assert x['verifications'][0]['passed']; assert len(x['attempts'])==1; print('separate-process task fact readback OK')"
+          python poc/maf/persisted_document.py --case buggy > /tmp/maf-a23-broken.json
+          python -c "import json; x=json.load(open('/tmp/maf-a23-broken.json')); assert x['run']['state']=='FAILED'; assert x['attempts'][0]['failure_type']=='VERIFICATION_FAILURE'; print('failed run readback OK')"
       - name: Shutdown POC infrastructure
         if: always()
         env:

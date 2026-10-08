@@ -53,6 +53,54 @@ python -m unittest discover -s poc/maf/tests -p "test_*.py" -v
 The above public API extensions use documented behavior; they cannot be
 interpreted as completion of the S03/S06/S07/G2/G6 end-to-end gates.
 
+## 0.2 A23 PostgreSQL task facts (integration slice)
+
+**Validated in [GitHub Actions #37717839849](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37717839849):** native MAF Workflow, 4 PostgreSQL integration tests, rejected terminal/Attempt mutations and stale Plan results, and separate-process readback for both completed and failed Runs. The generic no-DB unit-test job skips the four DB-only tests; the dedicated database step runs and passes all four. No Recovery/OSS gate is implied.
+
+
+
+The platform-owned ledger uses the same identity supplied to native MAF
+Document Workflow, never a generated MAF session ID as the platform Run ID.
+
+```bash
+# Install pinned SDK + psycopg in a virtualenv, then start POC Postgres:
+python -m pip install -r poc/maf/requirements.txt
+docker compose --env-file poc/maf/.env -f poc/maf/compose.yml up -d postgres
+export POC_POSTGRES_DSN="postgresql://poc:<local-password>@127.0.0.1:54329/poc_harness"
+
+python poc/maf/persisted_document.py --case expected
+python poc/maf/persisted_document.py --case buggy
+python poc/maf/persisted_document.py --inspect "<run-id-from-first-command>"
+python -m unittest discover -s poc/maf/tests -p "test_task_ledger_pg.py" -v
+```
+
+The schema is in `sql/001_task_facts.sql`. It stores Conversation/Turn/Run,
+versioned Plan, Step, Attempt, Execution, Verification, typed Event, and
+opaque RuntimeBinding/RecoveryPoint *references*. It does not store large
+Artifact or Evidence payloads, real MAF checkpoint internals, or a new
+scheduler. A trusted document verifier runs inside the native MAF Workflow;
+completion and verification facts are committed in **one** PostgreSQL
+transaction afterward. The process can exit, and a new Python process can
+read all of the persisted task facts.
+
+Database-enforced negative cases include terminal Run mutation, finalized
+Attempt rewriting, Plan history mutation, stale Plan finalization, and
+mismatched identity. A failure during native Workflow execution can leave
+the Run in RUNNING before the terminal fact transaction; interpreting and
+safely recovering such a Run belongs to A27–A30, **not** this slice.
+
+**Critical limitations:**
+
+- `poc-fixture://` evidence refs represent committed trusted test fixtures,
+  not OSS-backed Evidence. A15 must replace them with durable object refs.
+- Session/History/Compaction is **not** persisted by this ledger (A07/A24).
+  MAF's documented `AgentSession.to_dict/from_dict` path is a separate,
+  opaque session-state serialization capability.
+- Runtime Checkpoint/DurableTask/Worker failure resume is **not** implemented.
+  A23's task facts do not by themselves satisfy G2/G6.
+- This POC schema is a small validated slice, not the full production schema
+  or migration/permission architecture.
+
 ## 1. Install and inspect (A01)
 
 Use Python 3.11+ in a clean venv:
