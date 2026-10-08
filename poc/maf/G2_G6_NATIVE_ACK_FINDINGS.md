@@ -20,3 +20,12 @@
 **3/3 PASS**，同一临时 PostgreSQL 另外执行 A34 Cross DB **8/8**、RecoveryPoint **4/4**、Tool Receipt **5/5**，均通过。测试后销毁隔离数据库。
 
 **未验证：** 官方 MAF+MSSQL Worker 在真实 socket 半包条件下的同一轮实例状态观察；Native Instance ID 遗失后的生产安全定位、跨节点故障和企业 MCP 回执仍需独立验收。不能将本次 HTTP Stub 与历史官方 Native A34 实验拼接成同一完整故障链，G2/G6 仍 PARTIAL/GAP。
+## 2026-10-09 / 官方 MAF Functions + MSSQL 真实 ACK 丢失验证（新增）
+
+新增可复测 `test_official_native_ack_pg.py`，需显式设置 `POC_OFFICIAL_NATIVE_BASE_URL=http://127.0.0.1:17082` 和临时 `POC_POSTGRES_DSN`：**1/1 PASS**。
+
+- 使用已启动的**官方 MAF Azure Functions MSSQL Durable Provider**，透过只在本机运行的 TCP Proxy 真实 POST 一次 `/run`；Proxy 已收到官方 InstanceId，但向平台下游**直接断开 socket 不传 ACK**。
+- `NativeStartAckCoordinator` 真正走 PG `prepare → /run → quarantine_unbound`；平台原 Attempt/Execution UNKNOWN、Reconciliation PENDING、Native Binding=0；第二次启动在 Intent 处被拒绝，官方 /run 次数仍 **1**。
+- 通过官方 GET /status 证实 Native Instance 存在且等待原生 HITL；结束时对该唯一随机测试 Instance 发送 **REJECTED** 并确认输出 DENIED_NO_EXECUTION，避免遗留不安全测试实例。
+- 没有直接 SQL 篡改 TaskHub 或代替平台 Adapter 事务。本测试真实 Backend 但故障点是**受控代理下游 ACK**，不等于官方 Worker 自身 SIGKILL/网络半包损坏、跨节点 HA、未知 ID 的全局可信发现，也不等于企业 Tool Receipt Exactly Once。
+

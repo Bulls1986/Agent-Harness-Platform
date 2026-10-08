@@ -19,3 +19,9 @@
 4. Workspace-only 引用不宣称同一 Attempt 恢复。
 
 **4/4 PASS**。同一隔离 PostgreSQL 上回归非幂等 Tool Receipt **5/5 PASS**。没有调用真实 MAF Durable checkpoint/resume，没有恢复 Workspace 内容，也没有企业 OSS PIN / Artifact 存取验证；这些门禁继续 OPEN。
+## 2026-10-09 / 真实 MAF FileCheckpointStorage 跨进程恢复（新增）
+
+`verify_native_recovery_point.py` 连接真实 PG：进程 A 用 MAF Workflow `request_info` 和官方 `FileCheckpointStorage` 持久化原生 Checkpoint，平台记录同一 Run/Step/Attempt 的 Opaque RecoveryPoint；进程 A 退出后，进程 B 使用 PG `choose` 并验证 Native `list_checkpoints`，执行真实 `workflow.run(checkpoint_id=...)`，验证 Native RequestId 相同，再用 REJECTED 响应无工具副作用完成。另一个独立进程用错误 Provider 指纹被拒绝。
+
+**1/1 PASS**：两个不同 Python 进程 + 实际 MAF 公开 SDK + PG RecoveryPoint，Same Run/Attempt 身份保持。这是 FileCheckpointProvider 的 WAITING 请求恢复，不等于官方 MSSQL Durable RUNNING Executor same-attempt、Workspace Restore 或端到端 Tool Receipt 一致性。
+

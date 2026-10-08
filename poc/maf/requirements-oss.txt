@@ -1,0 +1,2 @@
+# Optional POC-A15 S3-compatible Artifact/Evidence/Workspace payload Adapter.
+boto3==1.35.99

@@ -438,6 +438,30 @@ are recorded in [DURABLE_FEASIBILITY.md](DURABLE_FEASIBILITY.md).
 - A23–A30: Postgres task facts and task-level recovery before claiming G2/G6.
 - A32/A33: real Python MAF Durable + Functions/MSSQL worker test.
 
+## A15 / G2 OSS Artifact, Evidence and Workspace actual S3 integration
+
+`oss_payload_refs.py` stores Harness-owned metadata (Run/Step/Attempt/
+Execution lineage, SHA-256, size, retention policy and tombstone) in PostgreSQL,
+while bytes live only in the ObjectStorage adapter. Actual S3 Put/Get/Delete
+is via optional `boto3`; no OSS engine, data-backup/HA layer or MCP governance
+is implemented. Restore enforces workspace-root paths, rejects symlinks and
+checks the object digest before atomic file replacement. RecoveryPoint references
+and explicit payload pins prevent purge while the Run remains recoverable;
+terminal Run cleanup preserves the minimal metadata tombstone.
+
+A repeatable **local isolated** S3-compatible SeaweedFS 3.99 + PostgreSQL
+acceptance (Docker required) creates disposable providers and ports, tests
+real Artifact/Evidence/Workspace bytes, tampering, recovery and retention,
+then removes only its own containers:
+
+    python -m pip install -r poc/maf/requirements-oss.txt
+    python poc/maf/verify_oss_acceptance.py
+
+Tests are in `test_oss_payload_refs_pg.py`; a generic CI run without boto3
+or an explicit isolated OSS endpoint SKIPs them. A local test result is NOT
+an enterprise OSS/Sandbox/Workspace multi-file restore certification.
+See [G2_G6_OSS_FINDINGS.md](G2_G6_OSS_FINDINGS.md).
+
 ## G2/G6 Native Start ACK uncertainty (bounded)
 
 `native_start_ack.py` commits one immutable PG Native Launch Intent before
@@ -453,6 +477,17 @@ actual TCP socket without an ACK. This is a **controlled native stub**, not
 MAF's official Durable Functions/MSSQL, and does not certify enterprise G6.
 See [G2_G6_NATIVE_ACK_FINDINGS.md](G2_G6_NATIVE_ACK_FINDINGS.md).
 
+The later `test_official_native_ack_pg.py` exercises **real official
+MAF Functions+MSSQL** on an existing trusted endpoint: a loopback proxy
+calls official /run exactly once and closes the downstream socket after the
+native instance was created but before platform ACK; PG quarantine/no replay
+is validated with the real coordinator and the test Instance is safely
+closed by a REJECTED HITL response. Set
+`POC_OFFICIAL_NATIVE_BASE_URL=http://127.0.0.1:17082` with an isolated
+`POC_POSTGRES_DSN` to opt in; it is intentionally NOT run by generic CI
+(disconnected CI has no local Functions+MSSQL service). This does not
+simulate an actual Functions Worker process crash.
+
 ## G2/G6 RecoveryPoint reference and capability slice
 
 `recovery_point_store.py` persists only immutable Opaque checkpoint and
@@ -464,6 +499,13 @@ Adapters. Workspace-only references do not imply same-Attempt resume.
 The real PG tests in `test_recovery_point_store_pg.py` verify lineage,
 immutability and conservative refusal for version/capability mismatches.
 See [G2_G6_RECOVERY_POINT_FINDINGS.md](G2_G6_RECOVERY_POINT_FINDINGS.md).
+
+`verify_native_recovery_point.py` also performs a **real public MAF
+FileCheckpointStorage resume** from a PG RecoveryPoint across two different
+Python processes: restores identical Native Request/Run/Attempt, verifies
+the provider fingerprint before resuming and uses REJECTED to ensure no
+sensitive action. This is waiting-state MAF checkpoint, not a completed
+MSSQL RUNNING Executor/Workspace resume.
 
 ## G6 bounded external HTTP Tool Receipt reconciliation
 

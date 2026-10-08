@@ -116,6 +116,14 @@ jobs:
         env:
           POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
         run: python -m unittest discover -s poc/maf/tests -p "test_recovery_point_store_pg.py" -v
+      - name: A15 external object adapter regression (SKIP without approved S3 + optional boto3)
+        env:
+          POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
+        run: python -m unittest discover -s poc/maf/tests -p "test_oss_payload_refs_pg.py" -v
+      - name: G2 actual MAF public FileCheckpointStorage restore from PG RecoveryPoint across processes
+        env:
+          POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
+        run: python poc/maf/verify_native_recovery_point.py
       - name: G2/G6 native start real TCP ACK loss safe PG quarantine (bounded HTTP stub)
         env:
           POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
