@@ -116,6 +116,10 @@ jobs:
         env:
           POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
         run: python -m unittest discover -s poc/maf/tests -p "test_recovery_point_store_pg.py" -v
+      - name: G2/G6 native start real TCP ACK loss safe PG quarantine (bounded HTTP stub)
+        env:
+          POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
+        run: python -m unittest discover -s poc/maf/tests -p "test_native_start_ack_pg.py" -v
       - name: A24/A27 distinct worker-process kill and restart
         env:
           POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness

@@ -438,6 +438,21 @@ are recorded in [DURABLE_FEASIBILITY.md](DURABLE_FEASIBILITY.md).
 - A23–A30: Postgres task facts and task-level recovery before claiming G2/G6.
 - A32/A33: real Python MAF Durable + Functions/MSSQL worker test.
 
+## G2/G6 Native Start ACK uncertainty (bounded)
+
+`native_start_ack.py` commits one immutable PG Native Launch Intent before
+calling the trusted adapter's native /run callback **once**. A lost HTTP ACK,
+invalid native instance ID or PG bind failure quarantines the original
+Attempt/Execution as UNKNOWN with PENDING Reconciliation; it never calls /run
+again. Retried prepare now deterministically fails as DurableBindingMismatch
+before dispatch, even when the original Attempt is UNKNOWN.
+
+The real PG test `test_native_start_ack_pg.py` uses a local HTTP server that
+commits a native-like instance into an independent SQLite DB and closes the
+actual TCP socket without an ACK. This is a **controlled native stub**, not
+MAF's official Durable Functions/MSSQL, and does not certify enterprise G6.
+See [G2_G6_NATIVE_ACK_FINDINGS.md](G2_G6_NATIVE_ACK_FINDINGS.md).
+
 ## G2/G6 RecoveryPoint reference and capability slice
 
 `recovery_point_store.py` persists only immutable Opaque checkpoint and
