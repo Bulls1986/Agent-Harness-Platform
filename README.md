@@ -13,6 +13,7 @@
 - [POC-C / Temporal 技术验证任务计划](docs/POC_C_TASK_PLAN.md)
 - [POC-C / 首批原生 Worker 与 Server 恢复证据](poc/temporal/C00_C04_NATIVE_FINDINGS.md)
 - [POC-C / C05 非 Dev Server 的 OSS Temporal + PostgreSQL 故障证据](poc/temporal/C05_OSS_POSTGRES_FINDINGS.md)
+- [POC-C / C06/C07 双 PostgreSQL 非幂等派发故障与任务状态证据](poc/temporal/C06_C07_GUARDED_FINDINGS.md)
 - [POC-A 阶段性结论与证据台账](docs/POC_A_STAGE_FINDINGS.md)
 - [POC-A / A30 任务恢复覆盖矩阵](docs/POC_A_RECOVERY_MATRIX.md)
 - [架构待办 / Architecture Backlog](docs/ARCHITECTURE_BACKLOG.md)

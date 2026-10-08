@@ -79,3 +79,58 @@ jobs:
         run: |
           docker compose -p poc-c-temporal-oss -f poc/temporal/compose-oss-postgres.yml logs --tail 20 temporal-oss || true
           docker compose -p poc-c-temporal-oss -f poc/temporal/compose-oss-postgres.yml down || true
+
+  selfhost-harness-c06-c07-fault-chain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install official Temporal SDK and minimal Harness PostgreSQL driver
+        run: |
+          python -m pip install -r poc/temporal/requirements-platform.txt
+          python -m pip check
+          python -m compileall -q poc/temporal
+      - name: Create isolated credentials for TWO independent PostgreSQL services
+        run: |
+          python - <<'PY'
+          import os,secrets
+          temporal=secrets.token_hex(16)
+          harness=secrets.token_hex(16)
+          with open(os.environ["GITHUB_ENV"],"a",encoding="utf-8") as env:
+              env.write("POC_C_TEMPORAL_DB_PASSWORD="+temporal+"\n")
+              env.write("POC_C_HARNESS_PG_PASSWORD="+harness+"\n")
+              env.write("POC_C_PLATFORM_DSN=postgresql://harness:"+harness+"@127.0.0.1:17236/harness_poc\n")
+          PY
+      - name: Start actual Temporal OSS/PostgreSQL and separate Harness PostgreSQL
+        run: |
+          set -euo pipefail
+          docker compose -p poc-c-guarded-native -f poc/temporal/compose-oss-postgres.yml up -d
+          docker compose -p poc-c-guarded-platform -f poc/temporal/compose-platform-pg.yml up -d
+          for attempt in $(seq 1 60); do
+            status=$(docker inspect -f '{{.State.Status}}|{{.State.ExitCode}}' poc-c-guarded-native-temporal-namespace-1)
+            if [ "$status" = 'exited|0' ]; then break; fi
+            sleep 2
+          done
+          test "$(docker inspect -f '{{.State.Status}}|{{.State.ExitCode}}' poc-c-guarded-native-temporal-namespace-1)" = 'exited|0'
+          for attempt in $(seq 1 30); do
+            if [ "$(docker inspect -f '{{.State.Health.Status}}' poc-c-harness-pg)" = 'healthy' ]; then break; fi
+            sleep 2
+          done
+          test "$(docker inspect -f '{{.State.Health.Status}}' poc-c-harness-pg)" = 'healthy'
+      - name: C07 immutable platform Run/Step/Attempt/Execution native-binding PostgreSQL negative tests
+        run: python -m unittest discover -s poc/temporal/tests -p "test_*.py" -v
+      - name: C06+C07 real Temporal PURE retry plus crash-after-HTTP NonRetryable fencing
+        env:
+          POC_C_TEMPORAL_ADDRESS: 127.0.0.1:17234
+        run: |
+          python poc/temporal/verify_c06_c07.py
+          test "$(docker exec poc-c-harness-pg psql -U harness -d harness_poc -X -qAt -c "SELECT count(*) FROM poc_reconciliations WHERE state='PENDING';")" -gt 0
+      - name: Stop isolated C06/C07 services without dropping persisted evidence
+        if: always()
+        run: |
+          docker compose -p poc-c-guarded-native -f poc/temporal/compose-oss-postgres.yml logs --tail 20 temporal-oss || true
+          docker compose -p poc-c-guarded-platform -f poc/temporal/compose-platform-pg.yml down || true
+          docker compose -p poc-c-guarded-native -f poc/temporal/compose-oss-postgres.yml down || true

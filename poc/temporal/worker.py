@@ -18,8 +18,15 @@ async def main() -> None:
     address=os.environ.get("POC_C_TEMPORAL_ADDRESS","127.0.0.1:17233")
     queue=os.environ["POC_C_TASK_QUEUE"]
     client=await Client.connect(address)
-    worker=Worker(client,task_queue=queue,workflows=[DocumentReviewWorkflow],
-                  activities=[fixture_agent_execute,independent_document_verify])
+    if os.environ.get("POC_C_GUARDED")=="1":
+        from guarded_workflow import GuardedNonRetryableWorkflow
+        from guarded_tool import guarded_tool, pure_retry_probe
+        workflows=[GuardedNonRetryableWorkflow]
+        activities=[guarded_tool,pure_retry_probe]
+    else:
+        workflows=[DocumentReviewWorkflow]
+        activities=[fixture_agent_execute,independent_document_verify]
+    worker=Worker(client,task_queue=queue,workflows=workflows,activities=activities)
     # READY means the Worker has been constructed; successful dispatch and
     # query are checked independently by the controller, not inferred from it.
     print("TEMPORAL_WORKER_READY",flush=True)
