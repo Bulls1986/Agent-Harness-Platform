@@ -10,6 +10,7 @@
 - [Agent Harness Platform 架构 POC 说明书 V1.0](docs/POC.md)
 - [POC-A / MAF 完整实施任务计划](docs/POC_A_TASK_PLAN.md)
 - [POC-A 阶段性结论与证据台账](docs/POC_A_STAGE_FINDINGS.md)
+- [POC-A / A30 任务恢复覆盖矩阵](docs/POC_A_RECOVERY_MATRIX.md)
 - [架构待办 / Architecture Backlog](docs/ARCHITECTURE_BACKLOG.md)
 
 ## 首轮 POC
