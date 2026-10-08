@@ -47,8 +47,11 @@ jobs:
         run: |
           mkdir -p /tmp/maf-a25-checkpoints
           chmod 700 /tmp/maf-a25-checkpoints
-          python poc/maf/checkpoint_probe.py --save /tmp/maf-a25-checkpoints
-          python poc/maf/checkpoint_probe.py --restore /tmp/maf-a25-checkpoints
+          for i in 1 2 3; do
+            mkdir -p "/tmp/maf-a25-checkpoints/repeat-$i"
+            python poc/maf/checkpoint_probe.py --save "/tmp/maf-a25-checkpoints/repeat-$i"
+            python poc/maf/checkpoint_probe.py --restore "/tmp/maf-a25-checkpoints/repeat-$i"
+          done
       - name: Compile Python POC entry points
         run: python -m compileall -q poc/maf
       - name: Verify compose configuration (local placeholders only)
