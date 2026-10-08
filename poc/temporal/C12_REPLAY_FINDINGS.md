@@ -62,10 +62,12 @@ export POC_C_TEMPORAL_ADDRESS=127.0.0.1:17234
 python poc/temporal/verify_workflow_replay.py
 ```
 
-本机两轮（真正 History + V1/V2 Replay）已通过；CI 对现有
-`selfhost-oss-postgres-proof` 作业追加该验证，用 GitHub Linux
-runner 再次证明。与 C05/ C06/C07 一样，只有 CI 成功才算最终
-scoped PASS。
+本机真实 History 的 V1/V2 Replay 正反验证 PASS，GitHub
+[CI #37770188545](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37770188545)
+中 `selfhost-oss-postgres-proof` 的 **C12 Native Replay 步骤 SUCCESS**，
+其他两组作业也全部 SUCCESS。对应
+[PR #29](https://github.com/Bulls1986/Agent-Harness-Platform/pull/29)
+已经合并 main；因此 C12 **部署前 Replay 子项最终 scoped PASS**。
 
 **结论：C12 部署前 Native History Replay 负例 PASS，
 但真实不兼容 Worker 接管/镜像身份、生产版本管理仍 GAP；
