@@ -35,6 +35,8 @@
 
 | A34（增量）RUNNING Attempt Native Instance 固定身份与版本门禁 | 平台独立持久不可变 Run/Step/Attempt/Execution ↔ Native Instance/Workflow/Runtime Version 映射；独立真实 PG 事务回滚实验通过首次绑定/重复绑定拒绝/更新拒绝；6 项 lineage/版本/状态数据库合约纳入 CI | 没有把真正 MSSQL Durable Instance 的创建/强杀/接管与此绑定放进同一次故障实验，跨库创建窗口依然 OPEN | [A34 RUNNING 身份绑定](../poc/maf/A34_RUNNING_IDENTITY_BINDING.md) | PASS (LOCAL SQL) / A34 OPEN |
 
+| A34（P0）**同一次** Native Worker 崩溃 + PG Running 身份/版本 + 受控 Tool Admission | 独立 `DurableA34Guarded` MSSQL/TaskHub 双在线 Worker；平台 PG 1 个 RUNNING Attempt + Immutable Native Instance/Version；首次原生 Executor 进入成功经 PG Fencing 后向 HTTP Tool Sink 写入 1 次，A SIGKILL 后 B 原位重入，第二次 PG Admission 409 拒绝，Sink 仍 1 次。官方原生 Instance `Failed` / History=12，故障标识 `HARNESS_TOOL_REPLAY_DENIED`；PG Attempt/Execution `UNKNOWN`、Reconciliation `PENDING` | 这里的成功是“不重复危险副作用，安全停止”，不是 Native Workflow 成功完成；Tool Sink 为受控本机回执；PG 分类采用测试注入 SQL 而非真实自动 Reconciler。版本不兼容接管和跨库极端断点仍 OPEN | [单链故障验证记录](../poc/maf/functions-mssql/A34_GUARDED_NATIVE_PG_E2E.md) | PASS (LOCAL FAIL-CLOSED SINGLE CHAIN) / A34 OPEN |
+
 **恢复能力完整清单**：[A30 恢复覆盖矩阵](POC_A_RECOVERY_MATRIX.md)，明确限制“单项 Fixture PASS ≠ 整体 G6 PASS”。
 
 ## 2. 不应混淆的三种恢复

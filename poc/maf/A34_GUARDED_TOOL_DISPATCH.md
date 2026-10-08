@@ -65,3 +65,12 @@ UNKNOWN/同一个 Attempt/Reconciliation、错误 Worker owner/token
   Admission；不应在 MAF Executor 内直接绕过 Adapter 写业务数据。
 - 本方案没有产生新的 Harness Scheduler、Lease 服务或 MAF fork；
   只复用平台 A29 已有表与公开接口。
+
+## 2026-10-08 后续同轮故障实证
+
+此前分离验证的端到端缺口，已在本机用官方 MSSQL Native Durable
+Worker SIGKILL、真实 PostgreSQL Immutable Attempt/Admission、受控 HTTP
+Tool Sink 的**同一次运行**补证：[A34 单链故障记录](functions-mssql/A34_GUARDED_NATIVE_PG_E2E.md)。
+Native Handler 重入 2 次，Sink 写入 1 次，Native `Failed`（主动拒绝
+第二次危险工具派发），平台 UNKNOWN/PENDING 对账。这没有改变上文
+针对真实企业 Tool Receipt、生产 HA 和 Exactly Once 的严格边界。
