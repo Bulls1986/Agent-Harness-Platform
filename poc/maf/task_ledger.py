@@ -34,7 +34,7 @@ class TaskLedger:
     def initialize(self) -> None:
         root = Path(__file__).resolve().parent / "sql"
         with psycopg.connect(self.dsn) as conn:
-            for name in ("001_task_facts.sql", "002_runtime_recovery.sql"):
+            for name in ("001_task_facts.sql", "002_runtime_recovery.sql", "003_approval_wait.sql"):
                 conn.execute((root / name).read_text(encoding="utf-8"))
 
     def start(self, fact: VerificationFact, *, initiator: str = "poc-ci-initiator") -> str:

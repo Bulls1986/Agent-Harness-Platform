@@ -43,6 +43,12 @@ jobs:
         run: python poc/maf/workflow_probe.py
       - name: A12 independent document verifier in native Workflow
         run: python poc/maf/document_workflow.py
+      - name: A25 native MAF File Checkpoint cross-process proof
+        run: |
+          mkdir -p /tmp/maf-a25-checkpoints
+          chmod 700 /tmp/maf-a25-checkpoints
+          python poc/maf/checkpoint_probe.py --save /tmp/maf-a25-checkpoints
+          python poc/maf/checkpoint_probe.py --restore /tmp/maf-a25-checkpoints
       - name: Compile Python POC entry points
         run: python -m compileall -q poc/maf
       - name: Verify compose configuration (local placeholders only)
@@ -98,6 +104,21 @@ jobs:
           python -c "import json; x=json.load(open('/tmp/maf-session-loaded.json')); assert x['restored'] and x['revision']==1; print('native MAF session restored in another process OK')"
           python poc/maf/recovery_process_probe.py --resume-pure "$run_id" --expected-attempt "$attempt_id" > /tmp/maf-resume.json
           python -c "import json; x=json.load(open('/tmp/maf-resume.json')); assert x['completed'] and x['attempts']==2; print('PURE Step retry after process exit OK')"
+      - name: A26 durable approval wait PostgreSQL tests
+        env:
+          POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
+        run: python -m unittest discover -s poc/maf/tests -p "test_approval_wait_pg.py" -v
+      - name: A26 waiting approval across Python process restart
+        env:
+          POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
+        run: |
+          python poc/maf/approval_wait_probe.py --create > /tmp/maf-approval-request.json
+          run_id=$(python -c "import json;print(json.load(open('/tmp/maf-approval-request.json'))['run_id'])")
+          approval_id=$(python -c "import json;print(json.load(open('/tmp/maf-approval-request.json'))['approval_id'])")
+          python poc/maf/approval_wait_probe.py --inspect "$run_id" > /tmp/maf-approval-loaded.json
+          python -c "import json; a=json.load(open('/tmp/maf-approval-request.json')); b=json.load(open('/tmp/maf-approval-loaded.json')); assert a==b and b['state']=='PENDING'; print('approval waiting recovered same Run in new process')"
+          python poc/maf/approval_wait_probe.py --approve "$approval_id" > /tmp/maf-approval-done.json
+          python -c "import json; x=json.load(open('/tmp/maf-approval-done.json')); assert x['run_state']=='RUNNING'; print('approval result persisted')"
       - name: Shutdown POC infrastructure
         if: always()
         env:

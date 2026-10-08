@@ -152,6 +152,52 @@ explicit and anchored to a particular interrupted Attempt identity; they do
 not silently infer that any RUNNING execution is abandoned. Retrying a
 non-PURE execution without reconciliation remains prohibited.
 
+## 0.4 Stage conclusions, native checkpoint and approval wait (A25/A26)
+
+The evidence-backed [POC-A Stage Findings](../../docs/POC_A_STAGE_FINDINGS.md)
+now separates each verified slice from undecided architecture and the G1–G8 gates.
+
+### A25: native workflow Checkpoint, not a custom engine
+
+```bash
+mkdir -p /tmp/maf-checkpoint-poc && chmod 700 /tmp/maf-checkpoint-poc
+python poc/maf/checkpoint_probe.py --save /tmp/maf-checkpoint-poc
+python poc/maf/checkpoint_probe.py --restore /tmp/maf-checkpoint-poc
+```
+
+MAF `FileCheckpointStorage` remains completely owned by the framework. The
+second command runs in a fresh Python process, rebuilds the same Workflow
+with stable Executor IDs, and rehydrates the native checkpoint before the
+terminal superstep. The test rejects re-executing the already completed
+`PrepareExecutor`. The `probe-manifest.json` contains only the
+`checkpoint_id` and workflow identifier, and is outside the native
+checkpoint files. This development-only file store **is not an enterprise
+Durable Task backend**. Python file checkpoint serialization has a
+restricted-pickle security boundary; never load untrusted checkpoint files.
+
+### A26: durable platform WAITING_APPROVAL, not native MAF HITL
+
+The platform Approval store records requester, approver, action/resource/
+policy references, Step and Attempt, all in PostgreSQL. A Run starts
+`WAITING_APPROVAL` with a `CREATED` Attempt and **no Execution**: a gated
+tool is not dispatched while the decision is pending. A second process
+reads the same Run's pending request. The decision transaction checks the
+named approver and *a trusted external authorization decision*, then
+updates the Run; rejection makes it terminal with no Execution.
+
+```bash
+# Requires POC_POSTGRES_DSN and a running PostgreSQL:
+python -m unittest discover -s poc/maf/tests -p "test_approval_wait_pg.py" -v
+# The separate-process CLI is strictly a trusted CI fixture, NOT a public
+# endpoint: it assumes the fixture's approver and Policy authorization.
+```
+
+Neither the CLI nor the PostgreSQL test implements enterprise IAM; never
+copy its fixed `authorized=True` into an HTTP approval handler.
+Native MAF `request_info`/pending-response checkpoint mapping and an
+actual sensitive Tool approval remain A26/G7 follow-up. This stage does not
+claim G2/G6/G7 PASS.
+
 ## 1. Install and inspect (A01)
 
 Use Python 3.11+ in a clean venv:
