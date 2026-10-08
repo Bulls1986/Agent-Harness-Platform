@@ -179,6 +179,10 @@ jobs:
           set -e
           test "$status" -ne 0
           UNCERTAIN_RUN="$uncertain_run" python -c "import os,psycopg;c=psycopg.connect(os.environ['POC_POSTGRES_DSN']);x=c.execute('SELECT d.state FROM poc_maf_hitl_deliveries d JOIN poc_approvals a ON a.approval_id=d.approval_id WHERE a.run_id=%s',(os.environ['UNCERTAIN_RUN'],)).fetchone();assert x[0]=='UNKNOWN';print('post-delivery intent crash stays UNKNOWN, no blind replay')"
+      - name: A29 cancellation and timeout PostgreSQL contract cases
+        env:
+          POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
+        run: python -m unittest discover -s poc/maf/tests -p "test_execution_control_pg.py" -v
       - name: Shutdown POC infrastructure
         if: always()
         env:
