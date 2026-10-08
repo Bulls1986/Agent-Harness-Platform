@@ -33,6 +33,8 @@
 
 | A34（增量）原生 Executor 对接平台危险派发门禁 | 在公开 MAF WorkflowBuilder/Executor 上注入平台 ExecutionOwnership 和工具 Adapter，重复进入相同 Execution 的测试 2/2 PASS；首次进入调用模拟工具 1 次、第二次拒绝；首次结果不明后的再次进入同样拒绝。真实 PostgreSQL 联动由 CI 新增专项用例 | 不等于实际 MSSQL Durable SIGKILL + PostgreSQL + 真实工具的统一故障链，也未冻结 RUNNING Native Instance ↔ 平台 Attempt 映射；不能声称 Exactly Once | [A34 快速 Admission 验证](../poc/maf/A34_GUARDED_TOOL_DISPATCH.md) | PASS (LOCAL MAF HANDLER CONTRACT) / A34 OPEN |
 
+| A34（增量）RUNNING Attempt Native Instance 固定身份与版本门禁 | 平台独立持久不可变 Run/Step/Attempt/Execution ↔ Native Instance/Workflow/Runtime Version 映射；独立真实 PG 事务回滚实验通过首次绑定/重复绑定拒绝/更新拒绝；6 项 lineage/版本/状态数据库合约纳入 CI | 没有把真正 MSSQL Durable Instance 的创建/强杀/接管与此绑定放进同一次故障实验，跨库创建窗口依然 OPEN | [A34 RUNNING 身份绑定](../poc/maf/A34_RUNNING_IDENTITY_BINDING.md) | PASS (LOCAL SQL) / A34 OPEN |
+
 **恢复能力完整清单**：[A30 恢复覆盖矩阵](POC_A_RECOVERY_MATRIX.md)，明确限制“单项 Fixture PASS ≠ 整体 G6 PASS”。
 
 ## 2. 不应混淆的三种恢复
