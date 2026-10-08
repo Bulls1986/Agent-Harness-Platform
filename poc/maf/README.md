@@ -438,6 +438,33 @@ are recorded in [DURABLE_FEASIBILITY.md](DURABLE_FEASIBILITY.md).
 - A23–A30: Postgres task facts and task-level recovery before claiming G2/G6.
 - A32/A33: real Python MAF Durable + Functions/MSSQL worker test.
 
+## G3 bounded live model streaming (not yet full Gate PASS)
+
+New local-only POST /v1/live/responses accepts a text prompt with stream=true.
+Only the one model configured in POC_LITELLM_MODEL is admitted. It calls actual
+MAF streaming via OpenAI-compatible LiteLLM, disables tools/file memory,
+persists each nonempty text delta into the platform PostgreSQL poc_events
+table, then emits the committed event over SSE. The GET
+/v1/responses/{run_id} snapshot reconstructs model output only from
+persisted deltas, and GET /v1/runs/{run_id}/events supports both ?after=N
+and run-scoped Last-Event-ID headers. No synthetic output or model retries.
+
+Set POC_POSTGRES_DSN to a disposable local database. The verification script
+reads the LiteLLM credential from a trusted short-lived stdin pipe, rather
+than argv, files or stdout:
+
+    python poc/maf/verify_live_model_protocol.py --model YOUR_MODEL --base-url YOUR_GATEWAY_V1
+
+It starts a real loopback HTTP process, streams an unpredictable nonce through
+the real model, shuts the process down, restarts without a model credential,
+then validates the same PG Run/Token SSE cursor and exact output reconstruction.
+Never pass a key through command-line arguments or commit it.
+
+This is a model-only restricted protocol slice, not complete Responses API
+compatibility. An in-flight stream lost with the HTTP worker is not
+automatically resumed or retried; G2/G6 recovery/reconciliation remains a
+separate hard gate. See [G3_LIVE_PROTOCOL_FINDINGS.md](G3_LIVE_PROTOCOL_FINDINGS.md).
+
 References: `docs/POC.md`, `docs/POC_A_TASK_PLAN.md` and Accepted Contracts.
 
 ## Upstream MinIO image caveat (2026-10-08)
