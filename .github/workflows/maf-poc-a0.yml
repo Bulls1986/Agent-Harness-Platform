@@ -78,6 +78,26 @@ jobs:
           python -c "import json; x=json.load(open('/tmp/maf-a23-reloaded.json')); assert x['run']['state']=='COMPLETED'; assert x['verifications'][0]['passed']; assert len(x['attempts'])==1; print('separate-process task fact readback OK')"
           python poc/maf/persisted_document.py --case buggy > /tmp/maf-a23-broken.json
           python -c "import json; x=json.load(open('/tmp/maf-a23-broken.json')); assert x['run']['state']=='FAILED'; assert x['attempts'][0]['failure_type']=='VERIFICATION_FAILURE'; print('failed run readback OK')"
+      - name: A24/A27/A28 native Session and safe recovery PostgreSQL tests
+        env:
+          POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
+        run: python -m unittest discover -s poc/maf/tests -p "test_session_recovery_pg.py" -v
+      - name: A24/A27 distinct worker-process kill and restart
+        env:
+          POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
+        run: |
+          set +e
+          python poc/maf/recovery_process_probe.py --create-crashed-run > /tmp/maf-crashed-run.json
+          crashed_exit=$?
+          set -e
+          test "$crashed_exit" -eq 91
+          run_id=$(python -c "import json; print(json.load(open('/tmp/maf-crashed-run.json'))['run_id'])")
+          attempt_id=$(python -c "import json; print(json.load(open('/tmp/maf-crashed-run.json'))['attempt_id'])")
+          python poc/maf/recovery_process_probe.py --save-session "$run_id" > /tmp/maf-session-saved.json
+          python poc/maf/recovery_process_probe.py --load-session "$run_id" > /tmp/maf-session-loaded.json
+          python -c "import json; x=json.load(open('/tmp/maf-session-loaded.json')); assert x['restored'] and x['revision']==1; print('native MAF session restored in another process OK')"
+          python poc/maf/recovery_process_probe.py --resume-pure "$run_id" --expected-attempt "$attempt_id" > /tmp/maf-resume.json
+          python -c "import json; x=json.load(open('/tmp/maf-resume.json')); assert x['completed'] and x['attempts']==2; print('PURE Step retry after process exit OK')"
       - name: Shutdown POC infrastructure
         if: always()
         env:

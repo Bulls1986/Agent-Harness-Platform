@@ -101,6 +101,57 @@ safely recovering such a Run belongs to A27–A30, **not** this slice.
 - This POC schema is a small validated slice, not the full production schema
   or migration/permission architecture.
 
+## 0.3 A24/A27/A28 bounded recovery evidence
+
+CI evidence: [GitHub Actions #37718726040](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37718726040)
+executed all three PostgreSQL tests plus a distinct-process test where worker
+A exits with status 91 and worker B rehydrates native Session state and
+finishes the PURE Step. Both readbacks passed. This is bounded task-level
+recovery evidence, not the full G6 gate.
+
+A new PostgreSQL migration, `sql/002_runtime_recovery.sql`, adds two
+deliberately small POC records: opaque native MAF Session payload in a
+separate runtime-state table, and a PENDING Reconciliation fact for UNKNOWN
+non-PURE executions. This is not another task scheduler or checkpoint backend.
+
+Native MAF `AgentSession.to_dict()/from_dict()` is used only through public
+APIs, with explicit Run binding, provider configuration fingerprint, and
+optimistic revision to reject stale writers. The CI process roundtrip uses a
+controlled state marker, **not** a real-model chat-history/compaction test.
+The runtime session payload is stored in a dedicated PostgreSQL POC table
+for a bounded proof, not as Harness Run metadata; the production Session
+backend and Payload policy still need to be chosen and tested.
+
+The fault-injection CLI intentionally terminates a Python process with code
+91 *after* the initial Run/Step/Attempt/Execution facts have committed.
+Another Python process then resumes a demonstrably PURE read-only Document
+Verification Step. It records the old Attempt as FAILED/EXECUTOR_CRASH and
+starts a new Attempt within the same Run and Step. A tardy old result
+cannot finalize that Run. No Same Attempt checkpoint resume is claimed.
+
+When side-effect semantics are NON_RETRYABLE and an execution may already
+have been dispatched, a missing worker is classified UNKNOWN and an explicit
+PENDING Reconciliation record is written; **no new Attempt is created**.
+The test never sends a real external write.
+
+Run these against the POC PostgreSQL database:
+
+```bash
+python -m unittest discover -s poc/maf/tests -p "test_session_recovery_pg.py" -v
+# Requires POC_POSTGRES_DSN. CI additionally tests separate OS processes:
+#   recovery_process_probe.py --create-crashed-run
+#   recovery_process_probe.py --save-session RUN_ID
+#   recovery_process_probe.py --load-session RUN_ID
+#   recovery_process_probe.py --resume-pure RUN_ID --expected-attempt ATTEMPT_ID
+```
+
+Limitations: no lease expiry/watchdog, automatic scheduling, native Workflow
+Checkpoint or durable same-Attempt resume, real history/compaction, Workspace
+restore, Sandbox snapshot, OSS Evidence or G2/G6 pass. Recovery commands are
+explicit and anchored to a particular interrupted Attempt identity; they do
+not silently infer that any RUNNING execution is abandoned. Retrying a
+non-PURE execution without reconciliation remains prohibited.
+
 ## 1. Install and inspect (A01)
 
 Use Python 3.11+ in a clean venv:
