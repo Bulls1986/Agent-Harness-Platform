@@ -25,6 +25,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS poc_one_pending_approval_per_run
 CREATE OR REPLACE FUNCTION poc_approval_decision_immutable()
 RETURNS trigger LANGUAGE plpgsql AS $approval_guard$
 BEGIN
+  IF (OLD.approval_id, OLD.run_id, OLD.step_id, OLD.attempt_id,
+      OLD.action_ref, OLD.resource_ref, OLD.policy_ref,
+      OLD.requester_principal_id, OLD.required_approver_principal_id)
+     IS DISTINCT FROM
+     (NEW.approval_id, NEW.run_id, NEW.step_id, NEW.attempt_id,
+      NEW.action_ref, NEW.resource_ref, NEW.policy_ref,
+      NEW.requester_principal_id, NEW.required_approver_principal_id) THEN
+    RAISE EXCEPTION 'approval binding cannot be changed: %', OLD.approval_id;
+  END IF;
   IF OLD.state <> 'PENDING' THEN
     RAISE EXCEPTION 'approval decision is immutable: %', OLD.approval_id;
   END IF;
