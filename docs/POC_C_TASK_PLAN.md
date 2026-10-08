@@ -41,7 +41,7 @@
 | C09 | P1 | **真实**替换两个 Agent Runtime Adapter 但平台 Run/Workflow/Events 不变；最好复用内网 LiteLLM | OPEN；固定 fixture A/B 不等于真实 Runtime Swap |
 | C10 | P0 | 平台 Responses-compatible + Typed SSE/Replay Bridge，不暴露 Temporal Payload/History 作为领域事实 | **PASS（本地+CI 受限只读桥接）**；整体 G3 PARTIAL |
 | C11 | P1 | 可替换 SandboxProvider + OSS Artifact/Evidence 元数据/引用薄 Adapter，禁止在 Temporal History 存大 Payload | OPEN / G2/G5 |
-| C12 | P0 | Native History Replay 版本兼容门禁；实际不同 Worker 镜像升级风险 | **本地 Replay 正负例 PASS，CI 待核对**；真实镜像接管/Build ID rollout GAP |
+| C12 | P0 | Native History Replay 版本兼容门禁；实际不同 Worker 镜像升级风险 | **PASS（本地+CI Native History Replay 正负例）**；真实镜像接管/Build ID rollout GAP |
 | C13 | P1 | Native OpenTelemetry / Task correlation；最小配置和依赖/运维成本计数 | OPEN |
 | C14 | P0 | G1–G8/S01–S12/A vs C 比较矩阵，失败类型和退出条件逐项决策，最终 ADR 前不得冒充主架构 PASS | OPEN |
 
