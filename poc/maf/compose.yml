@@ -41,9 +41,9 @@ services:
       context: ../..
       dockerfile: poc/maf/Dockerfile
     environment:
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
-      MAF_POC_MODEL: ${MAF_POC_MODEL:-}
+      - OPENAI_API_KEY
+      - OPENAI_BASE_URL
+      - MAF_POC_MODEL
     depends_on:
       postgres:
         condition: service_healthy
