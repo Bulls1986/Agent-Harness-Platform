@@ -35,8 +35,8 @@
 | C03 | P0 | 真实 Worker A SIGKILL，B 进程接续同一 Native Instance、审批 Signal 仍可交付、无旧 Attempt 覆写 | PASS (dev-server) |
 | C04 | P0 | 真 Temporal **Server** stop/start，状态从独立持久卷恢复，同 Native Workflow/History 继续 | PASS (dev SQLite) |
 | C05 | P0 | OSS Temporal Server + 独立 PostgreSQL（非 `start-dev`）复用 C02–C04 Worker/Server 故障实验 | **PASS（本地 OSS+PG）**，整体 G1/G6 仍 PARTIAL |
-| C06 | P0 | Activity infrastructure Retry 与业务 Replan 严格分开；非 PURE 结果不明必须平台 UNKNOWN/Receipt 对账，不把 Temporal 重放当 Exactly Once | NEXT |
-| C07 | P0 | 原生 Workflow ↔ PG 持久 Run/Step/Attempt/Execution + Reconciliation；跨进程读回，不依赖 In-memory dictionary | NEXT / G2/G6 |
+| C06 | P0 | PURE Activity 重试与 NON_RETRYABLE 工具派发后的崩溃隔离 | **本机双 PG 真实故障链 PASS，CI 待核对**；真实外部 Receipt GAP |
+| C07 | P0 | 原生 Workflow ↔ 独立 Harness PostgreSQL Run/Step/Attempt/Execution + Frozen Binding/UNKNOWN Reconciliation | **本机 PASS，CI 待核对**；完整 G2/G6 仍 OPEN |
 | C08 | P0 | 审批 WAITING Signal 与 REJECTED/APPROVED 均按固定 Platform Decision 继续，不合并新旧 Attempt | PASS bounded / 企业授权非范围 |
 | C09 | P1 | **真实**替换两个 Agent Runtime Adapter 但平台 Run/Workflow/Events 不变；最好复用内网 LiteLLM | OPEN；固定 fixture A/B 不等于真实 Runtime Swap |
 | C10 | P0 | 平台 Responses-compatible + Typed SSE/Replay Bridge，不暴露 Temporal Payload/History 作为领域事实 | OPEN / G3 |
@@ -65,8 +65,7 @@
 ## 下一批退出条件（不扩为生产服务建设）
 
 1. C05 已有 [Temporal OSS Server+PostgreSQL 真实实证](../poc/temporal/C05_OSS_POSTGRES_FINDINGS.md)：同一 Workflow 通过 Worker/Server 重启，SQL History 在 Server 关闭期间仍保留。生产 TLS/HA 未因此验收。
-2. C06+C07：对 NON_RETRYABLE 与 PURE 的失败动作作不同处理；
-   Task Facts 唯一性、Version Frozen、UNKNOWN 等遵守已有契约。
+2. C06+C07 的 [真实 Temporal Activity 重试 + 独立 Harness PG 门禁](../poc/temporal/C06_C07_GUARDED_FINDINGS.md) 已完成本机验证：PURE 自动重试、非幂等派发后真实 Worker 退出、恢复拒绝重复、原 Attempt/Execution UNKNOWN + Pending 对账；真实企业 Tool Receipt 不在本轮通过范围。
 3. C10：只做正确的 Harness Event/Response Adapter，外部 OSS/
    IAM/MCP Governance 只保留 Ownership Boundary，不重复建设产品。
 4. C12：Native Workflow 代码升级/Replay API 负例，避免“架构能跑”
