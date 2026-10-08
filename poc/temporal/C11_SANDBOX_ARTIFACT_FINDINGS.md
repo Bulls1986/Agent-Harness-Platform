@@ -1,6 +1,6 @@
 # POC-C C11 — SandboxProvider SPI / Object Storage Artifact & Evidence
 
-> 2026-10-08 | 本机真实 Docker + SeaweedFS S3 + 双 PG + Temporal 技术链路 **PASS**；Linux CI 待核对。
+> 2026-10-08 | **本机真实链+Linux 独立 CI scoped PASS**；整体 G2/G5/G6 仍 PARTIAL。
 
 ## 架构责任边界
 
@@ -62,6 +62,13 @@ python poc/temporal/verify_c11_real_s3.py
 GitHub CI 会独立启动实际 OSS Temporal + 两套 PostgreSQL +
 SeaweedFS S3 + Docker Container，验证与本机相同的原生 Workflow。
 不提供真实模型凭据、不使用生产 Bucket 或企业 Secret。
+
+### 最终 GitHub 验收
+
+- [PR #33](https://github.com/Bulls1986/Agent-Harness-Platform/pull/33) 已合并 main，commit `a56cbbd`。
+- [CI #37775482806](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37775482806) **5/5 作业 SUCCESS**，其中 `c11-real-sandbox-s3-artifact-proof` 在独立 Linux Runner 从零创建真实 OSS Temporal+双 PostgreSQL+SeaweedFS S3，运行四项 PG 负例与整条真实 Docker→S3→Temporal History 验收。
+- 所有先前 C05/C06/C07/C09/C10/C12 CI 回归仍 SUCCESS。
+- 该 CI 并不代表 CubeSandbox、企业 OSS IAM、两种独立生产 Sandbox 技术已经验收。
 
 ## 仍未验收 / 不过度承诺
 
