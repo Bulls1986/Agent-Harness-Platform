@@ -1,0 +1,2 @@
+agent-framework-core==1.20.0
+agent-framework-azurefunctions==1.0.0b260922
