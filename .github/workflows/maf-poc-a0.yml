@@ -43,6 +43,12 @@ jobs:
         run: python poc/maf/workflow_probe.py
       - name: A12 independent document verifier in native Workflow
         run: python poc/maf/document_workflow.py
+      - name: A25 native MAF File Checkpoint cross-process proof
+        run: |
+          mkdir -p /tmp/maf-a25-checkpoints
+          chmod 700 /tmp/maf-a25-checkpoints
+          python poc/maf/checkpoint_probe.py --save /tmp/maf-a25-checkpoints
+          python poc/maf/checkpoint_probe.py --restore /tmp/maf-a25-checkpoints
       - name: Compile Python POC entry points
         run: python -m compileall -q poc/maf
       - name: Verify compose configuration (local placeholders only)
