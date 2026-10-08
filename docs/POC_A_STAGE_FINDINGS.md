@@ -31,6 +31,8 @@
 
 | A34（增量）原生 RUNNING Executor 崩溃重放 | **两轮独立本机实测 PASS**：自托管 Functions+MSSQL 的独立 RUNNING Workflow 真实 Executor handler 开始后强杀 A、B 原位接续；每轮 MSSQL Instance Completed/History=12，已完成 Prepare=1，Executor dispatch observer=**2**，完成=1。Native Runtime 恢复但同一未完成 Handler 被再次调用；不能用 Workflow 完成证明副作用 Exactly Once | 文件 Marker 是观测器不是业务回执，尚未把该原生 RUNNING 故障与同一 PostgreSQL Run/Attempt/Execution 的 UNKNOWN/Reconciliation 联合验收；没有真实外部写、冻结版本真实升级。**A34/G6/G8 仍 OPEN** | [A34 原生 RUNNING SIGKILL 实测](../poc/maf/functions-mssql/A34_RUNNING_EXECUTOR_CRASH.md) | PASS (LOCAL NATIVE REINVOKE) / A34 OPEN |
 
+| A34（增量）原生 Executor 对接平台危险派发门禁 | 在公开 MAF WorkflowBuilder/Executor 上注入平台 ExecutionOwnership 和工具 Adapter，重复进入相同 Execution 的测试 2/2 PASS；首次进入调用模拟工具 1 次、第二次拒绝；首次结果不明后的再次进入同样拒绝。真实 PostgreSQL 联动由 CI 新增专项用例 | 不等于实际 MSSQL Durable SIGKILL + PostgreSQL + 真实工具的统一故障链，也未冻结 RUNNING Native Instance ↔ 平台 Attempt 映射；不能声称 Exactly Once | [A34 快速 Admission 验证](../poc/maf/A34_GUARDED_TOOL_DISPATCH.md) | PASS (LOCAL MAF HANDLER CONTRACT) / A34 OPEN |
+
 **恢复能力完整清单**：[A30 恢复覆盖矩阵](POC_A_RECOVERY_MATRIX.md)，明确限制“单项 Fixture PASS ≠ 整体 G6 PASS”。
 
 ## 2. 不应混淆的三种恢复
