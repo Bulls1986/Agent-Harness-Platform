@@ -1,6 +1,6 @@
 # POC-A: Microsoft Agent Framework implementation
 
-> Status: **A00 offline baseline passed; A01–A04 in verification; A05 and A31 production execution not demonstrated.**  
+> Status: **A00 passed; A01 API/versions, A02 fixture-verifier, A03 local Postgres/OTLP and A04 template validated in CI; A05 real provider and A31 durable backend NOT RUN.**  
 > This is a framework evaluation harness, **not** a production Harness Control Plane.
 
 ## Current slices
@@ -10,10 +10,12 @@
 | A00 | Original MAF streaming smoke + offline CI | Offline public imports and unit tests already passed |
 | A01 | Pinned direct packages + public API/optional capability probe | CI must install exact versions and run `api_probe.py`; transitive `pip freeze` captured per run |
 | A02 | Versioned Coding/Document broken/reference fixtures + independent verifier | CI must prove known-good passes and broken cases fail |
-| A03 | PostgreSQL/OTLP Compose + optional external S3-compatible store + isolated model runtime image | Compose validation/build **plus Postgres/OTLP runtime startup/health** (not yet done) |
+| A03 | PostgreSQL/OTLP Compose + optional external S3-compatible store + isolated model runtime image | CI verifies Compose validation, MAF image build, Postgres SELECT 1 and collector startup; no hosted API/OSS adapter |
 | A04 | Evidence template with Gate and scenario IDs | Every later case must record real exit status, version, and evidence refs |
 | A05 | Live two-turn memory/streaming probe | Requires real provider credential and successful model response; no CI secrets assumed |
 | A31 | Durable feasibility memo | Python MAF + Functions/MSSQL in private cluster and cross-worker recovery NOT tested |
+
+Verified in [GitHub Actions run #37715048965](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37715048965): pinned public SDK imports, actual HarnessAgent+native Session construction (no network model call), dependency freeze artifact, positive and negative acceptance fixtures, runtime image build, and Postgres/OTLP startup checks. These checks must not be counted as G1/G2/G3/G6 PASS.
 
 ## 1. Install and inspect (A01)
 
