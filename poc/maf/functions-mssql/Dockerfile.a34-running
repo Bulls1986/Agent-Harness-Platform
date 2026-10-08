@@ -1,0 +1,4 @@
+# Use the locally verified fixed-version A33/A34 MAF Functions image.
+# Avoid pulling/re-resolving external images or changing any POC base services.
+FROM maf-mssql-poc-functions:latest
+COPY function_app.py /home/site/wwwroot/function_app.py
