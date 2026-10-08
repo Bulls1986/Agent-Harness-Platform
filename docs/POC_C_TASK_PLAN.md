@@ -39,9 +39,9 @@
 | C07 | P0 | 原生 Workflow ↔ 独立 Harness PostgreSQL Run/Step/Attempt/Execution + Frozen Binding/UNKNOWN Reconciliation | **PASS（本地+CI 双 PG）**；整体 G2/G6 仍 OPEN |
 | C08 | P0 | 审批 WAITING Signal 与 REJECTED/APPROVED 均按固定 Platform Decision 继续，不合并新旧 Attempt | PASS bounded / 企业授权非范围 |
 | C09 | P1 | **真实**替换两个 Agent Runtime Adapter 但平台 Run/Workflow/Events 不变；最好复用内网 LiteLLM | OPEN；固定 fixture A/B 不等于真实 Runtime Swap |
-| C10 | P0 | 平台 Responses-compatible + Typed SSE/Replay Bridge，不暴露 Temporal Payload/History 作为领域事实 | **本机 PASS（受限只读桥接），CI 待核对；总体 G3 PARTIAL** |
+| C10 | P0 | 平台 Responses-compatible + Typed SSE/Replay Bridge，不暴露 Temporal Payload/History 作为领域事实 | **PASS（本地+CI 受限只读桥接）**；整体 G3 PARTIAL |
 | C11 | P1 | 可替换 SandboxProvider + OSS Artifact/Evidence 元数据/引用薄 Adapter，禁止在 Temporal History 存大 Payload | OPEN / G2/G5 |
-| C12 | P0 | Worker 不兼容版本/Workflow Replay/升级负例，旧 Workflow 不得在不兼容 Activity 上产生副作用 | OPEN |
+| C12 | P0 | Native History Replay 版本兼容门禁；实际不同 Worker 镜像升级风险 | **本地 Replay 正负例 PASS，CI 待核对**；真实镜像接管/Build ID rollout GAP |
 | C13 | P1 | Native OpenTelemetry / Task correlation；最小配置和依赖/运维成本计数 | OPEN |
 | C14 | P0 | G1–G8/S01–S12/A vs C 比较矩阵，失败类型和退出条件逐项决策，最终 ADR 前不得冒充主架构 PASS | OPEN |
 
@@ -67,8 +67,7 @@
 1. C05 已有 [Temporal OSS Server+PostgreSQL 真实实证](../poc/temporal/C05_OSS_POSTGRES_FINDINGS.md)：同一 Workflow 通过 Worker/Server 重启，SQL History 在 Server 关闭期间仍保留。生产 TLS/HA 未因此验收。
 2. C06+C07 的 [真实 Temporal Activity 重试 + 独立 Harness PG 门禁](../poc/temporal/C06_C07_GUARDED_FINDINGS.md) 已完成本机验证：PURE 自动重试、非幂等派发后真实 Worker 退出、恢复拒绝重复、原 Attempt/Execution UNKNOWN + Pending 对账；真实企业 Tool Receipt 不在本轮通过范围。
 3. C10 [受限只读 Responses/Typed SSE 真实链路](../poc/temporal/C10_PROTOCOL_FINDINGS.md)：读取 Harness PG、UNKNOWN 不误报完成、HTTP 进程重启后 `Last-Event-ID` 续播。完整 Responses/模型 Token SSE/Tool/Approval/Artifact 事件仍 GAP。
-4. C12：Native Workflow 代码升级/Replay API 负例，避免“架构能跑”
-   掩盖 nondeterminism 与 Activity side effect 事故。
+4. C12 [Native History Replay 与不兼容 V2 负例](../poc/temporal/C12_REPLAY_FINDINGS.md)：同一真实 PostgreSQL History 用 V1 回放正常、V2 额外 Timer 触发 `NondeterminismError`。生产不兼容 Worker 镜像接管与 Build ID/patch rollout 仍需专项评估。
 5. 最终比较时记录真实部署依赖、SDK/Worker 特殊代码规模、配置、
    模型 TTFT/Artifact 大小边界，而不是只按 Happy Path 打分。
 
