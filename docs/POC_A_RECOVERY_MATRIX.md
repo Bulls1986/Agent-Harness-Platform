@@ -12,7 +12,8 @@
 | B — Step Boundary Retry | Same Run + Same Step + **New Attempt** | Harness Run/Plan/Step/Attempt 及 Verified SideEffectContract | PURE Document Step 跨进程 PASS；其他真实能力仍 GAP |
 | C — Native Checkpoint Resume | MAF 原生 Workflow Superstep + Opaque Checkpoint | Runtime/Checkpoint Provider；Harness 只记录 reference | 本地 FileCheckpointStorage 从已完成 Prepare 之后恢复 PASS；**单机开发路径** |
 | W — Native HITL | Same Run WAITING_APPROVAL，MAF 原生 Request ID + Checkpoint 恢复 | Harness Approval + Runtime Request Binding | 批准/拒绝/跨进程及两处响应投递崩溃路径 PASS（模拟敏感 Executor） |
-| D — Production Durable | 私有生产 Backend 下跨进程/跨节点可靠等待、恢复、接管 | 官方 Durable Backend / Engine，不由 Harness 复制 | **NOT RUN / G1/G2/G6 未通过** |
+| D-dev — DTS Emulator Durable | 官方 DurableTask Worker/Client + native MAF Workflow，两个不同 Worker 进程接续原生 HITL | 官方 DTS **开发 Emulator**；Harness 不复制 TaskHub | **PASS（仅开发 Emulator）：批准/拒绝跨 Worker、Prepare 无重复** |
+| D — Production Durable | 私有生产 Backend 下跨进程/跨节点可靠等待、恢复、接管 | 官方 Durable Backend / Engine，不由 Harness 复制 | **NOT RUN / G1/G2/G6/G8 未通过** |
 
 Session 恢复、Step Retry、Native Workflow Checkpoint **不是等价能力**。保留运行中 Run、Step、Attempt 的 identity 与历史事实，不隐式转换或覆盖。
 
@@ -35,7 +36,8 @@ Session 恢复、Step Retry、Native Workflow Checkpoint **不是等价能力**�
 | WAITING_INPUT 同 Run 跨进程恢复 | NOT RUN | — | 尚无平台 Input Request 事实与 MAF 入站响应桥接 |
 | Native Same Attempt 在真实 LLM/Tool 中途崩溃后续跑 | NOT RUN | — | 本地单 Superstep 不能外推到任意工具副作用 |
 | Workspace / Sandbox State 恢复与引用一致性 | NOT RUN | — | 仅需恢复任务相关 reference，不负责底层 Disk Backup/DR |
-| 私有分布式 Durable Task Backend 与跨 Worker Recovery | NOT RUN / GAP | [A31 调查](../poc/maf/DURABLE_FEASIBILITY.md) | 不能用单机 FileCheckpoint、DTS Emulator 或 Azure 托管证据代替 |
+| DTS Emulator — 原生 Python Durable HITL 跨 Worker | PASS（开发环境，非生产） | [CI #37722178889](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37722178889) | Worker A 被 kill、Worker B 接续；两条已完成 Prepare 未重复，批准/拒绝正确；没有外部真实副作用 |
+| 私有分布式 **生产** Durable Backend 与跨 Worker Recovery | NOT RUN / GAP | [A31 调查](../poc/maf/DURABLE_FEASIBILITY.md) | Functions + MSSQL 尚未实跑；不能用 DTS Emulator 或 Azure 托管证据代替 |
 | 真实模型双轮历史与 Compaction 恢复 | NOT RUN | — | A05/A07 必须有真实 Provider / Gateway |
 | OSS Evidence/Artifact Payload、Digest、RecoveryPoint PIN | NOT RUN | — | A15/A25 尚未做企业 S3 接入 |
 

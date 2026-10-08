@@ -301,6 +301,42 @@ See [A30 Recovery Coverage Matrix](../../docs/POC_A_RECOVERY_MATRIX.md) for
 the tested recovery levels, failure injection results, unverified capability
 matrix and G1–G8 limitations.
 
+## 0.8 A31–A33 official DTS Durable Extension emulator proof
+
+This is a **separate development-only** Docker environment, distinct from
+the PostgreSQL/OTLP/MAF baseline and from production Durable deployment.
+The official Python beta Durable Extension is pinned independently in
+`requirements-durable-emulator.txt`. This POC uses real
+`DurableAIAgentWorker.configure_workflow` and
+`DurableWorkflowClient` with **no LLM/Foundry credentials**.
+
+For Windows use WSL2/Bash with a running Docker Engine; on Linux/macOS
+use a Bash shell in the repository root:
+
+```bash
+python -m pip install -r poc/maf/requirements-durable-emulator.txt
+python poc/maf/durable_emulator_probe.py version
+bash poc/maf/run_durable_emulator_ci.sh
+```
+
+The script creates an isolated `maf-dts-poc` Docker Compose project on
+`127.0.0.1:18080` (gRPC) and `127.0.0.1:18082` (dashboard), TaskHub
+`pocmaf`. It starts a real Durable Workflow on Worker A; two instances
+reach native `request_info` pending approval; Worker A is forcibly killed,
+and Worker B starts in a different Python process. On approval,
+the controlled fixture Executor completes; on rejection it never runs.
+Both finished Prepare steps must have **exactly one** marker; the markers
+are only trusted CI counters, **not** side-effect receipts or exactly-once
+external execution guarantees. Container image identity and Python
+dependency versions are captured in the GitHub Actions artifacts.
+
+**Important:** the DTS emulator is explicitly a local developer facility.
+Passing it does **not** certify production DTS self-hosting, disconnected
+Durable Functions + MSSQL integration, production Worker HA, Artifact/OSS
+state restoration or G1/G2/G6/G8. The separate A31 production feasibility
+analysis is [here](DURABLE_FEASIBILITY.md). We do not build a custom
+TaskHub scheduler backend.
+
 ## 1. Install and inspect (A01)
 
 Use Python 3.11+ in a clean venv:

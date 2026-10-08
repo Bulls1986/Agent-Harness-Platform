@@ -1,0 +1,55 @@
+name: MAF Durable DTS Emulator (development gate only)
+
+on:
+  pull_request:
+    paths:
+      - "poc/maf/durable_emulator_probe.py"
+      - "poc/maf/requirements-durable-emulator.txt"
+      - "poc/maf/compose-durable-emulator.yml"
+      - ".github/workflows/maf-poc-durable-emulator.yml"
+  push:
+    paths:
+      - "poc/maf/durable_emulator_probe.py"
+      - "poc/maf/requirements-durable-emulator.txt"
+      - "poc/maf/compose-durable-emulator.yml"
+      - ".github/workflows/maf-poc-durable-emulator.yml"
+  workflow_dispatch:
+
+jobs:
+  native-dts-worker-handoff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      POC_DTS_ENDPOINT: http://127.0.0.1:18080
+      POC_DTS_TASKHUB: pocmaf
+      POC_DTS_MARKERS: ${{ runner.temp }}/maf-dts-markers
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install pinned Python Durable Extension
+        run: |
+          python -m pip install -r poc/maf/requirements-durable-emulator.txt
+          python poc/maf/durable_emulator_probe.py version
+          python -m pip freeze > maf-durable-python311-dependencies.txt
+      - name: A32/A33 native MAF Durable DTS worker/hitl fault injection
+        run: bash poc/maf/run_durable_emulator_ci.sh
+      - name: Upload DTS Emulator evidence and Python dependency versions
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maf-dts-emulator-probe
+          path: |
+            maf-durable-python311-dependencies.txt
+            dts-emulator-image-id.txt
+            dts-emulator-image-digests.txt
+            /tmp/maf-dts-*.json
+            /tmp/maf-dts-worker-*.log
+          if-no-files-found: ignore
+          retention-days: 30
+      - name: Shutdown DTS emulator
+        if: always()
+        run: |
+          docker compose -p maf-dts-poc -f poc/maf/compose-durable-emulator.yml logs --no-color --tail 100 || true
+          docker compose -p maf-dts-poc -f poc/maf/compose-durable-emulator.yml down || true
