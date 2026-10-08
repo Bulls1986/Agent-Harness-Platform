@@ -200,6 +200,8 @@ claim G2/G6/G7 PASS.
 
 ## 0.5 Native MAF HITL / platform Approval bridge (A26 follow-up)
 
+[Final PR #9 CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37720102476): approved/rejected cross-process native HITL, two PostgreSQL binding integrity tests and three lineage-selected checkpoint restore repetitions all passed.
+
 The `native_hitl_probe.py` fixture uses **real MAF public**
 `WorkflowContext.request_info`, `@response_handler`, and
 `FileCheckpointStorage`, not a synthesized RequestInfo event.
