@@ -268,6 +268,39 @@ scheduler takeovers, cancellation/timeout propagation, production IAM,
 long-lived distributed Durable Checkpoint storage and G2/G6/G7 gates
 are **not** proven by these controlled fixtures.
 
+## 0.7 A29 cancellation/timeout task facts and A30 recovery matrix
+
+[A29 PostgreSQL CI #37721115581](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37721115581)
+passed all six new cancellation/timeout cases. The bounded POC implements
+deterministic task-fact transitions in `execution_control.py`:
+
+- A WAITING_APPROVAL Run with no dispatched Execution can be CANCELLED
+  directly, preserving the Approval request as a cancelled historical fact.
+- A RUNNING Run first enters `CANCELLING`; new Execution admissions are
+  rejected. Adapter `ACKNOWLEDGED` / `UNSUPPORTED` means **not terminated**.
+  Only trusted `TERMINATED` with proven safe effects may finish CANCELLED.
+- Non-PURE already dispatched cannot become CANCELLED solely because a
+  cancellation request was acknowledged or the provider stopped running.
+  It enters `UNKNOWN` and PENDING Reconciliation.
+- Timeout is a **failure_type**, never a terminal state. Proven pre-dispatch
+  timeout => FAILED/TIMEOUT; post-dispatch non-PURE unknown result =>
+  UNKNOWN/TIMEOUT_AFTER_DISPATCH; running PURE without termination proof =>
+  still RUNNING, requiring an explicit provider termination decision.
+
+```bash
+# Requires POC_POSTGRES_DSN and the running POC PostgreSQL service.
+python -m unittest discover -s poc/maf/tests -p "test_execution_control_pg.py" -v
+```
+
+**These are trusted Control Plane fact transitions, not real provider
+cancellation.** No actual MAF Cancel/Abort, shell/tool/process termination,
+Sandbox kill or external SideEffectReceipt was exercised. The test is not
+a production cancellation Adapter, distributed Scheduler or durable backend.
+
+See [A30 Recovery Coverage Matrix](../../docs/POC_A_RECOVERY_MATRIX.md) for
+the tested recovery levels, failure injection results, unverified capability
+matrix and G1–G8 limitations.
+
 ## 1. Install and inspect (A01)
 
 Use Python 3.11+ in a clean venv:
