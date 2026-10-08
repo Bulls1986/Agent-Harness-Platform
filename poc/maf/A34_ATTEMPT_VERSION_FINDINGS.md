@@ -45,6 +45,13 @@ PostgreSQL 平台原子绑定确实参与恢复与版本错配阻断，并由独
 完整步骤、Worker IDs、平台最终状态及仍缺证据见
 [本机双数据库 A34 整链](functions-mssql/A34_PLATFORM_MSSQL_E2E.md)。
 
+新增投递门禁验证：在 APPROVED/REJECTED 决定提交后，领取 PostgreSQL
+一次性 Native Response 投递令牌，原生 Completed 后才标记 APPLIED；
+同一双库 SIGKILL 链路 Completed=2/History=42，新增 DB 负例 4/4 PASS。
+未 ACK 的 IN_FLIGHT 再次领取会转 UNKNOWN 而不是重发，
+但这个 **UNKNOWN 故障分支仅有数据库测试**，还没有真实 MSSQL 中途
+投递崩溃与 reconciliation 实测。详见 A34 双数据库文档。
+
 **平台 Attempt 在 WAITING_APPROVAL 阶段为 CREATED，而不是某个正在进行的
 外部执行 Attempt 的原生 checkpoint 续跑。因此当前最多声称
 Same Waiting State + Same Platform Attempt Identity 的映射，

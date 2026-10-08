@@ -42,6 +42,7 @@ Session 恢复、Step Retry、Native Workflow Checkpoint **不是等价能力**�
 | Functions + MSSQL 自托管单主机、两个 Worker 进程接管/HITL | PASS (2 轮本机 Docker) | [本地操作与结果](../poc/maf/functions-mssql/README.md) | SQL Server dt.Instances/dt.History 写入，APPROVED/REJECTED 恢复，Prepare 零重放；不证明真实副作用 Exactly Once |
 | Functions + MSSQL 双 Worker 同时在线并接管 | PASS (本机 2 轮) | [A34 前置双 Worker 报告](../poc/maf/functions-mssql/A34_CONCURRENT_WORKERS.md) | A Prepare/等待，B 已并发运行，A SIGKILL 后 B 原地接管；SQL 真实 Completed/History；不代表 Same Attempt 领域绑定 |
 | 平台 PostgreSQL + MSSQL Durable 原生 WAITING_APPROVAL 同一 Attempt 身份恢复 | PASS（同一次本地双数据库 Worker 强杀测试） | [A34 双库整链](../poc/maf/functions-mssql/A34_PLATFORM_MSSQL_E2E.md) | Native 2 Completed / 42 History，两个 Run 各一个 CREATED Attempt；不代表执行中 Same Attempt Resume，真实不兼容版本迁移尚未测试 |
+| MSSQL Durable 审批决定提交→Native Response 投递窗口 | PASS（同一双数据库双 Worker 故障链，平台令牌领取及 Native Completed→APPLIED）；投递后 UNKNOWN 仅 PostgreSQL 合约 4/4 | [A34 投递增量记录](../poc/maf/functions-mssql/A34_PLATFORM_MSSQL_E2E.md) | 不是跨数据库原子事务；真实 Native HTTP 半途强杀和对账仍 NOT RUN；不能证明 RUNNING Attempt 恢复 |
 | 私有分布式 **生产** Durable Backend 与跨 Worker Recovery | PARTIAL / GAP | [A31 报告](../poc/maf/DURABLE_FEASIBILITY.md) | Functions+MSSQL 单机组合已通过；跨节点 HA、生产许可/支持、Harness 任务级绑定仍未验证 |
 | 真实模型双轮历史与 Compaction 恢复 | NOT RUN | — | A05/A07 必须有真实 Provider / Gateway |
 | OSS Evidence/Artifact Payload、Digest、RecoveryPoint PIN | NOT RUN | — | A15/A25 尚未做企业 S3 接入 |
