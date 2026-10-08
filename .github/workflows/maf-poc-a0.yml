@@ -1,4 +1,4 @@
-name: MAF POC-A0 offline contract
+name: MAF POC offline integration
 
 on:
   push:
@@ -41,6 +41,8 @@ jobs:
         run: python poc/maf/harness_capabilities.py
       - name: A11 native MAF Workflow deterministic gate
         run: python poc/maf/workflow_probe.py
+      - name: A12 independent document verifier in native Workflow
+        run: python poc/maf/document_workflow.py
       - name: Compile Python POC entry points
         run: python -m compileall -q poc/maf
       - name: Verify compose configuration (local placeholders only)
@@ -50,6 +52,8 @@ jobs:
         run: docker compose -f poc/maf/compose.yml config -q
       - name: Build standalone MAF runtime image
         run: docker build -f poc/maf/Dockerfile -t maf-poc-a0-ci .
+      - name: Verify packaged A05 live probe imports in container
+        run: docker run --rm --entrypoint python maf-poc-a0-ci -c "import sys; sys.path.insert(0, '/workspace/poc/maf'); import smoke, session_probe, harness_capabilities; print('safe A05 module imports OK')"
       - name: Start and probe Postgres and OTLP baseline
         env:
           POC_POSTGRES_PASSWORD: ci-not-a-real-secret
