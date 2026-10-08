@@ -37,6 +37,7 @@
 29. [MCP Trust Ownership Boundary](MCP_TRUST_OWNERSHIP_BOUNDARY.md)
 30. [Cancellation / Timeout Propagation 契约](CANCELLATION_TIMEOUT_PROPAGATION.md)
 31. [Harness Scope Alignment Review](HARNESS_SCOPE_ALIGNMENT_REVIEW.md)
+32. [Microsoft Execution Containers（MXC）Sandbox Backend 候选评估](MXC_EXECUTION_CONTAINER_CANDIDATE.md)
 
 ## 使用原则
 
