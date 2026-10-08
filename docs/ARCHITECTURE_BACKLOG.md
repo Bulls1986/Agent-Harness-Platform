@@ -728,3 +728,23 @@ MAF SkillsProvider
 - E2E Evidence、失败恢复与成本控制。
 
 该主题单独讨论，避免 Workspace/Git Contract 承担部署环境职责。
+
+---
+
+## ARCH-TODO-024 Microsoft Execution Containers（MXC）Sandbox Backend 候选
+
+**状态：DEFERRED（Candidate / 未采纳 / 未验证）**
+
+**来源：** Microsoft 于 2026-10-07 宣布 MXC GA，需判断 OS 级执行隔离能否作为可选 Sandbox 后端；但官方仓库仍带有 early preview 与 security-boundary 警告。
+
+**候选结论：**
+
+- MXC 仅作为现有 **SandboxProvider SPI** 下的可选执行后端候选；不新增平行 SPI，不调整当前 CubeSandbox 生产候选及 Docker 开发/兼容定位。
+- TaskContext/Workspace 路由是逻辑隔离，不能替代 OS 沙箱；共享 Harness Worker、MAF/Agent SDK 与平台领域模型不变。
+- 不承诺 MXC 在 Linux 默认后端实现 Windows Session、持久 Sandbox、快照或同等级网络强隔离能力；须按 host/backend/version 独立验证。
+- 不改变现有 Checkpoint、RecoveryPoint、UNKNOWN → Reconciliation、Tool Receipt、OSS Artifact/Evidence 和外围治理 Ownership Boundary。
+- **本条属于 P2 技术观察，不纳入当前 POC-A / POC-C Hard Gates，不阻塞 G3/G2/G6 收口。**
+
+**后续触发：** 当前核心 POC 收口后，若存在轻量 Tool/Code Execution 需求，则按同负载对照验证隔离正确性、网络/凭据、cancel/cleanup、任务恢复、环境一致性及并发性能，再决定 Adopt / Keep Candidate / Reject。
+
+**候选评估记录：** [MXC_EXECUTION_CONTAINER_CANDIDATE.md](references/MXC_EXECUTION_CONTAINER_CANDIDATE.md)
