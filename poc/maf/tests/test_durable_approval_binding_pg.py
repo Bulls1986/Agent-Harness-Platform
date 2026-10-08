@@ -128,6 +128,37 @@ class DurableApprovalBindingTests(unittest.TestCase):
         self.assertEqual(self.resume(first)["native_instance_id"],
                          self.native["durable_instance_id"])
 
+    def test_direct_insert_cannot_bind_another_attempt_lineage(self):
+        old = VerificationFact.example(passed=False, evidence_ref=None)
+        other = VerificationFact.example(passed=False, evidence_ref=None)
+        a1 = self.approvals.request(
+            old, requester_principal="poc-requester",
+            approver_principal="poc-approver", action_ref="tool:poc",
+            resource_ref="res", policy_ref="policy:poc",
+        )
+        self.approvals.request(
+            other, requester_principal="poc-requester",
+            approver_principal="poc-approver", action_ref="tool:poc",
+            resource_ref="res", policy_ref="policy:poc",
+        )
+        with psycopg.connect(self.dsn) as conn:
+            with self.assertRaises(psycopg.Error):
+                conn.execute(
+                    """INSERT INTO poc_maf_durable_approval_bindings
+                       (approval_id,run_id,step_id,attempt_id,
+                        native_instance_id,native_request_id,native_workflow_name,
+                        frozen_workflow_version,frozen_runtime_version)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                    (a1.approval_id,old.run_id,old.step_id,other.attempt_id,
+                     "fake-"+uuid4().hex,"req-"+uuid4().hex,"maf_mssql_poc_hitl",
+                     "fixture-v1","sdk-fixture-v1"),
+                )
+        with psycopg.connect(self.dsn) as conn:
+            self.assertEqual(conn.execute(
+                "SELECT COUNT(*) FROM poc_maf_durable_approval_bindings WHERE approval_id=%s",
+                (a1.approval_id,),
+            ).fetchone()[0], 0)
+
     def test_decided_request_cannot_reenter_pending_resume(self):
         fact, approval = self.request()
         self.approvals.decide(
