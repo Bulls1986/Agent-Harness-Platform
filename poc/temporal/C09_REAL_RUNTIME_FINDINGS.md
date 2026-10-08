@@ -89,10 +89,16 @@ python -m pip install -r poc/temporal/requirements-c09.txt
 python poc/temporal/verify_c09_real_runtime.py
 ```
 
-公开 GitHub CI 不连接内部 LiteLLM。它只用独立 PG+Temporal
-运行 C09 PostgreSQL 负例和显式假 Activity 的 Workflow
-契约验证，并在无凭据的独立 job 检查两个官方 SDK 可同时安装
-和导入。不能将 CI mock PASS 当作 Live Model PASS。
+公开 GitHub CI 不连接内部 LiteLLM。独立
+[GitHub Actions #37772949991](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37772949991)
+的 **4 个作业全部 SUCCESS**：其中 C09 SDK 同环境安装/导入
+成功，实际 OSS Temporal + Harness PostgreSQL 的 11 项
+Contract 检查和显式 Fake Activity 的原生 Workflow 成功；
+C05/C06/C07/C10/C12 回归均保持通过。
+[PR #31](https://github.com/Bulls1986/Agent-Harness-Platform/pull/31)
+已合并 main（提交 `ed8c175`）。
+**CI 不调用内网模型，不能将 CI Fake Activity PASS 当作 Live Model PASS；
+真实 Live PASS 是独立开发机实测证据。**
 
 ## 5. 仍未覆盖
 

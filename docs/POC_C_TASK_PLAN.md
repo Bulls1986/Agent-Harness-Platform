@@ -38,7 +38,7 @@
 | C06 | P0 | PURE Activity 重试与 NON_RETRYABLE 工具派发后的崩溃隔离 | **PASS（本地+CI 双 PG）**；真实外部 Receipt GAP |
 | C07 | P0 | 原生 Workflow ↔ 独立 Harness PostgreSQL Run/Step/Attempt/Execution + Frozen Binding/UNKNOWN Reconciliation | **PASS（本地+CI 双 PG）**；整体 G2/G6 仍 OPEN |
 | C08 | P0 | 审批 WAITING Signal 与 REJECTED/APPROVED 均按固定 Platform Decision 继续，不合并新旧 Attempt | PASS bounded / 企业授权非范围 |
-| C09 | P1 | **真实**替换两个 Agent Runtime Adapter 而保持 Harness Run/Workflow/Event 契约 | **本地两次 Live SDK Swap PASS，CI 依赖/契约待核对**；模型供应商 G4 GAP |
+| C09 | P1 | **真实**替换两个 Agent Runtime Adapter 而保持 Harness Run/Workflow/Event 契约 | **PASS（本地两次真实 Agent SDK + CI 依赖与离线契约）**；模型供应商 G4 GAP |
 | C10 | P0 | 平台 Responses-compatible + Typed SSE/Replay Bridge，不暴露 Temporal Payload/History 作为领域事实 | **PASS（本地+CI 受限只读桥接）**；整体 G3 PARTIAL |
 | C11 | P1 | 可替换 SandboxProvider + OSS Artifact/Evidence 元数据/引用薄 Adapter，禁止在 Temporal History 存大 Payload | OPEN / G2/G5 |
 | C12 | P0 | Native History Replay 版本兼容门禁；实际不同 Worker 镜像升级风险 | **PASS（本地+CI Native History Replay 正负例）**；真实镜像接管/Build ID rollout GAP |
