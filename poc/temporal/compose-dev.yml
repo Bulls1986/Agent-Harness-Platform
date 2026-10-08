@@ -1,0 +1,25 @@
+# C00–C04: official Temporal DEV server only.
+# Persistent SQLite history is for local SDK experiments, NOT production HA/G1.
+services:
+  initialize-persistent-volume:
+    image: temporalio/temporal@sha256:ad4c82c97bd12b417d1ea942610dbcd511afb250c4d5ed26c694009533df447e
+    user: "0"
+    entrypoint: ["sh", "-c", "chown temporal:temporal /data"]
+    volumes: ["temporal-state:/data"]
+    restart: "no"
+  temporal-dev:
+    image: temporalio/temporal@sha256:ad4c82c97bd12b417d1ea942610dbcd511afb250c4d5ed26c694009533df447e
+    container_name: poc-c-temporal-dev
+    command: ["server", "start-dev", "--ip", "0.0.0.0", "--db-filename", "/data/temporal.db"]
+    depends_on:
+      initialize-persistent-volume:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:17233:7233"
+      - "127.0.0.1:18233:8233"
+    volumes: ["temporal-state:/data"]
+    restart: "no"
+volumes:
+  temporal-state:
+    external: true
+    name: poc-c-temporal-dev-data
