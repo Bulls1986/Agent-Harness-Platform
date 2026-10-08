@@ -1,0 +1,24 @@
+name: MAF POC-A0 offline contract
+
+on:
+  push:
+    paths:
+      - "poc/maf/**"
+      - ".github/workflows/maf-poc-a0.yml"
+  pull_request:
+    paths:
+      - "poc/maf/**"
+      - ".github/workflows/maf-poc-a0.yml"
+
+jobs:
+  offline-smoke-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile A0 smoke
+        run: python -m py_compile poc/maf/smoke.py
+      - name: Offline contract tests (no provider key required)
+        run: python -m unittest discover -s poc/maf/tests -p "test_*.py" -v
