@@ -34,6 +34,20 @@ jobs:
         run: docker compose -f poc/maf/compose.yml config -q
       - name: Build standalone MAF runtime image
         run: docker build -f poc/maf/Dockerfile -t maf-poc-a0-ci .
+      - name: Start and probe actual POC infrastructure
+        env:
+          POC_POSTGRES_PASSWORD: ci-not-a-real-secret
+          POC_MINIO_ROOT_PASSWORD: ci-not-a-real-secret
+        run: |
+          docker compose -f poc/maf/compose.yml up --wait -d postgres object-store otel-collector
+          docker compose -f poc/maf/compose.yml exec -T postgres psql -U poc -d poc_harness -c "SELECT 1"
+          curl --fail --retry 12 --retry-delay 2 --retry-connrefused http://127.0.0.1:9002/minio/health/live
+      - name: Shutdown POC infrastructure
+        if: always()
+        env:
+          POC_POSTGRES_PASSWORD: ci-not-a-real-secret
+          POC_MINIO_ROOT_PASSWORD: ci-not-a-real-secret
+        run: docker compose -f poc/maf/compose.yml down --remove-orphans
       - name: Verify expected coding and document baselines
         run: |
           python poc/maf/verify_fixture.py --case coding --candidate poc/maf/fixtures/coding/solution
