@@ -103,6 +103,12 @@ safely recovering such a Run belongs to A27–A30, **not** this slice.
 
 ## 0.3 A24/A27/A28 bounded recovery evidence
 
+CI evidence: [GitHub Actions #37718726040](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37718726040)
+executed all three PostgreSQL tests plus a distinct-process test where worker
+A exits with status 91 and worker B rehydrates native Session state and
+finishes the PURE Step. Both readbacks passed. This is bounded task-level
+recovery evidence, not the full G6 gate.
+
 A new PostgreSQL migration, `sql/002_runtime_recovery.sql`, adds two
 deliberately small POC records: opaque native MAF Session payload in a
 separate runtime-state table, and a PENDING Reconciliation fact for UNKNOWN
