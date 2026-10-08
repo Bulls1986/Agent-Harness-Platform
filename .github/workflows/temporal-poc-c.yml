@@ -1,0 +1,39 @@
+name: Temporal POC-C native smoke
+on:
+  push:
+    paths:
+      - "poc/temporal/**"
+      - ".github/workflows/temporal-poc-c.yml"
+  pull_request:
+    paths:
+      - "poc/temporal/**"
+      - ".github/workflows/temporal-poc-c.yml"
+  workflow_dispatch:
+
+jobs:
+  native-dev-server-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install public Temporal Python SDK only
+        run: python -m pip install -r poc/temporal/requirements.txt
+      - name: Check Python source compiles
+        run: python -m compileall -q poc/temporal
+      - name: Start isolated Temporal dev server with persistent volume
+        run: |
+          set -euo pipefail
+          docker volume create poc-c-temporal-dev-data
+          docker compose -f poc/temporal/compose-dev.yml up -d
+      - name: Real native Temporal Workflow + independent Worker SIGKILL/HITL
+        run: python poc/temporal/verify_local_handoff.py
+      - name: Real Temporal Server restart from persisted SQLite Workflow History
+        run: python poc/temporal/verify_server_restart.py
+      - name: Clean up only the isolated Temporal POC service
+        if: always()
+        run: |
+          docker compose -f poc/temporal/compose-dev.yml logs --tail 30 || true
+          docker compose -f poc/temporal/compose-dev.yml down || true

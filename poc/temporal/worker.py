@@ -1,0 +1,30 @@
+"""Run real Temporal SDK Worker in an independent OS process."""
+from __future__ import annotations
+
+import asyncio
+import os
+import sys
+from pathlib import Path
+
+from temporalio.client import Client
+from temporalio.worker import Worker
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from activities import fixture_agent_execute, independent_document_verify
+from workflow import DocumentReviewWorkflow
+
+
+async def main() -> None:
+    address=os.environ.get("POC_C_TEMPORAL_ADDRESS","127.0.0.1:17233")
+    queue=os.environ["POC_C_TASK_QUEUE"]
+    client=await Client.connect(address)
+    worker=Worker(client,task_queue=queue,workflows=[DocumentReviewWorkflow],
+                  activities=[fixture_agent_execute,independent_document_verify])
+    # READY means the Worker has been constructed; successful dispatch and
+    # query are checked independently by the controller, not inferred from it.
+    print("TEMPORAL_WORKER_READY",flush=True)
+    await worker.run()
+
+
+if __name__=="__main__":
+    asyncio.run(main())
