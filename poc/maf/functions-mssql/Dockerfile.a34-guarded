@@ -1,0 +1,3 @@
+# Add only changed Workflow file to a preverified, fully cached Functions/MAF base.
+FROM maf-mssql-a34-running:cached
+COPY function_app.py /home/site/wwwroot/function_app.py
