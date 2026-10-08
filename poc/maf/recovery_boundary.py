@@ -68,6 +68,27 @@ class RecoveryCoordinator:
                 )
                 if cur.fetchone()["version"] != old["version"]:
                     return RecoveryDecision(outcome="SUPERSEDED_PLAN_REQUIRES_DECISION")
+                # A29: an active platform Worker Lease is authoritative. Never
+                # take over a still-live Execution just because recovery was called.
+                cur.execute(
+                    """SELECT owner_id,fencing_token,revoked_at,
+                              lease_expires_at > now() AS lease_live
+                       FROM poc_execution_ownership WHERE execution_id=%s FOR UPDATE""",
+                    (old["execution_id"],),
+                )
+                lease=cur.fetchone()
+                if lease is not None:
+                    if lease["revoked_at"] is not None:
+                        return RecoveryDecision(outcome="OWNERSHIP_ALREADY_REVOKED")
+                    if lease["lease_live"]:
+                        return RecoveryDecision(outcome="OWNER_STILL_ACTIVE")
+                    cur.execute(
+                        """UPDATE poc_execution_ownership
+                           SET owner_id=NULL, fencing_token=fencing_token+1,
+                               revoked_at=now()
+                           WHERE execution_id=%s""",
+                        (old["execution_id"],),
+                    )
                 if old["side_effect_class"] != "PURE":
                     cur.execute(
                         """UPDATE poc_attempts SET state='UNKNOWN',failure_type='EXECUTOR_CRASH'

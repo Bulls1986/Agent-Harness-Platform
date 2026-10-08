@@ -16,6 +16,8 @@
 | A25 Native Workflow Checkpoint（单机路径） | MAF FileCheckpointStorage 保存 Superstep Checkpoint；独立 Python 进程按 Checkpoint **父子血缘**选择 Prepare 之后的恢复点并完成 Workflow。列表返回顺序不保证稳定，早期 `checkpoints[-2]` 导致重放；已按官方公开 `previous_checkpoint_id` 血缘修复，并通过 CI 连续 3 次跨进程恢复、`prepare_reexecuted=false` | 私有分布式 Durable Backend、生产安全审批跨 Worker、同 Attempt + 复杂工具副作用不重复 | [PR #8 CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37719461420) | PARTIAL |
 | A26 Platform + Native MAF HITL | PostgreSQL WAITING_APPROVAL 保持 Same Run/Step/Attempt；使用 MAF 公开 `request_info`/`response_handler` 和 FileCheckpointStorage 生成真实请求；请求 ID、Opaque Checkpoint ID 与 Approval 原子绑定；独立进程重建 Workflow，校验 Request ID 后执行 APPROVED/REJECTED；拒绝不会执行模拟敏感 Executor | CI 固定了审批人/Policy 授权，尚未对接企业 IAM；并非真实 Model Tool Approval 或生产 Durable 后端；审批决定提交至 Runtime 恢复之间的 Crash Gap 待处理 | [PR #8 CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37719461420)、[PR #9 最终 CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37720102476) | PARTIAL |
 | A27 Safe Step Boundary | 进程显式异常退出后，新进程仍用 Same Run + Same Step + New Attempt 验证只读 PURE Document 工作；旧 Attempt 无权提交终态 | 自动 Worker ownership/fencing、原生 Same Attempt Resume、Workspace 恢复 | [PR #7 CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37718726040) | PARTIAL |
+| A26 Crash-gap / Response Delivery（增量） | PostgreSQL 审批决定已提交、MAF 响应尚未投递时，进程退出码 92 后另一进程可恢复原 Run；已投递响应再次恢复不会重复进入模拟敏感 Executor；投递意图后退出码 93 必须保持 UNKNOWN 并拒绝盲重放。3 项 DB 测试与两处进程退出注入通过 | 真实外部副作用、SideEffectReceipt、UNKNOWN 自动核对闭环、企业 IAM、生产 Durable 服务 | [PR #10 CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37720639309) | PARTIAL |
+| A29 Execution Ownership / Fencing（增量） | 平台自有 Execution 的 PostgreSQL Claim/Heartbeat/一次 Dispatch 门禁及 epoch token；4 项 DB 集成测试证明过期/旧 Owner 不能提交，Lease 有效不得接管，PURE 续跑须 New Attempt，非 PURE 进入 UNKNOWN | Cancellation/Timeout 传播、真实外部工具执行的 token 端到端传递、生产并发调度与跨节点稳定性 | [PR #10 CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37720639309) | PARTIAL |
 | A28 UNKNOWN→Reconciliation | 非 PURE 被中断时产生 UNKNOWN 和持久 PENDING Reconciliation，没有第二次自动 dispatch | 真正外部副作用及 receipt 重放、人工 Reconciliation 闭环 | [PR #7 CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37718726040) | PARTIAL |
 | A31 Durable feasibility | 区分 Python MAF Workflow Checkpoint、本地/官方 provider 与 MAF Durable/Functions 托管路线；识别私有部署组合兼容性缺口 | 私有 Durable Backend、Functions+MSSQL 实跑、跨 Worker Same Attempt 恢复 | [调查说明](../poc/maf/DURABLE_FEASIBILITY.md) | RESEARCH / NOT VERIFIED |
 
@@ -41,8 +43,8 @@
 - **G2 状态自主**：平台任务事实及限定原生 Session 可读，但 Approval/Artifact/Checkpoint 等完整可迁移状态尚未验收；OPEN。
 - **G3 协议桥接**：Responses/SSE/Typed Events 未实测；OPEN。
 - **G4/G5 Runtime/Model/Sandbox 可替换**：缺双模型真实切换、CubeSandbox Adapter；OPEN。
-- **G6 任务恢复**：受限 PURE Step Retry 有证据，不等于完整 waiting/same-attempt/workspace/fencing；OPEN。
-- **G7 HITL**：MAF 原生 `request_info`/响应与平台 Approval 已有固定场景跨进程批准/拒绝实测；企业 Policy/IAM 校验与真实敏感 Tool Approval 尚未验证；OPEN。
+- **G6 任务恢复**：已有受限 PURE Step Retry、原生 File Checkpoint、审批前/后崩溃窗口与平台 Execution Fencing 的 CI 证据；真实外部副作用/Receipt、Workspace 与生产跨 Worker Durable 仍未收口；OPEN。
+- **G7 HITL**：MAF 原生请求 + Checkpoint 与平台 Approval 的批准/拒绝、两处进程故障注入已通过；仍待外部 Policy/IAM 和真实 Tool Approval + Reconciliation；OPEN。
 - **G8 License/Managed Cliff**：待完整私有 Durable 路线验证；OPEN。
 
 ## 5. 记录与收口规则
@@ -53,4 +55,5 @@
 
 - **A25**：单机 FileCheckpointStorage 的原生 Superstep Checkpoint 跨进程恢复在 POC 实测通过；接下来仍需验证绑定平台 RecoveryPoint、同 Attempt 真实阻断后恢复，以及私有分布式生产存储能否接入。
 - **A26**：原生 `request_info` → Opaque Checkpoint → 平台 Approval 绑定 → 新进程响应已通过模拟安全执行验证。接下来需验证外部 Authorization Decision、真实 Tool Approval、决策落库后进程崩溃的幂等继续与原生 Durable Backend。
+- **A29**：平台 Execution 的 owner/epoch/Lease 实测通过限定场景；仍需 Cancel/Timeout 传播、真实 Data Plane 副作用与 SideEffectReceipt 及 stale Worker 请求拦截端到端证据。
 - **A32/A33**：只有在真实私有 Durable backend 上验证跨 Worker Same Attempt，才评定 MAF Durable Control Plane。

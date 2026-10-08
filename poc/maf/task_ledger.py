@@ -34,7 +34,7 @@ class TaskLedger:
     def initialize(self) -> None:
         root = Path(__file__).resolve().parent / "sql"
         with psycopg.connect(self.dsn) as conn:
-            for name in ("001_task_facts.sql", "002_runtime_recovery.sql", "003_approval_wait.sql", "004_native_hitl_binding.sql"):
+            for name in ("001_task_facts.sql", "002_runtime_recovery.sql", "003_approval_wait.sql", "004_native_hitl_binding.sql", "005_hitl_delivery_and_execution_fencing.sql"):
                 conn.execute((root / name).read_text(encoding="utf-8"))
 
     def start(self, fact: VerificationFact, *, initiator: str = "poc-ci-initiator") -> str:
@@ -127,7 +127,7 @@ class TaskLedger:
                 )
                 return plan_id, version
 
-    def finish(self, fact: VerificationFact, outcome: PlatformOutcome, execution_id: str) -> None:
+    def finish(self, fact: VerificationFact, outcome: PlatformOutcome, execution_id: str, *, owner_id: str | None = None, fencing_token: int | None = None) -> None:
         """Atomic attempt/execution/verifier/run terminal transaction.
 
         Called exclusively by the trusted POC runner after MAF Workflow gives an
@@ -157,6 +157,17 @@ class TaskLedger:
                 row = cur.fetchone()
                 if row is None or row[0] != "RUNNING":
                     raise TaskFactConflict("Run absent or no longer active")
+                # Only a current, live owner may finalize a claimed Execution.
+                # Unowned legacy POC fixture executions remain compatible.
+                cur.execute(
+                    "SELECT 1 FROM poc_execution_ownership WHERE execution_id=%s",
+                    (execution_id,),
+                )
+                if cur.fetchone() is not None:
+                    from execution_ownership import assert_current_owner, StaleExecutionOwner
+                    if not owner_id or fencing_token is None:
+                        raise StaleExecutionOwner("Claimed Execution requires owner and fencing token")
+                    assert_current_owner(cur,execution_id,owner_id=owner_id,token=fencing_token)
                 cur.execute("SELECT MAX(version) FROM poc_plans WHERE run_id=%s", (fact.run_id,))
                 if cur.fetchone()[0] != fact.plan_version:
                     raise TaskFactConflict("Cannot finalize Run using superseded Plan version")

@@ -228,6 +228,46 @@ a production private Durable backend. Same Attempt end-to-end production
 resumption, native Agent tool approval, external Policy/IAM, multi-worker
 ownership and production storage remain open G2/G6/G7/G8 tasks.
 
+## 0.6 Approval decision crash window & Execution ownership (A26/A29)
+
+This POC covers **two distinct crash windows**, without implementing a
+Durable Task Scheduler or an IAM backend:
+
+- **Committed Approval, no native response delivery intent yet:** a new
+  Python process recovers the same MAF pending request from the opaque
+  Checkpoint and reuses the immutable PostgreSQL Approval decision.
+- **Response delivery intent exists but result not durably acknowledged:**
+  treat native response application as `UNKNOWN`, prevent another automatic
+  native response, and require explicit reconciliation. Even a crash just
+  after recording intent cannot be assumed pre-dispatch. This does **not**
+  establish exactly-once side effects.
+
+`poc_maf_hitl_deliveries` stores a small delivery token and state:
+`IN_FLIGHT / APPLIED / UNKNOWN`. It does **not** interpret or save MAF
+Checkpoint internals. CI fault injection ends processes with exit codes
+92 (safe gap) and 93 (uncertain gap); retry of an already APPLIED response
+does not re-enter the simulated sensitive Executor.
+
+For platform-owned `Execution` only, `ExecutionOwnership` uses the
+existing PostgreSQL authority for atomic Claim, Heartbeat, single
+Dispatch admission, Lease expiry and epoch-based fencing token. Claimed
+Execution result commits require its valid owner and token. Expired
+owners cannot commit or issue new dispatch requests; recovery refuses
+an active owner, revokes an expired owner, then routes PURE to
+Same Step + New Attempt or non-PURE to UNKNOWN/Reconciliation.
+No framework / DurableTask / Sandbox internal worker ownership is replaced.
+
+```bash
+# With POC_POSTGRES_DSN and the POC PostgreSQL container:
+python -m unittest discover -s poc/maf/tests -p "test_approval_delivery_pg.py" -v
+python -m unittest discover -s poc/maf/tests -p "test_execution_ownership_pg.py" -v
+```
+
+**Scope limits:** real tool effects and SideEffectReceipts, distributed
+scheduler takeovers, cancellation/timeout propagation, production IAM,
+long-lived distributed Durable Checkpoint storage and G2/G6/G7 gates
+are **not** proven by these controlled fixtures.
+
 ## 1. Install and inspect (A01)
 
 Use Python 3.11+ in a clean venv:
