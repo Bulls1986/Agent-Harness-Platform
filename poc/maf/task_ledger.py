@@ -32,9 +32,10 @@ class TaskLedger:
         self.dsn = dsn
 
     def initialize(self) -> None:
-        sql = (Path(__file__).resolve().parent / "sql" / "001_task_facts.sql").read_text()
+        root = Path(__file__).resolve().parent / "sql"
         with psycopg.connect(self.dsn) as conn:
-            conn.execute(sql)
+            for name in ("001_task_facts.sql", "002_runtime_recovery.sql"):
+                conn.execute((root / name).read_text(encoding="utf-8"))
 
     def start(self, fact: VerificationFact, *, initiator: str = "poc-ci-initiator") -> str:
         """Atomically create a Run plus first Plan/Step/Attempt/Execution."""
