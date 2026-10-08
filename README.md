@@ -23,9 +23,12 @@
 - [POC-C / C14 MAF 与 Temporal 全 Gate/场景比较与条件选型](poc/temporal/C14_COMPARATIVE_DECISION.md)
 - [POC-C / C15 真实模型→平台 API/Typed Token SSE 与 Native Start RecoveryPoint](poc/temporal/C15_REAL_G3_PROTOCOL_FINDINGS.md)
 - [POC-C / C16 非幂等外部 Tool Receipt 查询与 UNKNOWN 对账](poc/temporal/C16_RECEIPT_RECOVERY_FINDINGS.md)
+- [POC-C / C00–C16 阶段评估收口（CONDITIONAL / Production NO-GO）](docs/POC_C_EVALUATION_CLOSEOUT.md)
 - [POC-A 阶段性结论与证据台账](docs/POC_A_STAGE_FINDINGS.md)
 - [POC-A / A30 任务恢复覆盖矩阵](docs/POC_A_RECOVERY_MATRIX.md)
 - [架构待办 / Architecture Backlog](docs/ARCHITECTURE_BACKLOG.md)
+
+> **2026-10-09：** POC-C C00–C16 已完成技术评估收口；Temporal 仍是候选 Durable Adapter，完整 G2/G3/G6 硬门禁未通过、生产 NO-GO。剩余准入工作由 [ARCH-TODO-025](docs/ARCHITECTURE_BACKLOG.md) 承接。
 
 ## 首轮 POC
 

@@ -831,6 +831,10 @@ Capability 表示组件具备的技术能力；Policy 只负责 Harness 当前 E
 
 > 上述匹配比例为 2026-09-29 的 POC 前架构映射估算，建议按 ±5 个百分点理解，不作为最终选型结论。
 
+## 16.1 POC-C 阶段选型裁决（2026-10-09）
+
+[POC-C C00–C16 技术评估](POC_C_EVALUATION_CLOSEOUT.md) 已 **CLOSED / CONDITIONAL**；Harness 自有 Task Facts/Policy/Event + Temporal Durable Adapter + MAF/OpenAI Agents SDK Runtime Adapter 是优先候选，不是生产 Accepted ADR。G1 本地 scoped PASS，G2/G3/G6 完整硬门禁仍 PARTIAL，**Production NO-GO**。仅 [ARCH-TODO-025](ARCHITECTURE_BACKLOG.md) 可继续生产准入；Temporal ID/History/Checkpoint 不能成为 Harness 业务事实源。
+
 # 17. LangGraph 本轮排除说明
 
 LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 POC。原因不是 Graph 能力不足，而是生产部署路径与平台能力存在明显绑定风险：官方 Self-Hosted Lite/Enterprise 需要 LangGraph Server 形态，常见部署要求 PostgreSQL + Redis；Enterprise 使用许可证密钥，Lite 也存在 LangSmith API key/节点规模等限制。对“企业内建、平台层掌握控制权”的目标，容易形成第二套控制平面与 Managed Feature Cliff。[R12]
@@ -869,6 +873,7 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 | ADR-026 | 冻结 Environment Supply Chain 边界：SBOM、签名、漏洞扫描、provenance 等由外部 CI/CD/Registry/Security 基础设施负责；Harness 只消费已验证 Environment metadata 与 immutable digest。 | Accepted |
 | ADR-027 | 冻结 MCP Trust 边界：MCP 准入与信任由外部 Governance 负责；Harness 对可调用 MCP 视为已准入，不建立 Trust Score/二次审核，只负责当前 Execution 的 Policy、Credential、SideEffect、Audit 与版本绑定。 | Accepted |
 | ADR-028 | 冻结 Cancellation/Timeout：Cancel Request 先进入 CANCELLING 并下传；ACK 不等于停止；Timeout 是 Failure Type；已 dispatch 副作用不确定时 UNKNOWN→Reconciliation；取消不隐式回滚。 | Accepted |
+| ADR-029 | POC-C C00–C16 阶段**技术评估**收口，Temporal 保留 Durable Adapter 优先候选；G2/G3/G6 完整硬门禁未过，生产主架构 NO-GO，后续归 ARCH-TODO-025。 | Accepted（仅评估处置；非生产 ADR） |
 
 # 19. MAF 扩展性验证要求
 

@@ -8,6 +8,8 @@
 > TASK_RECOVERY_COVERAGE_AND_SEMANTICS.md。
 > POC-A 已决策关闭；沿用同一 Document 负例/独立 Verifier 和平台 ID。
 > **不因 Temporal SDK、Dev Server 的能力调整平台 Domain。**
+>
+> **2026-10-09 最终阶段状态：EVALUATION CLOSED / CONDITIONAL，生产 NO-GO。** C00–C16 为冻结的受限范围证据；历史行中仍可保留当时的 GAP。参见 [正式收口记录](POC_C_EVALUATION_CLOSEOUT.md)；剩余准入仅在 [ARCH-TODO-025](ARCHITECTURE_BACKLOG.md) 管理。
 
 ## 责任边界（首轮冻结）
 
