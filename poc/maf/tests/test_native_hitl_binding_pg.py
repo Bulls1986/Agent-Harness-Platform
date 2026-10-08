@@ -3,6 +3,7 @@ import os
 import sys
 import unittest
 from pathlib import Path
+from uuid import uuid4
 
 import psycopg
 
@@ -30,13 +31,16 @@ class NativeHitlBindingTests(unittest.TestCase):
         )
 
     def test_binding_immutable_and_same_run(self):
-        approval=self.request(native_request_id="native-request-1",
-                             native_checkpoint_ref="native-checkpoint-1",
+        # The POC database intentionally retains previous evidence. Repeated
+        # local runs must use fresh IDs rather than collide with history.
+        request_id="native-request-"+uuid4().hex
+        approval=self.request(native_request_id=request_id,
+                             native_checkpoint_ref="native-checkpoint-"+uuid4().hex,
                              native_workflow_name="native-poc-workflow")
         binding=ApprovalWaitStore(self.dsn).load_native_binding(approval.run_id)
         self.assertEqual(binding["run_id"],approval.run_id)
         self.assertEqual(binding["approval_id"],approval.approval_id)
-        self.assertEqual(binding["native_request_id"],"native-request-1")
+        self.assertEqual(binding["native_request_id"],request_id)
         with psycopg.connect(self.dsn) as conn:
             with self.assertRaises(psycopg.Error):
                 conn.execute(

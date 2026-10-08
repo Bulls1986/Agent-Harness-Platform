@@ -125,3 +125,30 @@ Prepare replay=0、批准 Action=1、拒绝 Action=0。
 
 同样只证明审批等待态身份连续性；不代表 RUNNING Execution 原生续跑、
 真实 Workflow 镜像升级/迁移、跨库原子提交或生产 HA。
+
+## 2026-10-08 增量：审批决定后原生 Response 投递窗口
+
+在前述相同的本机 PostgreSQL + MSSQL、在线双 Worker SIGKILL 链路中，
+新增平台投递门禁 `durable_approval_delivery.py`：平台 Approval 决定
+在 PostgreSQL 事务中提交后，重新创建 Adapter/连接，再按 Run/Attempt、
+原生 Instance/Request、冻结 Workflow/Runtime Version 原子领取一次投递令牌。
+只有 `CLAIMED` 才允许调用官方 Native Response API；原生状态查询确认
+Completed 且输出与平台决策匹配后，才把投递记录标记 APPLIED。
+相同决策的再次 claim 返回 ALREADY_APPLIED，不产生再次响应。
+
+**实跑证据：** 4/4 新 PostgreSQL 合约测试 PASS；完整双数据库故障链
+`committed_decision_before_native_delivery=PASS`、
+`native_response_delivery_token=APPLIED`、`mssql_completed=2`、
+`mssql_history_rows=42`、`prepare_replayed=0`、批准 Action=1、拒绝 Action=0。
+Worker A=5a39b119aa5d、B=b4d643af84e7，B 在 A SIGKILL 后没有重启。
+原始 TaskHub History 不清除。
+
+**严格边界：** 投递令牌已经持久化、但 Native HTTP 响应结果未知时，
+新 Worker claim 会原子将其标成 UNKNOWN_REQUIRES_RECONCILIATION，
+不能 blind retry；该分支目前只由真实 PostgreSQL 负例证明，
+**没有**在 MSSQL Native API 请求中间真实 kill Worker、也没有完成
+后续 Reconciliation/Receipt。审批已提交但尚未领取令牌的安全窗口，
+本轮是两个独立数据库连接/Adapter 的断点检验，并非进程强杀注入。
+Native Request 已存在但平台 Binding 尚未提交的窗口只验证了平台
+fail-closed，未完成自动发现/对账。上述测试不是跨库分布式事务，
+也不是 RUNNING Execution 中途 Same Attempt Resume 或 G6/G8 PASS。

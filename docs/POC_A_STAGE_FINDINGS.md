@@ -27,6 +27,8 @@
 | A33/A34 前置 — 相同应用的双 Worker 并发 | **两轮本地实测**：Worker A 单独 Prepare→native request_info WAIT；B 在 A 存活时加入相同 SQL Server DurableA34 数据库/TaskHub，双方 MSSQL Provider/TaskHub 日志已核验且镜像 ID 一致。B 查询原生相同 Instance/Request ID；A 被 SIGKILL 后 B **不重启**，APPROVED/REJECTED 均完成；每轮 MSSQL Completed=2、History=42、Prepare replay=0、批准 Action=1、拒绝 Action=0 | 两容器位于同一 Docker 主机，未验证跨节点 HA/版本升级/企业 IAM/真实副作用，也没有平台 Same Attempt 绑定；**A34 整体仍 OPEN** | [本地双 Worker 实验记录](../poc/maf/functions-mssql/A34_CONCURRENT_WORKERS.md) | PASS (LOCAL 2 REPLICAS) / PRODUCTION GATES OPEN |
 | A34（增量）原生 Durable Approval/Attempt 绑定及冻结版本 | **同一完整本地故障链路 PASS**：平台 PostgreSQL 原子保存两条 Approval→Run/Step/Attempt→MAF Native Instance/Request；Worker B 在 A SIGKILL 后先核对绑定/冻结版本再审批；不兼容版本在平台 Adapter 被拒绝。2 个 MSSQL 原生实例 Completed、42 条 History；PostgreSQL 各 Run 只有一个 CREATED Attempt，决策分别 APPROVED/REJECTED；本机/CI 六项数据库负例均 PASS | 证明 WAITING_APPROVAL Same Attempt Identity，不是 RUNNING Attempt checkpoint 续跑；真实不兼容 Workflow 镜像版本升级/跨库崩溃窗口/可信外部副作用未验证；**A34 整体 OPEN** | [双数据库端到端证据](../poc/maf/functions-mssql/A34_PLATFORM_MSSQL_E2E.md) | PASS (LOCAL WAITING IDENTITY) / A34 OPEN |
 
+| A34（增量）审批决定后的 Native Response 投递 | 本地 PostgreSQL 4/4 新合约测试：审批已提交但尚未领取令牌可以重连领取；错误版本/未绑定原生请求不能派发；IN_FLIGHT 结果不明的二次 claim 转 UNKNOWN 不重投；原生 Completed 才可标 APPLIED。双库在线 Worker A SIGKILL 后 B 继续审批，2 个原生 Completed / History=42，Prepare replay=0，令牌最终均 APPLIED | UNKNOWN 故障分支目前仅 PostgreSQL 负例，无 Native HTTP 投递中途 Worker 强杀、外部副作用 Receipt/对账；RUNNING Attempt 续跑、生产 HA/版本升级继续 OPEN | [A34 双数据库增量实测](../poc/maf/functions-mssql/A34_PLATFORM_MSSQL_E2E.md) | PASS (LOCAL DELIVERY ADMISSION) / A34 OPEN |
+
 **恢复能力完整清单**：[A30 恢复覆盖矩阵](POC_A_RECOVERY_MATRIX.md)，明确限制“单项 Fixture PASS ≠ 整体 G6 PASS”。
 
 ## 2. 不应混淆的三种恢复

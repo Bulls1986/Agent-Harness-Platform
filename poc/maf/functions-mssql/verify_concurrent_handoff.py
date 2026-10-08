@@ -29,6 +29,7 @@ if PLATFORM_DSN:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from approval_wait import ApprovalWaitStore
     from durable_approval_binding import DurableApprovalBindingStore, DurableBindingMismatch
+    from durable_approval_delivery import DurableApprovalDelivery
     from task_ledger import TaskLedger
     from workflow_probe import VerificationFact
 
@@ -106,10 +107,12 @@ def main() -> None:
                     container_id("maf-mssql-poc-azurite-1"))
     created: dict[str, tuple[str, str]] = {}
     platform: dict[str, tuple] = {}
+    delivery_tokens: dict[str, str] = {}
     if PLATFORM_DSN:
         TaskLedger(PLATFORM_DSN).initialize()
         approval_store = ApprovalWaitStore(PLATFORM_DSN)
         binding_store = DurableApprovalBindingStore(PLATFORM_DSN)
+        delivery_store = DurableApprovalDelivery(PLATFORM_DSN)
 
     for case in cases:
         response = v.invoke("POST", f"{v.ROUTE}/run", case)
@@ -188,6 +191,17 @@ def main() -> None:
                 authorized=True,
                 decision="APPROVED" if case == v.APPROVED_CASE else "REJECTED",
             )
+            # Simulate a process boundary after committed platform Approval
+            # but before delivery admission. No native response has been sent.
+            claim = DurableApprovalDelivery(PLATFORM_DSN).claim(
+                fact.run_id, attempt_id=fact.attempt_id,
+                native_instance_id=instance, native_request_id=request_id,
+                workflow_name=WORKFLOW_NAME, workflow_version=WORKFLOW_VERSION,
+                runtime_version=RUNTIME_VERSION,
+            )
+            assert claim.state == "CLAIMED" and claim.token
+            assert (claim.instance_id, claim.request_id) == (instance, request_id)
+            delivery_tokens[case] = claim.token
         v.invoke("POST", f"{v.ROUTE}/respond/{instance}/{request_id}",
                  "APPROVED" if case == v.APPROVED_CASE else "REJECTED")
     for case, (instance, _) in created.items():
@@ -196,6 +210,21 @@ def main() -> None:
             status = v.invoke("GET", f"{v.ROUTE}/status/{instance}")
             if status.get("runtimeStatus") == "Completed":
                 assert status.get("output") == expected, status
+                if PLATFORM_DSN:
+                    fact, _ = platform[case]
+                    delivery_store.complete(
+                        fact.run_id, token=delivery_tokens[case],
+                        native_status=status["runtimeStatus"],
+                        output_kind=("SIMULATED_EXECUTION" if case == v.APPROVED_CASE
+                                     else "DENIED_NO_EXECUTION"),
+                    )
+                    repeat = delivery_store.claim(
+                        fact.run_id, attempt_id=fact.attempt_id,
+                        native_instance_id=instance, native_request_id=created[case][1],
+                        workflow_name=WORKFLOW_NAME,workflow_version=WORKFLOW_VERSION,
+                        runtime_version=RUNTIME_VERSION,
+                    )
+                    assert repeat.state == "ALREADY_APPLIED" and repeat.token is None
                 break
             if status.get("runtimeStatus") in ("Failed", "Terminated"):
                 raise AssertionError(f"Native Workflow failure: {case}")
@@ -217,6 +246,9 @@ def main() -> None:
         "platform_approval_attempt_binding": "PASS-WAITING-IDENTITY" if PLATFORM_DSN else "NOT_RUN",
         "platform_inflight_same_attempt_resume": "NOT_PROVEN",
         "workflow_frozen_version_negative_guard": bool(PLATFORM_DSN),
+        "committed_decision_before_native_delivery": "PASS" if PLATFORM_DSN else "NOT_RUN",
+        "native_response_delivery_token": "APPLIED" if PLATFORM_DSN else "NOT_RUN",
+        "post_claim_crash_unknown_guard": "POSTGRES_ONLY" if PLATFORM_DSN else "NOT_RUN",
         "scenario": "A34-two-concurrent-replicas",
         "shared_worker_image": a_image[:18], "two_workers_live_concurrently": True,
         "worker_a": a_id[:12], "worker_b": b_id[:12],
