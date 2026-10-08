@@ -16,11 +16,14 @@ from agent_framework import Executor, FileCheckpointStorage, WorkflowBuilder, Wo
 
 
 WORKFLOW_NAME = "maf-poc-a25-checkpoint-v1"
+PREPARE_CALLS = 0
 
 
 class PrepareExecutor(Executor):
     @handler
     async def prepare(self, value: str, ctx: WorkflowContext[str]) -> None:
+        global PREPARE_CALLS
+        PREPARE_CALLS += 1
         if value != "trusted-input":
             raise ValueError("bad fixture input")
         await ctx.send_message("prepared")
@@ -41,7 +44,7 @@ def build(storage: FileCheckpointStorage):
 
 
 async def save(directory: Path) -> dict:
-    storage = FileCheckpointStorage(str(directory))
+    storage = FileCheckpointStorage(str(directory / 'native-checkpoints'))
     workflow = build(storage)
     events = []
     async for event in workflow.run("trusted-input", stream=True):
@@ -73,7 +76,8 @@ async def restore(directory: Path) -> dict:
     ):
         if event.type == "output":
             outputs.append(event.data)
-    return {"resumed":bool(outputs),"outputs":len(outputs),"checkpoint_native":True}
+    return {"resumed":outputs == ["done:prepared"],"outputs":len(outputs),
+            "prepare_reexecuted": PREPARE_CALLS != 0,"checkpoint_native":True}
 
 
 def main() -> int:
@@ -86,7 +90,7 @@ def main() -> int:
         args.save.mkdir(parents=True,exist_ok=True)
     result=asyncio.run(save(args.save) if args.save else restore(args.restore))
     print(json.dumps(result,sort_keys=True))
-    return 0 if result.get("saved") or result.get("resumed") else 1
+    return 0 if (result.get("saved") or result.get("resumed")) and not result.get("prepare_reexecuted") else 1
 
 
 if __name__=="__main__":
