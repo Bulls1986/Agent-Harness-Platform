@@ -32,3 +32,5 @@
 
 新增 [同链专项证据](G6_NATIVE_RECEIPT_SINGLE_CHAIN_FINDINGS.md)：官方 MAF Functions/MSSQL Worker A SIGKILL、B 原生 Handler 重入 **2 次**，PG 首轮派发成功、重派被拒；独立 SQLite 工具真实写入 **1 次**、回执 **1 条**；使用实际 `ToolReceiptReconciler.observe` 将 PG Reconciliation PENDING→**RESOLVED**，原 Attempt 仍 UNKNOWN，Native Failed。原文“未与 Native 同链”的限制是此增量前的阶段状态，已被本次本地技术验证覆盖；企业 MCP Receipt 和生产 Exactly Once 仍未验证。
 
+进一步增量：同一官方 Worker SIGKILL 故障链仅通过测试 SQL 将已终止 Worker A 的平台 Lease 时间推进到过期，然后真实调用 `RecoveryCoordinator.recover()` 完成 UNKNOWN/PENDING/Fencing，真实调用 `ToolReceiptReconciler.observe()` 完成 RESOLVED。完整实测 PASS；受控 Lease 时间注入不是自然 TTL/生产 Lease 健壮性验收。
+

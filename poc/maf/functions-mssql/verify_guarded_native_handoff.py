@@ -403,7 +403,28 @@ def main() -> None:
                    lambda: v.count(case, "guarded_admission_denied") >= 1, 20)
         if v.count(case, "tool_sink_effect") != 1:
             raise AssertionError("Duplicate external tool side effect observed")
-        set_unknown(ids)
+        if receipt_mode:
+            # The Worker A process has been SIGKILLed. Force only its
+            # platform-owned lease clock to expire in this trusted fault test;
+            # the real RecoveryCoordinator must perform all task transitions.
+            # This is NOT an organic production TTL-expiry observation.
+            expired = pg(
+                "UPDATE poc_execution_ownership "
+                "SET lease_expires_at=now()-interval '1 second' "
+                f"WHERE execution_id='{ids['execution']}' "
+                "AND owner_id='MAF-worker-A' AND dispatched_at IS NOT NULL "
+                "AND revoked_at IS NULL RETURNING 1;"
+            )
+            if expired != ["1"]:
+                raise AssertionError("Could not inject expired owner lease for recovery test")
+            from recovery_boundary import RecoveryCoordinator
+            recovery = RecoveryCoordinator(local_a34_pg_dsn()).recover(
+                ids["run"],interrupted_attempt_id=ids["attempt"]
+            )
+            if recovery.outcome != "RECONCILIATION":
+                raise AssertionError("Real RecoveryCoordinator did not quarantine UNKNOWN")
+        else:
+            set_unknown(ids)  # unchanged legacy A34 controlled-SQL scenario
         postgres = audit_pg(ids, instance)
         if len(postgres)!=1 or postgres[0].split("|")[:4]!=["t","2","UNKNOWN","UNKNOWN"]:
             raise AssertionError("Postgres state/owner fence mismatch: " + repr(postgres))
@@ -464,7 +485,9 @@ def main() -> None:
             "tool_sink_effect_count": v.count(case,"tool_sink_effect"),
             "postgres_attempt_count": 1,
             "postgres_attempt_state": "UNKNOWN",
-            "postgres_reconciliation_state": "PENDING",
+            "postgres_reconciliation_state": "RESOLVED" if receipt_mode else "PENDING",
+            "real_recovery_coordinator_invoked": receipt_mode,
+            "owner_lease_expiry_fault_injected": receipt_mode,
             "postgres_fencing_token": 2,
             "native_binding_immutable": True,
             "production_exactly_once_proven": False,
