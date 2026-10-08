@@ -94,13 +94,15 @@ def workflow():
 
 def task_worker():
     return DurableTaskSchedulerWorker(host_address=HOST_ADDRESS,
-                                      secure_channel=False,taskhub=TASKHUB)
+                                      secure_channel=False,taskhub=TASKHUB,
+                                      token_credential=None)
 
 
 def task_client():
     return DurableWorkflowClient(
         DurableTaskSchedulerClient(host_address=HOST_ADDRESS,
-                                   secure_channel=False,taskhub=TASKHUB),
+                                   secure_channel=False,taskhub=TASKHUB,
+                                   token_credential=None),
         workflow_name=WORKFLOW_NAME,
     )
 
