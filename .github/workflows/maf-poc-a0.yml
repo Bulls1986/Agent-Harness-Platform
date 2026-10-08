@@ -191,11 +191,12 @@ jobs:
         env:
           POC_MSSQL_SA_PASSWORD: ci-not-a-real-secret
         run: |
-          python -m py_compile poc/maf/functions-mssql/function_app.py poc/maf/functions-mssql/init_mssql_db.py poc/maf/functions-mssql/verify_handoff.py poc/maf/functions-mssql/verify_concurrent_handoff.py poc/maf/functions-mssql/verify_running_handoff.py poc/maf/functions-mssql/verify_guarded_native_handoff.py
+          python -m py_compile poc/maf/functions-mssql/function_app.py poc/maf/functions-mssql/init_mssql_db.py poc/maf/functions-mssql/verify_handoff.py poc/maf/functions-mssql/verify_concurrent_handoff.py poc/maf/functions-mssql/verify_running_handoff.py poc/maf/functions-mssql/verify_guarded_native_handoff.py poc/maf/functions-mssql/verify_incompatible_worker.py
           docker compose -p maf-mssql-poc-static -f poc/maf/compose-functions-mssql.yml config --quiet
           docker compose -p maf-mssql-a34-static -f poc/maf/compose-functions-mssql-a34.yml config --quiet
           docker compose -p maf-mssql-a34-running-static -f poc/maf/compose-functions-mssql-a34-running.yml config --quiet
           docker compose -p maf-mssql-a34-guarded-static -f poc/maf/compose-functions-mssql-a34-guarded.yml config --quiet
+          docker compose -p maf-mssql-a34-version-static -f poc/maf/compose-functions-mssql-a34-version.yml config --quiet
           python - <<'PY'
           import json
           from pathlib import Path
@@ -225,6 +226,16 @@ jobs:
           assert '127.0.0.1:17101:80' in guarded and '127.0.0.1:17102:80' in guarded
           assert 'POC_RUNNING_GUARDED' in guarded and 'host.docker.internal:17105' in guarded
           assert 'maf-mssql-a34-running:cached' in Path('poc/maf/functions-mssql/Dockerfile.a34-guarded').read_text()
+          mismatched=Path('poc/maf/compose-functions-mssql-a34-version.yml').read_text()
+          assert 'DurableA34Version' in mismatched and 'MafMssqlVersion' in mismatched
+          assert 'maf-mssql-a34-version-v1:cached' in mismatched
+          assert 'maf-mssql-a34-version-v2:cached' in mismatched
+          assert '127.0.0.1:17111:80' in mismatched and '127.0.0.1:17112:80' in mismatched
+          v2=Path('poc/maf/functions-mssql/Dockerfile.a34-version-v2').read_text()
+          assert 'v2-incompatible' in v2 and 'INCOMPATIBLE_RUNNING_V2:' in v2
+          script=Path('poc/maf/functions-mssql/verify_incompatible_worker.py').read_text()
+          assert 'different_application_images' in script and 'gateway_version_denied' in script
+          print('A34 mixed actual application image / frozen workflow guard static PASS (runtime local only)')
           print('A34 guarded crash fixture static contract PASS (Docker SIGKILL only local)')
           print('A34 native RUNNING Worker crash Compose static contract PASS (runtime ONLY local Docker)')
           print('A34 two-worker Compose static contract PASS (NOT multi-node runtime proof)')

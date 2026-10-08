@@ -121,6 +121,31 @@ class GateHandler(BaseHTTPRequestHandler):
             if supplied != {"case": ctx["case"]}:
                 self.send_error(403)
                 return
+            # Version is read from the immutable PG binding, not supplied by
+            # the Worker; a changed-image Worker cannot route an old task to
+            # its new tool implementation without a compatible version.
+            frozen = pg(
+                "SELECT frozen_workflow_version FROM poc_maf_durable_running_bindings "
+                f"WHERE execution_id='{ctx['exec']}' AND "
+                f"native_instance_id='{ctx['instance']}';"
+            )
+            if len(frozen) != 1:
+                self.server.audit.append("native_binding_missing")
+                self.send_error(409)
+                return
+            worker_version = self.headers.get("X-POC-Worker-Workflow-Version")
+            if worker_version != frozen[0]:
+                with self.server.lock:
+                    with (v.MARKERS / f"{ctx['case']}.gateway_version_denied").open(
+                        "a", encoding="utf-8"
+                    ) as f:
+                        f.write("incompatible\n")
+                    self.server.audit.append("version_denied")
+                self.send_response(412)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(b'{"status":"incompatible_frozen_version"}')
+                return
             # Same exact trusted Execution and immutable native binding on A/B.
             # This is the A29 atomic fenced dispatch predicate, not a TaskHub lease.
             sql = f"""
@@ -270,6 +295,7 @@ def main() -> None:
     token_file = v.MARKERS / (case + ".gateway_token")
     token_file.write_text(token, encoding="utf-8")
     ctx = {"case": case, "token": token}
+    # Version mismatch is also guarded in the normal single-fault test.
     server = GateServer(ctx)
     runner = threading.Thread(target=server.serve_forever, daemon=True)
     runner.start()
