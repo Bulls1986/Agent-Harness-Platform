@@ -25,6 +25,7 @@ endpoint, Foundry, file-memory persistence, shell or web tools:
 ```bash
 python poc/maf/harness_capabilities.py
 python poc/maf/workflow_probe.py
+python poc/maf/document_workflow.py
 python -m unittest discover -s poc/maf/tests -p "test_*.py" -v
 ```
 
@@ -40,6 +41,11 @@ python -m unittest discover -s poc/maf/tests -p "test_*.py" -v
   Failure, missing evidence and invalid plan version are negative cases.
   **No actual Planner/Executor tool invocation, PostgreSQL state transaction,
   Retry/Replan, or crash recovery** is claimed.
+- A12 (bounded Document case): uses an actual MAF Workflow Executor to call the
+  **independent fixture verifier**; correct summary finishes, deliberately wrong
+  summary fails. This is a trusted fixture test, not Agent-produced code,
+  production sandbox execution, or permanent OSS-backed Evidence. The
+  `poc-fixture://` URI is deliberately a local test marker, not a storage reference.
 - A05 now creates a restricted HarnessAgent using the same public factory:
   host File Memory/Web Search/Tool Auto Approval are disabled for the live
   probe until real sandbox, authorization and persistence are integrated.
