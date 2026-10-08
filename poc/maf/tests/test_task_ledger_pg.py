@@ -44,6 +44,12 @@ class LedgerPostgresTests(unittest.IsolatedAsyncioTestCase):
         with psycopg.connect(os.environ["POC_POSTGRES_DSN"]) as conn:
             with self.assertRaises(psycopg.Error):
                 conn.execute(
+                    "UPDATE poc_executions SET state='FAILED' WHERE execution_id=%s",
+                    (execution_id,)
+                )
+        with psycopg.connect(os.environ["POC_POSTGRES_DSN"]) as conn:
+            with self.assertRaises(psycopg.Error):
+                conn.execute(
                     "UPDATE poc_runs SET state='RUNNING' WHERE run_id=%s", (fact.run_id,)
                 )
 
