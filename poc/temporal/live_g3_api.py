@@ -11,8 +11,9 @@ from fastapi import FastAPI, HTTPException, Header, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from temporalio.client import Client
-from live_g3_facts import LiveFacts,QUEUE,TERMINAL
+from live_g3_facts import LiveFacts,QUEUE
 from live_g3_workflow import LiveStreamWorkflow
+from platform_typed_feed import TemporalEventFeed, TERMINAL
 
 app=FastAPI(title="POC-C Real Responses Model Stream",version="0.2")
 
@@ -30,13 +31,6 @@ def store():
     key=os.environ.get("POC_C_PLATFORM_DSN","")
     if not key:raise HTTPException(503,detail="Harness PostgreSQL not configured")
     return LiveFacts(key)
-
-def serialize_event(run,row):
-    fields=("delta","sha256","chars","state","step_id","attempt_id","execution_id","version")
-    data={k:row["payload"][k] for k in fields if k in row["payload"]}
-    return {"id":f"{run}:{row['seq']}","sequence":row["seq"],
-            "run_id":run,"type":row["event_type"],"data":data,
-            "timestamp":row["created_at"].isoformat()}
 
 @app.get("/health")
 def health():
@@ -149,27 +143,43 @@ def start_seq(run,after,last_id):
         seq=previous
     return seq
 
-@app.get("/v1/responses/{run_id}/events")
-@app.get("/v1/runs/{run_id}/events")
-async def events(run_id:str,after:int|None=Query(default=None,ge=0),
-                 last_event_id:str|None=Header(default=None,alias="Last-Event-ID")):
-    s=store()
+async def _typed_events(run_id,after,last_event_id,*,c15_only):
+    # /v1/responses is restricted to the C15 response-producing Run.
+    # /v1/runs is a generic read-only projection of all supported Temporal
+    # platform events, including real C11 Artifact and C16 Reconciliation.
+    if c15_only:
+        try:
+            await asyncio.to_thread(store().snapshot,run_id)
+        except KeyError:
+            raise HTTPException(404,detail="Response Run not found")
+    feed=TemporalEventFeed(store().dsn)
+    start=start_seq(run_id,after,last_event_id)
     try:
-        await asyncio.to_thread(s.snapshot,run_id)
+        await asyncio.to_thread(feed.snapshot,run_id,start)
     except KeyError:
         raise HTTPException(404,detail="Run not found")
-    start=start_seq(run_id,after,last_event_id)
+    except ValueError as exc:
+        raise HTTPException(503,detail="Invalid persisted event stream") from exc
     async def tail():
         seq=start
         for _ in range(1500):
-            snapshot,rows=await asyncio.to_thread(s.snapshot,run_id,seq,1000)
-            for row in rows:
-                value=serialize_event(run_id,row)
+            snapshot,rows=await asyncio.to_thread(feed.snapshot,run_id,seq)
+            for value in rows:
                 yield ("id: "+value["id"]+"\n"+"event: "+value["type"]+"\n"+
                        "data: "+json.dumps(value,separators=(",",":"),ensure_ascii=False)+"\n\n")
-                seq=row["seq"]
+                seq=value["sequence"]
             if snapshot["state"] in TERMINAL and not rows:
                 break
             await asyncio.sleep(.1)
     return StreamingResponse(tail(),media_type="text/event-stream",
                              headers={"Cache-Control":"no-cache","X-Accel-Buffering":"no"})
+
+@app.get("/v1/responses/{run_id}/events")
+async def events(run_id:str,after:int|None=Query(default=None,ge=0),
+                 last_event_id:str|None=Header(default=None,alias="Last-Event-ID")):
+    return await _typed_events(run_id,after,last_event_id,c15_only=True)
+
+@app.get("/v1/runs/{run_id}/events")
+async def run_events(run_id:str,after:int|None=Query(default=None,ge=0),
+                     last_event_id:str|None=Header(default=None,alias="Last-Event-ID")):
+    return await _typed_events(run_id,after,last_event_id,c15_only=False)
