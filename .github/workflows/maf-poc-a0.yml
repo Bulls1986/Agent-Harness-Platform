@@ -119,6 +119,10 @@ jobs:
           python -c "import json; a=json.load(open('/tmp/maf-approval-request.json')); b=json.load(open('/tmp/maf-approval-loaded.json')); assert a==b and b['state']=='PENDING'; print('approval waiting recovered same Run in new process')"
           python poc/maf/approval_wait_probe.py --approve "$approval_id" > /tmp/maf-approval-done.json
           python -c "import json; x=json.load(open('/tmp/maf-approval-done.json')); assert x['run_state']=='RUNNING'; print('approval result persisted')"
+      - name: A26 opaque MAF request/checkpoint binding integrity
+        env:
+          POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
+        run: python -m unittest discover -s poc/maf/tests -p "test_native_hitl_binding_pg.py" -v
       - name: A26 native MAF HITL checkpoint and platform Approval cross-process (approve and reject)
         env:
           POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
