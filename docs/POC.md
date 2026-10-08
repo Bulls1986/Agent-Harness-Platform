@@ -136,6 +136,8 @@ P2 Backlog 整体标记为 **DEFERRED / NON-BLOCKING FOR POC**，不作为 POC �
 
 # 7. POC-A：Microsoft Agent Framework
 
+本路线的实施任务拆解、依赖、独立验收和 Milestone 详见 [POC_A_TASK_PLAN.md](POC_A_TASK_PLAN.md)。以下章节是评价约束，具体执行按该任务计划推进。
+
 ## 7.1 验证假设
 
 MAF 的价值在于 HarnessAgent、Workflow、Self-host、Responses/A2A/AG-UI 与 Durable Extension 组合得较完整。POC 重点验证：不用 Foundry Hosted Agents 时，是否仍能作为企业内建 Runtime/Harness 使用；生产所需持久化和 Durable 能否掌握在自有基础设施中。[R1][R2][R3]
