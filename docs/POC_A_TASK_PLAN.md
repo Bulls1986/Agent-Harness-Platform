@@ -32,6 +32,7 @@ POC-A 必须给出三个独立结论：
 - A05：仅提供真实模型探针；当前没有已验证的实际 Provider 会话结果，因此不标 PASS。
 - A06/A07（新增）：`poc/maf/harness_capabilities.py` 运行真实 MAF Provider 装配、native Session 序列化及自定义 ContextProvider Hook 的无网络探针；未验证模型真正生成 Todo、Compaction 或跨进程恢复。
 - A11（新增）：`poc/maf/workflow_probe.py` 通过真实 MAF WorkflowBuilder/Executor 验证平台 ID 沿图传播，且 terminal 成功必须有外部 Verification Fact + Evidence；完整 Plan/Execute/Verify/Replan 与持久化仍待实施。
+- A12（新增局部验证）：`poc/maf/document_workflow.py` 通过真实 MAF Workflow 调用独立 Document Verifier；通过与故意失败用例形成正反断言。Sandbox、OSS Evidence、完整 Execute 实现仍待 A12/A14/A15 后续集成。
 - A31：已形成 [Durable preliminary findings](../poc/maf/DURABLE_FEASIBILITY.md)，但跨 Worker/Functions+MSSQL 尚未实测。
 
 ## 1. 阶段与详细任务
