@@ -5,11 +5,11 @@ export POC_DTS_ENDPOINT="${POC_DTS_ENDPOINT:-http://127.0.0.1:18080}"
 export POC_DTS_TASKHUB="${POC_DTS_TASKHUB:-pocmaf}"
 export POC_DTS_MARKERS="${POC_DTS_MARKERS:-/tmp/maf-dts-markers}"
 finish() {
-  docker compose -f poc/maf/compose-durable-emulator.yml logs --no-color --tail 60 || true
-  docker compose -f poc/maf/compose-durable-emulator.yml down --remove-orphans || true
+  docker compose -p maf-dts-poc -f poc/maf/compose-durable-emulator.yml logs --no-color --tail 60 || true
+  docker compose -p maf-dts-poc -f poc/maf/compose-durable-emulator.yml down || true
 }
 trap finish EXIT
-docker compose -f poc/maf/compose-durable-emulator.yml up -d
+docker compose -p maf-dts-poc -f poc/maf/compose-durable-emulator.yml up -d
 docker image inspect mcr.microsoft.com/dts/dts-emulator:latest --format '{{.Id}}' > dts-emulator-image-id.txt
 docker image inspect mcr.microsoft.com/dts/dts-emulator:latest --format '{{json .RepoDigests}}' > dts-emulator-image-digests.txt
 python - <<'PY'
