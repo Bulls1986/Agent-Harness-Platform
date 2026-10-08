@@ -466,11 +466,28 @@ persistent Run/event replay, but it is NOT a real LiteLLM/model acceptance:
 It requires POC_POSTGRES_DSN and needs no provider API Key. CI runs this
 real-SDK/simulated-upstream gate separately from any authenticated model proof.
 
-Set POC_POSTGRES_DSN to a disposable local database. The verification script
-reads the LiteLLM credential from a trusted short-lived stdin pipe, rather
-than argv, files or stdout:
+For the **authenticated live G3 gate**, supply environment variables to the
+**process that launches the local Runner / Python probe**:
 
-    python poc/maf/verify_live_model_protocol.py --model YOUR_MODEL --base-url YOUR_GATEWAY_V1
+    POC_POSTGRES_DSN          # disposable, reachable PostgreSQL database
+    POC_LITELLM_API_KEY      # credential, never pass via CLI or logs
+    POC_LITELLM_MODEL        # the admitted model
+    POC_LITELLM_BASE_URL     # gateway OpenAI-compatible /v1 URL
+
+Then, from the repository root in the same environment, run:
+
+    python poc/maf/verify_live_model_protocol.py
+
+`--model` / `--base-url` are optional overrides; if set they take precedence
+over the corresponding environment variables. The key is **always read from
+POC_LITELLM_API_KEY first**. A trusted non-interactive stdin pipe remains
+optional for backward compatibility. The script does not try to read from
+an interactive terminal when no credential is set.
+
+Setting `$env:POC_LITELLM_API_KEY` in an unrelated PowerShell session does
+**not** inject it into an already-running WebCodex Runner. Configure the
+Runner's own launch environment and restart the Runner if needed. A `.env`
+file alone is not automatically loaded by an ordinary Python process.
 
 It starts a real loopback HTTP process, streams an unpredictable nonce through
 the real model, shuts the process down, restarts without a model credential,

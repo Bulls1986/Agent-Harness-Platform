@@ -1,10 +1,13 @@
 """G3 real self-hosted MAF/LiteLLM -> durable typed event -> SSE/restart gate.
 
-Run from repository root with POC_POSTGRES_DSN set to a disposable database:
+Run from repository root with POC_POSTGRES_DSN and POC_LITELLM_API_KEY
+set in the local Runner process environment:
     python poc/maf/verify_live_model_protocol.py --model MODEL --base-url URL
 
-Provide the LiteLLM API key as the first line of a trusted stdin pipe.
-Never place credentials in argv, repo files, reports or stdout. This probe
+POC_LITELLM_MODEL and POC_LITELLM_BASE_URL may also come from environment.
+A trusted stdin pipe remains optional for backward compatibility when no
+API key environment variable exists; it is never needed for env-based runs.
+Never put credentials in argv, repo files, reports or stdout. This probe
 prints only aggregate booleans/counters, never raw model output or secrets.
 """
 from __future__ import annotations
@@ -40,20 +43,38 @@ def events_from_sse(stream: str) -> list[dict]:
     return events
 
 
+def read_api_key() -> str:
+    """Environment credential first; a trusted stdin pipe is only a fallback."""
+    key = os.getenv("POC_LITELLM_API_KEY", "").strip()
+    if key:
+        return key
+    if sys.stdin.isatty():
+        return ""
+    return sys.stdin.readline().strip()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", required=True)
-    parser.add_argument("--base-url", required=True)
+    parser.add_argument("--model", default=None)
+    parser.add_argument("--base-url", default=None)
     args = parser.parse_args()
-    key = sys.stdin.readline().strip()
-    if not key or not os.getenv("POC_POSTGRES_DSN"):
-        print(json.dumps({"outcome": "SETUP_GAP", "reason": "stdin key and PG DSN required"}))
+    model = args.model or os.getenv("POC_LITELLM_MODEL", "")
+    base_url = args.base_url or os.getenv("POC_LITELLM_BASE_URL", "")
+    key = read_api_key()
+    missing = [name for name, value in (
+        ("POC_POSTGRES_DSN", os.getenv("POC_POSTGRES_DSN")),
+        ("POC_LITELLM_API_KEY", key),
+        ("POC_LITELLM_MODEL", model),
+        ("POC_LITELLM_BASE_URL", base_url),
+    ) if not value]
+    if missing:
+        print(json.dumps({"outcome": "SETUP_GAP", "missing_environment_or_arg": missing}))
         return 2
 
     # The key is injected into a short-lived, loopback-only Uvicorn subprocess.
     os.environ["POC_LITELLM_API_KEY"] = key
-    os.environ["POC_LITELLM_MODEL"] = args.model
-    os.environ["POC_LITELLM_BASE_URL"] = args.base_url
+    os.environ["POC_LITELLM_MODEL"] = model
+    os.environ["POC_LITELLM_BASE_URL"] = base_url
     sys.path.insert(0, os.path.join(os.getcwd(), "poc", "maf"))
     from task_ledger import TaskLedger
     TaskLedger(os.environ["POC_POSTGRES_DSN"]).initialize()

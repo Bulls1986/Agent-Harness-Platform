@@ -17,7 +17,9 @@
 - 空输出不宣告成功，模型异常/连接中断有明确失败分类，
   保留此前已落库的片段，不自动重试。
 - verify_live_model_protocol.py 提供真正的 Uvicorn/LiteLLM/PG/重启验收入口；
-  API Key 从 stdin 读取，不进入 argv、仓库或测试报告。
+  API Key **优先从 Runner 进程环境变量 POC_LITELLM_API_KEY** 读取；模型、
+  Base URL 也可从 POC_LITELLM_MODEL / POC_LITELLM_BASE_URL 读取，
+  stdin 仅留非交互兼容后备，凭据不进入 argv、仓库或测试报告。
 - 新增 Live Route 的非 loopback 拒绝和请求模型 allowlist 校验；异常取消不能
   生成成功终态，过长或超出 PostgreSQL seq 范围的 Last-Event-ID 返回 422。
 
@@ -44,14 +46,19 @@
   FAILED / MODEL_STREAM_INTERRUPTED，服务端错误 Canary 不泄漏且不重试；
   失败 Run 同样可跨进程重放。脚本已纳入 GitHub Actions 工作流，但本轮未运行
   远端 CI。**模拟的是上游模型 API，不是 MAF SDK 或平台 Adapter。**
+- 2026-10-09 环境变量接入：`test_live_probe_configuration.py` 5 项离线
+  PASS，覆盖环境变量优先级、无 stdin 读取、缺失配置安全报错、旧管道兼容；
+  CI 工作流已增加此测试，尚未在远端执行。当前 Runner 进程与 Windows 用户环境
+  均**未配置** POC_LITELLM_API_KEY，故不能冒称本轮执行了真实授权请求。
 - LiteLLM 网关 /v1/models 在无凭据探测下返回 HTTP 401：证明目标可达，
   **不能**据此判定凭据有效或 G3 E2E PASS。
 - Runner 全局 Python 缺 agent-framework-openai，且原有全局 openai SDK 版本
   不兼容。已在系统临时目录创建隔离 venv，安装仓库锁定依赖；
   **MAF OpenAIChatClient + create_harness_agent + Session 初始化 PASS**，
-  `pip check`、`compileall` PASS。隔离环境最新离线回归 **90 tests，
-  33 PASS、57 条因未启用所需集成条件而 SKIP**；上述独立 PostgreSQL
-  集成已另外执行 9+3 项，不把 SKIP 伪称 PASS。
+  `pip check`、`compileall` PASS。环境变量读取改造后的隔离环境离线回归
+  **95 tests，38 PASS、57 条因未启用所需集成条件而 SKIP**；上述独立 PostgreSQL
+  集成此前已另外执行 9+3 项，不把 SKIP 伪称 PASS。
+  无配置启动验收 CLI 返回预期 SETUP_GAP (exit 2)，只列出缺失变量名。
 - 本轮试图通过执行工具递交聊天中已给的 API Key 受安全检查阻止；
   禁止以改写/混淆密钥规避检查，也不从聊天复制密钥到代码或 CI。
 - A05 既有独立 LiteLLM + MAF 双轮流式与 History smoke PASS，不能替代本次
