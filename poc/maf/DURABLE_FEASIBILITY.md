@@ -171,6 +171,21 @@ This is **not** proof of multi-node HA, SQL Server failover, Harness
 Same Attempt mapping, external write atomicity, or production support/licensing.
 The A34 overall gate stays OPEN.
 
+## A34 Harness PostgreSQL / MAF MSSQL combined fault injection
+
+The local A34 follow-up now **joins both stores in one real worker-crash
+test**. The platform atomically binds PostgreSQL Run/Step/Attempt/Approval
+to the native Durable Instance/Request and frozen SDK/workflow version.
+Worker B rejects incompatible version input, then continues the same
+native HITL request after Worker A is killed. Two MAF instances completed
+with MSSQL History=42; separate PostgreSQL audit proves one CREATED Attempt
+per Run and immutable binding. Full details:
+[dual-database live proof](functions-mssql/A34_PLATFORM_MSSQL_E2E.md).
+
+This is still **same WAITING approval / platform Attempt identity**,
+not in-flight RUNNING Attempt checkpoint recovery, cross-DB atomicity,
+workflow-code-upgrade replay, or production HA.
+
 ## Explicit conclusion
 
 MAF has **two distinct, real recovery proofs**: native DTS dev emulator
