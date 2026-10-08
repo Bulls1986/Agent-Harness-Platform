@@ -4,6 +4,9 @@
 > G1/G2/G3/G6 为正式硬门禁；局部 PASS 不能升级为主架构 PASS。
 > POC-A 的基线来自 [POC-A 决策型评估](../maf/POC_A_DECISION_CLOSEOUT.md)，
 > 不因 POC-C 的新证据而追溯修改历史结果。
+> 实证与评估已由 [PR #35](https://github.com/Bulls1986/Agent-Harness-Platform/pull/35) 合并 main，
+> [Linux CI #37780673019](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37780673019) **5/5 SUCCESS**；
+> 这并不改变本文的 **生产主架构硬门禁 NO-GO**。
 
 ## 1. 分层架构判断
 
