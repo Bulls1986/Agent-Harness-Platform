@@ -6,7 +6,9 @@
 
 - 独立 POST /v1/live/responses，与只接受 Document fixture 的原接口隔离。
 - 公共 MAF create_harness_agent + OpenAIChatClient streaming，store=False，
-  禁用文件记忆、Web、工具自动批准和 Compaction；模型由可信本地配置限制。
+  禁用文件记忆、Web、工具自动批准、Compaction、Todo 和 Mode；显式 tools=[]。
+  **实测发现**之前仅禁用工具自动批准时 MAF 仍将 Todo/Mode 工具定义发给上游，
+  已修复并通过真实 SDK wire-contract 测试校验。模型由可信本地配置限制。
 - Run/Plan/Step/Attempt/Execution 先入 PostgreSQL。每一个真实非空
   chunk 在发出 SSE 之前写入 poc_events（sequence 与 Run 绑定）。
 - Event type = response.output_text.delta；run.started/run.terminal 均为
@@ -33,6 +35,15 @@
   其中 Token 片段明确为 **Mock Provider / Real PG**；独立进程重启是
   真实 MAF Document Fixture，不能冒充真实 LLM Token 全链路验证。
 - Python compileall 新实现通过。
+- 新增 verify_sdk_wire_protocol.py，使用**真实锁定版本 MAF/OpenAI SDK**、
+  合成 OpenAI Responses SSE 上游（非真实模型）、两个真实 Uvicorn 进程和
+  一次性 PostgreSQL。已执行 **PASS_REAL_SDK_WITH_SIMULATED_UPSTREAM**：
+  SDK 向 /v1/responses 发送 stream=true/store=false、空工具列表；
+  正常回复 3 个 Delta / 5 条事件均先落库再经平台 SSE 输出；重新启动 HTTP
+  Worker 后 Snapshot 与 Last-Event-ID 回放一致。上游 HTTP 400 错误会形成
+  FAILED / MODEL_STREAM_INTERRUPTED，服务端错误 Canary 不泄漏且不重试；
+  失败 Run 同样可跨进程重放。脚本已纳入 GitHub Actions 工作流，但本轮未运行
+  远端 CI。**模拟的是上游模型 API，不是 MAF SDK 或平台 Adapter。**
 - LiteLLM 网关 /v1/models 在无凭据探测下返回 HTTP 401：证明目标可达，
   **不能**据此判定凭据有效或 G3 E2E PASS。
 - Runner 全局 Python 缺 agent-framework-openai，且原有全局 openai SDK 版本

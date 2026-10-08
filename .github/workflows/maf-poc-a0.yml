@@ -100,6 +100,8 @@ jobs:
           python -m unittest discover -s poc/maf/tests -p "test_protocol_service_pg.py" -v
           python -m unittest discover -s poc/maf/tests -p "test_live_model_protocol.py" -v
           python poc/maf/verify_selfhost_protocol.py
+          # Real MAF SDK and separate HTTP/PG/SSE process; loopback fake upstream only.
+          python poc/maf/verify_sdk_wire_protocol.py
       - name: A24/A27/A28 native Session and safe recovery PostgreSQL tests
         env:
           POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness

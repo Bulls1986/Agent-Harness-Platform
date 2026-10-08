@@ -108,6 +108,9 @@ async def provider_deltas(*, prompt: str, model: str, base_url: str,
     client = OpenAIChatClient(model=model, base_url=base_url, api_key=api_key)
     agent = create_harness_agent(
         client=client, name="maf-platform-live-protocol-poc",
+        # Harness Todo/Mode tools are enabled by default. A text-only proof
+        # must disable them explicitly, not merely disable auto approval.
+        tools=[], disable_todo=True, disable_mode=True,
         disable_file_memory=True, disable_web_search=True,
         disable_tool_auto_approval=True, disable_compaction=True,
         default_options={"store": False, "max_output_tokens": 128},

@@ -451,6 +451,21 @@ table, then emits the committed event over SSE. The GET
 persisted deltas, and GET /v1/runs/{run_id}/events supports both ?after=N
 and run-scoped Last-Event-ID headers. No synthetic output or model retries.
 
+The MAF Harness enables Todo and Mode tools by default even with tool auto
+approval disabled. This model-only adapter explicitly uses disable_todo=True,
+disable_mode=True and tools=[]; the actual SDK request is checked for an empty
+toolset, stream=true, and store=false.
+
+An additional local contract gate uses **the real pinned MAF/OpenAI SDK**,
+a synthetic OpenAI-compatible SSE upstream, real PostgreSQL and two separate
+Uvicorn processes. It checks success, provider HTTP failure redaction and
+persistent Run/event replay, but it is NOT a real LiteLLM/model acceptance:
+
+    python poc/maf/verify_sdk_wire_protocol.py
+
+It requires POC_POSTGRES_DSN and needs no provider API Key. CI runs this
+real-SDK/simulated-upstream gate separately from any authenticated model proof.
+
 Set POC_POSTGRES_DSN to a disposable local database. The verification script
 reads the LiteLLM credential from a trusted short-lived stdin pipe, rather
 than argv, files or stdout:
