@@ -30,6 +30,8 @@ POC-A 必须给出三个独立结论：
 - A03：Compose 配置、MAF 镜像构建、PostgreSQL SQL 查询及 OTLP Collector 启动均已通过 CI；OSS 实际接入留给 A15，外部对象存储产品不属于 Harness。
 - A04：Evidence 模板及防止默认 PASS 的离线测试已通过 CI；后续每个 Gate 必须分别填写真实记录。
 - A05：仅提供真实模型探针；当前没有已验证的实际 Provider 会话结果，因此不标 PASS。
+- A06/A07（新增）：`poc/maf/harness_capabilities.py` 运行真实 MAF Provider 装配、native Session 序列化及自定义 ContextProvider Hook 的无网络探针；未验证模型真正生成 Todo、Compaction 或跨进程恢复。
+- A11（新增）：`poc/maf/workflow_probe.py` 通过真实 MAF WorkflowBuilder/Executor 验证平台 ID 沿图传播，且 terminal 成功必须有外部 Verification Fact + Evidence；完整 Plan/Execute/Verify/Replan 与持久化仍待实施。
 - A31：已形成 [Durable preliminary findings](../poc/maf/DURABLE_FEASIBILITY.md)，但跨 Worker/Functions+MSSQL 尚未实测。
 
 ## 1. 阶段与详细任务
