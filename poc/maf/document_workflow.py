@@ -55,9 +55,12 @@ def build_document_workflow():
     )
 
 
-async def run_document_case(candidate: Literal["expected", "buggy"]) -> PlatformOutcome:
+async def run_document_case(
+    candidate: Literal["expected", "buggy"],
+    fact: VerificationFact | None = None,
+) -> PlatformOutcome:
     request = DocumentRequest(
-        fact=VerificationFact.example(passed=False, evidence_ref=None),
+        fact=fact or VerificationFact.example(passed=False, evidence_ref=None),
         candidate=candidate,
     )
     result = await build_document_workflow().run(request)
