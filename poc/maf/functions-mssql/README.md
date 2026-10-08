@@ -81,3 +81,7 @@ Harness Same Run/Step/Attempt ID 绑定、OSS/Sandbox State、
 本平台不自研 TaskHub，Harness 业务事实仍由 PostgreSQL 存储。
 
 参考：https://learn.microsoft.com/en-us/azure/azure-functions/durable/durable-functions-storage-providers
+
+## 双 Worker 同时在线验证
+
+见 [A34 前置并发双 Worker 实测报告](A34_CONCURRENT_WORKERS.md)。与上一轮顺序替换不同，第二个 Worker 在第一个被 SIGKILL **之前**已同时在线并连接 MSSQL；两轮单主机测试通过，但生产跨节点/完整 Same Attempt 仍未验收。

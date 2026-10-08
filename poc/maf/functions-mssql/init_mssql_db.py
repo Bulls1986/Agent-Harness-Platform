@@ -6,6 +6,7 @@ container-internal MSSQL_SA_PASSWORD for isolated POC SQL Server only.
 from __future__ import annotations
 
 import subprocess
+import sys
 import time
 
 SQL_CONTAINER = "maf-mssql-poc-mssql-1"
@@ -32,17 +33,22 @@ def run_sql(query: str) -> subprocess.CompletedProcess[str]:
 
 
 def main() -> None:
+    db = sys.argv[1] if len(sys.argv) == 2 else 'DurableDB'
+    if db not in ('DurableDB', 'DurableA34'):
+        raise ValueError('Only dedicated POC databases are allowed')
+    create = CREATE.replace('DurableDB', db)
+    verify = VERIFY.replace('DurableDB', db)
     for attempt in range(60):
-        result = run_sql(CREATE)
+        result = run_sql(create)
         if result.returncode == 0:
             break
         time.sleep(2)
     else:
         raise RuntimeError("Isolated MSSQL SQL Server not ready after retries")
-    check = run_sql(VERIFY)
+    check = run_sql(verify)
     if check.returncode != 0 or "Latin1_General_100_BIN2_UTF8" not in check.stdout:
         raise RuntimeError("DurableDB collation missing or not BIN2_UTF8")
-    print("DurableDB initialized with Latin1_General_100_BIN2_UTF8; SQL container only")
+    print(db + " initialized with Latin1_General_100_BIN2_UTF8; SQL container only")
 
 
 if __name__ == "__main__":

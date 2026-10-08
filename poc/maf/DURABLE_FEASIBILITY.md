@@ -154,6 +154,23 @@ effects; trustworthy IAM on HTTP status/respond; RTO/RPO and production
 security, observability and performance gates. Beta extension support must
 be resolved before architecture selection.
 
+## A33 online twin-worker test before A34 Same Attempt mapping
+
+The second local Functions/MSSQL probe extends the previous sequential
+Worker replacement. On the *same Docker host*, two **identical** MAF
+AgentFunctionApp replicas started simultaneously against the same MSSQL
+TaskHub in a dedicated DurableA34 database. Two rounds verified that A
+completed Prepare before B joined; both were healthy and using the MSSQL
+Provider concurrently; B could read A's native request IDs; A then suffered
+SIGKILL while B remained up and completed APPROVED/REJECTED without replay.
+
+Per round: MSSQL Completed=2 and History=42 for the two instances,
+Prepare replay=0, approved controlled action=1, rejected action=0.
+[Reproducible A34 prerequisite](functions-mssql/A34_CONCURRENT_WORKERS.md).
+This is **not** proof of multi-node HA, SQL Server failover, Harness
+Same Attempt mapping, external write atomicity, or production support/licensing.
+The A34 overall gate stays OPEN.
+
 ## Explicit conclusion
 
 MAF has **two distinct, real recovery proofs**: native DTS dev emulator
