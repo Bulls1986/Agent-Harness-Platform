@@ -1,0 +1,5 @@
+# A31–A33 pinned *optional* Durable Extension probe dependencies.
+# Isolated from A00–A30 default CI; real model/Foundry packages not required.
+# This release is beta: a successful DTS Emulator run is NOT production proof.
+agent-framework-core==1.20.0
+agent-framework-durabletask==1.0.0b260922
