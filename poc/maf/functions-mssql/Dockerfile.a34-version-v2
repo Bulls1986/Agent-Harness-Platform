@@ -1,0 +1,5 @@
+# Separate REAL application image: incompatible handler behavior and version.
+# Fixed MAF SDK distribution in this POC; not a cross-MAF-SDK binary upgrade.
+FROM maf-mssql-a34-version-v1:cached
+RUN sed -i 's/WORKER_GUARDED_WORKFLOW_VERSION = "maf_mssql_poc_guarded:v1"/WORKER_GUARDED_WORKFLOW_VERSION = "maf_mssql_poc_guarded:v2-incompatible"/;s/GUARDED_RUNNING:/INCOMPATIBLE_RUNNING_V2:/g' /home/site/wwwroot/function_app.py && \
+    grep -q 'WORKER_GUARDED_WORKFLOW_VERSION = "maf_mssql_poc_guarded:v2-incompatible"' /home/site/wwwroot/function_app.py

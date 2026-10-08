@@ -37,6 +37,8 @@
 
 | A34（P0）**同一次** Native Worker 崩溃 + PG Running 身份/版本 + 受控 Tool Admission | 独立 `DurableA34Guarded` MSSQL/TaskHub 双在线 Worker；平台 PG 1 个 RUNNING Attempt + Immutable Native Instance/Version；首次原生 Executor 进入成功经 PG Fencing 后向 HTTP Tool Sink 写入 1 次，A SIGKILL 后 B 原位重入，第二次 PG Admission 409 拒绝，Sink 仍 1 次。官方原生 Instance `Failed` / History=12，故障标识 `HARNESS_TOOL_REPLAY_DENIED`；PG Attempt/Execution `UNKNOWN`、Reconciliation `PENDING` | 这里的成功是“不重复危险副作用，安全停止”，不是 Native Workflow 成功完成；Tool Sink 为受控本机回执；PG 分类采用测试注入 SQL 而非真实自动 Reconciler。版本不兼容接管和跨库极端断点仍 OPEN | [单链故障验证记录](../poc/maf/functions-mssql/A34_GUARDED_NATIVE_PG_E2E.md) | PASS (LOCAL FAIL-CLOSED SINGLE CHAIN) / A34 OPEN |
 
+| A34（P0）实际不同工作流代码镜像、Worker 混跑与冻结版本 | V1/V2 应用镜像 SHA 不同，且 V2 的声明版本与成功输出逻辑均不同。V1 Worker A 在 Native Prepare 中 SIGKILL，在线 V2 Worker B 原生接管同一 MSSQL Instance，执行到 V2 Handler，向 Harness Gateway 发送 V2 version；PG 冻结 V1 → HTTP 412 `HARNESS_INCOMPATIBLE_WORKER_VERSION`。受控外部 Tool 写入 0，MSSQL `Failed` / History=12，PG 一个 Attempt `FAILED`。**不能信赖原生 Durable 自动版本隔离** | 测试未更换 MAF SDK；Worker 版本头为测试自我声明，生产需可信来源校验；PG 任务失败状态由 Test Driver 写入，非生产自动化 | [A34 不兼容 Worker 真镜像负例](../poc/maf/functions-mssql/A34_INCOMPATIBLE_WORKER.md) | PASS (LOCAL WORKFLOW VERSION FAIL-CLOSED) / A34 P1 OPEN |
+
 **恢复能力完整清单**：[A30 恢复覆盖矩阵](POC_A_RECOVERY_MATRIX.md)，明确限制“单项 Fixture PASS ≠ 整体 G6 PASS”。
 
 ## 2. 不应混淆的三种恢复

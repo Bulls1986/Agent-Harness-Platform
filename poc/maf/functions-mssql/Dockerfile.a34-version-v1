@@ -1,0 +1,3 @@
+# Minimal cached repro: freeze actual application code V1 image.
+FROM maf-mssql-a34-running:cached
+COPY function_app.py /home/site/wwwroot/function_app.py
