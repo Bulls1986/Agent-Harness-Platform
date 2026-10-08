@@ -3,6 +3,8 @@
 > 2026-10-08 | **真实非幂等 HTTP 业务副作用 + 重启后 Receipt 反查 scoped PASS**，
 > 不是企业 MCP 带签名回执、Exactly Once 或整个 Run 恢复终态 PASS。
 
+**最终远端验收**：[PR #38](https://github.com/Bulls1986/Agent-Harness-Platform/pull/38) 已合并 main（`1edd5bf`）；[CI #37793061991](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37793061991) **5/5 jobs SUCCESS**，其中 C16 使用真实受控 HTTP 业务 Side Effect、独立 SQLite WAL Receipt、Worker `os._exit(74)`、重启后只读查询。未验证企业真实 MCP 回执，G6 仍 PARTIAL。
+
 ## 测试隔离与执行边界
 
 - 真实 OSS Temporal Server + Temporal PostgreSQL；独立 Harness

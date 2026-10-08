@@ -4,6 +4,8 @@
 > 不是整个 Responses API/全种类 Tool、Approval、Artifact/UI G3 Gate PASS。
 > Native Start ACK 故障、RecoveryPoint 引用、Cancel 为额外 G2/G6 scoped 证据。
 
+**最终远端验收**：[PR #38](https://github.com/Bulls1986/Agent-Harness-Platform/pull/38) 已合并 main（`1edd5bf`）；[GitHub CI #37793061991](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37793061991) **5/5 jobs SUCCESS**。公开 CI 执行实际 Temporal/PG/API/SSE，模型阶段使用显式 Fake Tokens；真实模型调用以独立本机实测为证据。完整 G3 仍 PARTIAL。
+
 ## 完整的真实模型链（非 Mock）
 
 - `POST /v1/responses` 创建 Harness PostgreSQL 的
