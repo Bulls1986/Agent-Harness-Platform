@@ -183,6 +183,7 @@ jobs:
       - name: Install Temporal, Harness PostgreSQL and restricted HTTP protocol dependencies
         run: |
           python -m pip install -r poc/temporal/requirements-protocol.txt
+          python -m pip install -r poc/temporal/requirements-c13.txt
           python -m pip check
           python -m compileall -q poc/temporal
       - name: Create isolated credentials for TWO independent PostgreSQL services
@@ -218,6 +219,12 @@ jobs:
         env:
           POC_C_TEMPORAL_ADDRESS: 127.0.0.1:17234
         run: python poc/temporal/verify_c09_offline.py
+      - name: C13 real Temporal native OpenTelemetry and Harness Run/Attempt correlation
+        env:
+          POC_C_TEMPORAL_ADDRESS: 127.0.0.1:17234
+        run: |
+          python poc/temporal/verify_c13_otel.py
+          python poc/temporal/measure_c13_footprint.py
       - name: C06+C07+C10 real Temporal crash, Tool fencing and HTTP/SSE restart
         env:
           POC_C_TEMPORAL_ADDRESS: 127.0.0.1:17234
