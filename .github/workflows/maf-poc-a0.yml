@@ -294,3 +294,34 @@ jobs:
           ! python poc/maf/verify_fixture.py --case document --candidate poc/maf/fixtures/document/buggy
       - name: Offline contract tests (no provider key required)
         run: python -m unittest discover -s poc/maf/tests -p "test_*.py" -v
+
+  a40-real-maf-workflow-agent-sdk-adapter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install same MAF and OpenAI Agents SDK versions used in C09
+        run: |
+          python -m pip install -r poc/maf/requirements-sdk-swap.txt
+          python -m pip check
+      - name: A40 actual MAF AgentExecutor Workflow offline positive and negative contracts
+        run: python -m unittest discover -s poc/maf/tests -p "test_agent_sdk_swap.py" -v
+      - name: Verify second SDK is bridged through MAF public BaseAgent API
+        run: |
+          python - <<'PY'
+          from agent_framework import BaseAgent, AgentExecutor, SupportsAgentRun
+          from pathlib import Path
+          import sys
+          sys.path.insert(0, "poc/maf")
+          from maf_sdk_swap import AgentSdkBridge
+          a=AgentSdkBridge(model="fixture",endpoint="http://127.0.0.1:1/v1",api_key="ci-dummy")
+          assert isinstance(a,BaseAgent)
+          assert isinstance(a,SupportsAgentRun)
+          assert AgentExecutor(a,id="c09-external-sdk").agent is a
+          print("A40 MAF official AgentExecutor external SDK adapter PASS (no model called)")
+          PY
+      - name: Compile A40 adapter and no provider credentials
+        run: python -m compileall -q poc/maf

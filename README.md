@@ -10,6 +10,7 @@
 - [Agent Harness Platform 架构 POC 说明书 V1.0](docs/POC.md)
 - [POC-A / MAF 完整实施任务计划](docs/POC_A_TASK_PLAN.md)
 - [POC-A / MAF 决策型最终评估（Hard Gates 与 GAP）](poc/maf/POC_A_DECISION_CLOSEOUT.md)
+- [POC-A / A40 MAF Workflow 实际切换 Agent SDK 的对照验证](poc/maf/A40_AGENT_SDK_WORKFLOW_SWAP.md)
 - [POC-C / Temporal 技术验证任务计划](docs/POC_C_TASK_PLAN.md)
 - [POC-C / 首批原生 Worker 与 Server 恢复证据](poc/temporal/C00_C04_NATIVE_FINDINGS.md)
 - [POC-C / C05 非 Dev Server 的 OSS Temporal + PostgreSQL 故障证据](poc/temporal/C05_OSS_POSTGRES_FINDINGS.md)
