@@ -108,6 +108,10 @@ jobs:
         env:
           POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
         run: python -m unittest discover -s poc/maf/tests -p "test_session_recovery_pg.py" -v
+      - name: G6 external non-idempotent Tool Receipt and reconciliation (HTTP SQLite + PostgreSQL)
+        env:
+          POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
+        run: python -m unittest discover -s poc/maf/tests -p "test_tool_receipt_reconciliation_pg.py" -v
       - name: A24/A27 distinct worker-process kill and restart
         env:
           POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness

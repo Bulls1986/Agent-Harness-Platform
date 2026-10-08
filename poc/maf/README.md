@@ -438,6 +438,23 @@ are recorded in [DURABLE_FEASIBILITY.md](DURABLE_FEASIBILITY.md).
 - A23–A30: Postgres task facts and task-level recovery before claiming G2/G6.
 - A32/A33: real Python MAF Durable + Functions/MSSQL worker test.
 
+## G6 bounded external HTTP Tool Receipt reconciliation
+
+`tool_receipt_reconciliation.py` adds a frozen, unique platform dispatch
+intent before an externally non-idempotent tool POST, and a separately recorded
+external COMMITTED receipt after an UNKNOWN/PENDING interruption. Reconciliation
+reads a receipt obtained from a trusted Tool Adapter; it **never re-POSTs the
+tool**. Original Attempt/Execution stay UNKNOWN and the Run stays RUNNING until
+a separate workflow decision. The PostgreSQL receipt fact is immutable and
+repeated observations are idempotent.
+
+`test_tool_receipt_reconciliation_pg.py` uses real PostgreSQL plus a distinct
+HTTP+SQLite sink with actual non-idempotent writes. It verifies lost ACK,
+service restart, receipt replay, missing/ambiguous receipts, invalid identities
+and concurrent reconciliation. The sink is a **controlled fixture**, not an
+enterprise MCP or business service and not a guarantee of Exactly Once.
+See [G6_TOOL_RECEIPT_FINDINGS.md](G6_TOOL_RECEIPT_FINDINGS.md).
+
 ## G3 bounded live model streaming (not yet full Gate PASS)
 
 New local-only POST /v1/live/responses accepts a text prompt with stream=true.
