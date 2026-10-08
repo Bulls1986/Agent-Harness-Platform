@@ -5,6 +5,8 @@
 > 权威约束：[`docs/ARCHITECTURE.md`](ARCHITECTURE.md)、[`docs/POC.md`](POC.md)、根目录 `AGENTS.md` 和相关 Accepted Contracts。  
 > **范围控制：不设计另一个 Agent Framework，不自建 Durable Task 后端，不把 IAM/MCP 治理/计费/存储 DR/APM 扩入 Harness。**
 
+**阶段性结论与门禁证据统一台账**：[POC_A_STAGE_FINDINGS.md](POC_A_STAGE_FINDINGS.md)。实际运行 PASS 与最终架构 ADR 不能混同。
+
 ## 0. 评估目标与状态口径
 
 POC-A 必须给出三个独立结论：
