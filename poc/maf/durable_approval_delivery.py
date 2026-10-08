@@ -118,3 +118,68 @@ class DurableApprovalDelivery:
                     "SET state='APPLIED',output_kind=%s,completed_at=now() "
                     "WHERE delivery_token=%s", (output_kind, token),
                 )
+    def reconcile_observation(
+        self, run_id: str, *, attempt_id: str, native_instance_id: str,
+        native_request_id: str, workflow_name: str,
+        workflow_version: str, runtime_version: str,
+        native_status: str, output_kind: str | None,
+    ) -> str:
+        """Trusted caller supplies official native GET status; NEVER re-sends HTTP.
+
+        A pending/unknown native result CANNOT prove that re-delivery is safe.
+        """
+        identity=(run_id,attempt_id,native_instance_id,native_request_id,
+                  workflow_name,workflow_version,runtime_version)
+        if not all(identity):
+            raise ValueError("Complete immutable delivery identity required")
+        if native_status not in ("Completed","Running","Pending","Failed","Terminated","Unknown"):
+            raise ValueError("Unrecognized native status")
+        with psycopg.connect(self.dsn) as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                cur.execute("SELECT state FROM poc_runs WHERE run_id=%s FOR UPDATE",(run_id,))
+                run=cur.fetchone()
+                cur.execute(
+                    """SELECT b.run_id,b.attempt_id,b.native_instance_id,
+                              b.native_request_id,b.native_workflow_name,
+                              b.frozen_workflow_version,b.frozen_runtime_version,
+                              a.state AS decision,d.state AS delivery_state,
+                              d.delivery_token
+                       FROM poc_maf_durable_approval_bindings b
+                       JOIN poc_approvals a ON a.approval_id=b.approval_id
+                       JOIN poc_maf_hitl_deliveries d ON d.approval_id=a.approval_id
+                       JOIN poc_attempts t ON t.attempt_id=b.attempt_id
+                       WHERE b.run_id=%s AND a.run_id=b.run_id
+                         AND a.attempt_id=b.attempt_id
+                         AND t.step_id=b.step_id AND t.state='CREATED'
+                         AND a.state IN ('APPROVED','REJECTED')
+                       FOR UPDATE OF d""",(run_id,),
+                )
+                row=cur.fetchone()
+                if row is None or run is None:
+                    raise DurableBindingMismatch("No claimed native response")
+                frozen=(row["run_id"],row["attempt_id"],row["native_instance_id"],
+                        row["native_request_id"],row["native_workflow_name"],
+                        row["frozen_workflow_version"],row["frozen_runtime_version"])
+                expected_run="RUNNING" if row["decision"]=="APPROVED" else "FAILED"
+                if frozen != identity or run["state"] != expected_run:
+                    raise DurableBindingMismatch("Native response identity/version mismatch")
+                if row["delivery_state"]=="APPLIED":
+                    return "ALREADY_APPLIED"
+                expected_output=("SIMULATED_EXECUTION" if row["decision"]=="APPROVED"
+                                 else "DENIED_NO_EXECUTION")
+                if native_status=="Completed" and output_kind==expected_output:
+                    cur.execute(
+                        """UPDATE poc_maf_hitl_deliveries
+                           SET state='APPLIED',output_kind=%s,completed_at=now()
+                           WHERE delivery_token=%s AND state IN ('IN_FLIGHT','UNKNOWN')""",
+                        (output_kind,row["delivery_token"]),
+                    )
+                    if cur.rowcount != 1:
+                        raise DurableBindingMismatch("Delivery state changed")
+                    return "APPLIED_FROM_NATIVE_EVIDENCE"
+                if row["delivery_state"]=="IN_FLIGHT":
+                    cur.execute(
+                        "UPDATE poc_maf_hitl_deliveries SET state='UNKNOWN' "
+                        "WHERE delivery_token=%s",(row["delivery_token"],),
+                    )
+                return "UNKNOWN_REQUIRES_RECONCILIATION"
