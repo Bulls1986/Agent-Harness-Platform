@@ -41,6 +41,11 @@ class ApprovalWaitStore:
         native_request_id: str | None = None,
         native_checkpoint_ref: str | None = None,
         native_workflow_name: str | None = None,
+        durable_instance_id: str | None = None,
+        durable_request_id: str | None = None,
+        durable_workflow_name: str | None = None,
+        frozen_workflow_version: str | None = None,
+        frozen_runtime_version: str | None = None,
     ) -> ApprovalRequest:
         if fact.plan_version != 1 or not all((
             fact.run_id, fact.plan_id, fact.step_id, fact.attempt_id,
@@ -50,6 +55,13 @@ class ApprovalWaitStore:
         native_values = (native_request_id, native_checkpoint_ref, native_workflow_name)
         if any(value is not None for value in native_values) and not all(native_values):
             raise ValueError("Native HITL bindings must be supplied together")
+        durable_values = (durable_instance_id, durable_request_id,
+                          durable_workflow_name, frozen_workflow_version,
+                          frozen_runtime_version)
+        if any(value is not None for value in durable_values) and not all(durable_values):
+            raise ValueError("Durable instance/request/workflow/version must be bound together")
+        if any(durable_values) and any(native_values):
+            raise ValueError("Do not mix FileCheckpoint and Durable Functions binding models")
         conversation_id, turn_id, approval_id = _id("conversation"), _id("turn"), _id("approval")
         with psycopg.connect(self.dsn) as conn:
             with conn.cursor() as cur:
@@ -91,6 +103,16 @@ class ApprovalWaitStore:
                            (approval_id,run_id,native_request_id,native_checkpoint_ref,native_workflow_name)
                            VALUES (%s,%s,%s,%s,%s)""",
                         (approval_id,fact.run_id,*native_values),
+                    )
+                if all(durable_values):
+                    cur.execute(
+                        """INSERT INTO poc_maf_durable_approval_bindings
+                           (approval_id,run_id,step_id,attempt_id,
+                            native_instance_id,native_request_id,native_workflow_name,
+                            frozen_workflow_version,frozen_runtime_version)
+                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                        (approval_id,fact.run_id,fact.step_id,fact.attempt_id,
+                         *durable_values),
                     )
                 cur.execute(
                     """INSERT INTO poc_events(event_id,run_id,seq,event_type,payload)

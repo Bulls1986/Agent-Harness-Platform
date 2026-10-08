@@ -212,6 +212,21 @@ jobs:
           print('A34 two-worker Compose static contract PASS (NOT multi-node runtime proof)')
           print('Functions MSSQL local POC syntax/provider/loopback contracts PASS; this is NOT a runtime Durable test')
           PY
+      - name: A34 immutable MAF Durable Approval/Attempt binding PostgreSQL
+        env:
+          POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
+        run: python -m unittest discover -s poc/maf/tests -p "test_durable_approval_binding_pg.py" -v
+      - name: A34 runtime binding guard static contract
+        run: |
+          python -m py_compile poc/maf/durable_approval_binding.py poc/maf/functions-mssql/verify_concurrent_handoff.py
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('poc/maf/functions-mssql/verify_concurrent_handoff.py').read_text()
+          assert 'POC_POSTGRES_DSN' in s
+          assert 'require_waiting_resume' in s
+          assert 'workflow_version="maf_mssql_poc_hitl:v2-incompatible"' in s
+          print("A34 binding/read-version gate wired to native worker test (runtime only when platform PostgreSQL supplied)")
+          PY
       - name: Shutdown POC infrastructure
         if: always()
         env:

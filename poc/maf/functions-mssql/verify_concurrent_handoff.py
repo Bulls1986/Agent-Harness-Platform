@@ -7,7 +7,9 @@ Only the separate maf-mssql-a34 project containers may be stopped/recreated.
 from __future__ import annotations
 
 import json
+import os
 import re
+import sys
 import subprocess
 import time
 from pathlib import Path
@@ -16,6 +18,20 @@ import verify_handoff as v
 PROJECT = "maf-mssql-a34"
 COMPOSE = Path(__file__).resolve().parent.parent / "compose-functions-mssql-a34.yml"
 ENVFILE = Path(__file__).resolve().parent / ".env.local"
+
+# Optional PLATFORM fact proof. Without POC_POSTGRES_DSN this remains
+# an A33 native HITL worker test, not a claim of platform Same Attempt Resume.
+PLATFORM_DSN = os.environ.get("POC_POSTGRES_DSN")
+WORKFLOW_VERSION = "maf_mssql_poc_hitl:v1"
+RUNTIME_VERSION = "agent-framework-azurefunctions==1.0.0b260922"
+WORKFLOW_NAME = "maf_mssql_poc_hitl"
+if PLATFORM_DSN:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from approval_wait import ApprovalWaitStore
+    from durable_approval_binding import DurableApprovalBindingStore, DurableBindingMismatch
+    from task_ledger import TaskLedger
+    from workflow_probe import VerificationFact
+
 A = "http://127.0.0.1:17081"
 B = "http://127.0.0.1:17082"
 
@@ -89,11 +105,32 @@ def main() -> None:
     infra_before = (container_id("maf-mssql-poc-mssql-1"),
                     container_id("maf-mssql-poc-azurite-1"))
     created: dict[str, tuple[str, str]] = {}
+    platform: dict[str, tuple] = {}
+    if PLATFORM_DSN:
+        TaskLedger(PLATFORM_DSN).initialize()
+        approval_store = ApprovalWaitStore(PLATFORM_DSN)
+        binding_store = DurableApprovalBindingStore(PLATFORM_DSN)
+
     for case in cases:
         response = v.invoke("POST", f"{v.ROUTE}/run", case)
         instance = response.get("instanceId")
         assert instance and re.fullmatch("[0-9a-f]{32}", instance), response
         created[case] = instance, v.pending(instance, 95)
+        if PLATFORM_DSN:
+            fact = VerificationFact.example(passed=False, evidence_ref=None)
+            approval = approval_store.request(
+                fact, requester_principal="poc-fixture-requester",
+                approver_principal="poc-fixture-approver",
+                action_ref="tool:poc-simulated-execution",
+                resource_ref="resource:poc", policy_ref="policy:poc",
+                durable_instance_id=instance,
+                durable_request_id=created[case][1],
+                durable_workflow_name=WORKFLOW_NAME,
+                frozen_workflow_version=WORKFLOW_VERSION,
+                frozen_runtime_version=RUNTIME_VERSION,
+            )
+            platform[case] = (fact, approval)
+
     assert all(v.count(case, "prepare") == 1 and
                v.count(case, "action") == 0 for case in cases)
     compose("up", "-d", "--force-recreate", "--no-deps", "worker-b")
@@ -109,12 +146,48 @@ def main() -> None:
     assert container("worker-b") == b_id
     for case, (instance, req_id) in created.items():
         assert v.pending(instance, 50) == req_id, "Second replica sees different request"
+        if PLATFORM_DSN:
+            fact, _ = platform[case]
+            # Harden freeze before runtime response: simulated incompatible
+            # deployment must be rejected, without touching the native wait.
+            if case == v.APPROVED_CASE:
+                try:
+                    binding_store.require_waiting_resume(
+                        fact.run_id, attempt_id=fact.attempt_id,
+                        native_instance_id=instance,native_request_id=req_id,
+                        workflow_name=WORKFLOW_NAME,
+                        workflow_version="maf_mssql_poc_hitl:v2-incompatible",
+                        runtime_version=RUNTIME_VERSION,
+                    )
+                except DurableBindingMismatch:
+                    pass
+                else:
+                    raise AssertionError("Version mismatch was not rejected")
+
     run("docker", "kill", "--signal", "KILL", a_id)
     assert container("worker-b") == b_id
     assert (container_id("maf-mssql-poc-mssql-1"),
             container_id("maf-mssql-poc-azurite-1")) == infra_before
     for case, (instance, request_id) in created.items():
         assert v.pending(instance, 95) == request_id
+        if PLATFORM_DSN:
+            fact, approval = platform[case]
+            binding = binding_store.require_waiting_resume(
+                fact.run_id, attempt_id=fact.attempt_id,
+                native_instance_id=instance, native_request_id=request_id,
+                workflow_name=WORKFLOW_NAME,
+                workflow_version=WORKFLOW_VERSION,
+                runtime_version=RUNTIME_VERSION,
+            )
+            assert binding["step_id"] == fact.step_id
+            assert len(binding_store.load_attempt_history(fact.run_id)) == 1
+            # Trusted local test fixture; NOT a client-supplied IAM authorization.
+            approval_store.decide(
+                approval.approval_id,
+                authenticated_principal="poc-fixture-approver",
+                authorized=True,
+                decision="APPROVED" if case == v.APPROVED_CASE else "REJECTED",
+            )
         v.invoke("POST", f"{v.ROUTE}/respond/{instance}/{request_id}",
                  "APPROVED" if case == v.APPROVED_CASE else "REJECTED")
     for case, (instance, _) in created.items():
@@ -135,7 +208,15 @@ def main() -> None:
     assert v.count(v.REJECTED_CASE, "action") == 0
     completed, history = db_count([x[0] for x in created.values()])
     assert completed == 2 and history > 0, (completed, history)
+    if PLATFORM_DSN:
+        for case in cases:
+            fact, _ = platform[case]
+            attempts = binding_store.load_attempt_history(fact.run_id)
+            assert len(attempts) == 1 and attempts[0]["attempt_id"] == fact.attempt_id
     print(json.dumps({
+        "platform_approval_attempt_binding": "PASS-WAITING-IDENTITY" if PLATFORM_DSN else "NOT_RUN",
+        "platform_inflight_same_attempt_resume": "NOT_PROVEN",
+        "workflow_frozen_version_negative_guard": bool(PLATFORM_DSN),
         "scenario": "A34-two-concurrent-replicas",
         "shared_worker_image": a_image[:18], "two_workers_live_concurrently": True,
         "worker_a": a_id[:12], "worker_b": b_id[:12],

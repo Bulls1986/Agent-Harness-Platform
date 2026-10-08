@@ -85,3 +85,7 @@ Harness Same Run/Step/Attempt ID 绑定、OSS/Sandbox State、
 ## 双 Worker 同时在线验证
 
 见 [A34 前置并发双 Worker 实测报告](A34_CONCURRENT_WORKERS.md)。与上一轮顺序替换不同，第二个 Worker 在第一个被 SIGKILL **之前**已同时在线并连接 MSSQL；两轮单主机测试通过，但生产跨节点/完整 Same Attempt 仍未验收。
+
+## A34 PostgreSQL Harness identity + version pinning
+
+可选设置可信本地 POC_POSTGRES_DSN 后，双 Worker 脚本在原生 request_info 建立后通过 PostgreSQL ApprovalWaitStore 在同事务持久化 Run/Step/Attempt/Approval/native Instance/Request 和冻结版本；Worker B 先检查平台不可变绑定，再投递原生审批响应。此合并测试如不提供 DSN 会明确输出 platform_approval_attempt_binding=NOT_RUN。版本不匹配按 Adapter fail-closed 而不是交给 MAF 未验证的热升级机制。详见 [A34 边界](../A34_ATTEMPT_VERSION_FINDINGS.md)，不得把 WAITING 的 Attempt CREATED 误报成 RUNNING Attempt same-attempt replay。
