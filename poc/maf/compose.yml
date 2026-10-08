@@ -17,9 +17,10 @@ services:
       timeout: 5s
       retries: 10
   object-store:
-    build:
-      context: ../..
-      dockerfile: poc/maf/minio/Dockerfile
+    profiles: ["local-oss"]
+    # BYO enterprise-approved image; upstream public MinIO image distribution is unavailable.
+    # Defaults to an intentionally unusable placeholder until explicitly configured.
+    image: ${POC_OBJECT_STORAGE_IMAGE:-example.invalid/approved-s3-image:unconfigured}
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${POC_MINIO_ROOT_USER:-pocadmin}
