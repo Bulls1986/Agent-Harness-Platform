@@ -1,0 +1,12 @@
+# A31–A33: Microsoft DTS emulator *development* environment ONLY.
+# Run: docker compose -f poc/maf/compose-durable-emulator.yml up -d
+# Do not classify this service as a production self-hosted durable backend.
+# Digest of the pulled mutable upstream :latest tag must be recorded in CI.
+services:
+  dts-emulator:
+    image: mcr.microsoft.com/dts/dts-emulator:latest
+    environment:
+      DTS_TASK_HUB_NAMES: pocmaf
+    ports:
+      - "127.0.0.1:18080:8080"
+      - "127.0.0.1:18082:8082"
