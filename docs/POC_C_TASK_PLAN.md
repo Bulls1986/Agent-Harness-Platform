@@ -40,7 +40,7 @@
 | C08 | P0 | 审批 WAITING Signal 与 REJECTED/APPROVED 均按固定 Platform Decision 继续，不合并新旧 Attempt | PASS bounded / 企业授权非范围 |
 | C09 | P1 | **真实**替换两个 Agent Runtime Adapter 而保持 Harness Run/Workflow/Event 契约 | **PASS（本地两次真实 Agent SDK + CI 依赖与离线契约）**；模型供应商 G4 GAP |
 | C10 | P0 | 平台 Responses-compatible + Typed SSE/Replay Bridge，不暴露 Temporal Payload/History 作为领域事实 | **PASS（本地+CI 受限只读桥接）**；整体 G3 PARTIAL |
-| C11 | P1 | 两种 Docker Sandbox SPI 模式、真实 S3 Artifact/Evidence、PG Lineage/Pin/Tombstone、Temporal History 无大 Payload | **本地真实链 PASS；独立 CI 待核对**；CubeSandbox/生产 G5 GAP |
+| C11 | P1 | 两种 Docker Sandbox SPI 模式、真实 S3 Artifact/Evidence、PG Lineage/Pin/Tombstone、Temporal History 无大 Payload | **PASS（本机真实链+Linux CI 五作业）**；CubeSandbox/生产 G5 GAP |
 | C12 | P0 | Native History Replay 版本兼容门禁；实际不同 Worker 镜像升级风险 | **PASS（本地+CI Native History Replay 正负例）**；真实镜像接管/Build ID rollout GAP |
 | C13 | P1 | Native OpenTelemetry / Task correlation；最小配置和依赖/运维成本计数 | OPEN |
 | C14 | P0 | G1–G8/S01–S12/A vs C 比较矩阵，失败类型和退出条件逐项决策，最终 ADR 前不得冒充主架构 PASS | OPEN |
