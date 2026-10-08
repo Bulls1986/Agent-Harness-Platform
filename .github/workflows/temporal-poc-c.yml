@@ -184,6 +184,7 @@ jobs:
         run: |
           python -m pip install -r poc/temporal/requirements-protocol.txt
           python -m pip install -r poc/temporal/requirements-c13.txt
+          python -m pip install -r poc/temporal/requirements-c15.txt
           python -m pip check
           python -m compileall -q poc/temporal
       - name: Create isolated credentials for TWO independent PostgreSQL services
@@ -225,12 +226,39 @@ jobs:
         run: |
           python poc/temporal/verify_c13_otel.py
           python poc/temporal/measure_c13_footprint.py
+      - name: C15 real Temporal/PG/HTTP Typed Token SSE (explicit offline model fixture)
+        env:
+          POC_C_TEMPORAL_ADDRESS: 127.0.0.1:17234
+          POC_C_LITELLM_MODEL: ci-offline-model
+          POC_C15_FAKE_MODEL: "1"
+          POC_C15_TEST_STREAM_CREATE: "1"
+        run: python poc/temporal/verify_c15_g3_http.py
+      - name: C15 persisted RecoveryPoint, native Start ACK gap and cancellation
+        env:
+          POC_C_TEMPORAL_ADDRESS: 127.0.0.1:17234
+          POC_C_LITELLM_MODEL: ci-offline-model
+          POC_C15_FAKE_MODEL: "1"
+          POC_C15_INJECT_START_ACK_LOSS: "1"
+          POC_C15_TEST_CANCEL: "1"
+          POC_C15_FAKE_TOKEN_DELAY: "0.25"
+        run: python poc/temporal/verify_c15_g3_http.py
+      - name: C15 fake model failure cannot be marked successful
+        env:
+          POC_C_TEMPORAL_ADDRESS: 127.0.0.1:17234
+          POC_C_LITELLM_MODEL: ci-offline-model
+          POC_C15_FAKE_MODEL: "1"
+          POC_C15_FAIL_AFTER_TOKEN: "1"
+        run: python poc/temporal/verify_c15_g3_http.py
       - name: C06+C07+C10 real Temporal crash, Tool fencing and HTTP/SSE restart
         env:
           POC_C_TEMPORAL_ADDRESS: 127.0.0.1:17234
         run: |
           python poc/temporal/verify_c06_c07.py
           test "$(docker exec poc-c-harness-pg psql -U harness -d harness_poc -X -qAt -c "SELECT count(*) FROM poc_reconciliations WHERE state='PENDING';")" -gt 0
+      - name: C16 actual non-idempotent external Tool and durable Receipt reconciliation
+        env:
+          POC_C_TEMPORAL_ADDRESS: 127.0.0.1:17234
+        run: python poc/temporal/verify_c16_receipt.py
       - name: Stop isolated C06/C07 services without dropping persisted evidence
         if: always()
         run: |

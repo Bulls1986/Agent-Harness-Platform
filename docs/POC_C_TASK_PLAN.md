@@ -44,6 +44,8 @@
 | C12 | P0 | Native History Replay 版本兼容门禁；实际不同 Worker 镜像升级风险 | **PASS（本地+CI Native History Replay 正负例）**；真实镜像接管/Build ID rollout GAP |
 | C13 | P1 | Temporal 官方 OTel Interceptor、Harness ID Correlation、真实 Compose 依赖数 | **PASS（本地+CI 原生 OTel/PG 关联、Compose 计数）**；OTLP Collector/生产成本 GAP |
 | C14 | P0 | 同口径 G1–G8、S01–S12、MAF/Temporal 分层选型和退出条件 | **评估 CLOSED / CONDITIONAL**；生产主架构 G2/G3/G6 NO-GO |
+| C15 | P0 | 真实模型→自托管 Responses→PG Typed Token SSE/Cancel/断线续播；Native Start ACK+RecoveryPoint | **本地真实+故障注入 PASS，CI 待核**；全 Tool/Approval/Artifact G3 PARTIAL |
+| C16 | P0 | 真实非幂等 HTTP Tool、Worker 崩溃、持久 Receipt 反查、UNKNOWN→RESOLVED | **本地真实业务副作用 PASS，CI 待核**；企业 MCP/Run 终态 G6 PARTIAL |
 
 ## 第一批 C00–C04 本地证据
 
