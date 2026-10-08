@@ -4,6 +4,8 @@
 > 本台账以每阶段真实执行证据为准，结论拆分为 **Verified / Partial / Not Run / Gap**。
 > 只有通过完整架构门禁并形成正式 ADR 后，才允许将某个候选标记为最终选型。
 
+> 最终决策请读 [POC-A 候选最终评估](../poc/maf/POC_A_DECISION_CLOSEOUT.md)：A34 局部 P0/P1 已收口，整体 G1/G2/G3/G6 硬门禁未全过，MAF 未被选定为独立 Harness 主架构。下表保留历史局部证据，不追溯修改旧状态。
+
 ## 1. 阶段性结论（按任务能力分开判断）
 
 | 阶段 / 任务 | 已验证的结论（Verified） | 尚不能推导的能力 | Evidence | 状态 |

@@ -1,0 +1,4 @@
+# Restricted POC-only ASGI protocol adapter, separate from MAF core deps.
+fastapi==0.115.14
+uvicorn==0.40.0
+httpx==0.28.1
