@@ -31,7 +31,9 @@ class RecoveryCoordinator:
             raise ValueError("Postgres DSN required")
         self.dsn = dsn
 
-    def recover(self, run_id: str) -> RecoveryDecision:
+    def recover(self, run_id: str, *, interrupted_attempt_id: str) -> RecoveryDecision:
+        if not interrupted_attempt_id:
+            raise ValueError("Interrupted Attempt identity is required for idempotent recovery")
         with psycopg.connect(self.dsn) as conn:
             with conn.cursor(row_factory=dict_row) as cur:
                 # Serialize with TaskLedger.finish() and concurrent recoverers.
@@ -57,6 +59,9 @@ class RecoveryCoordinator:
                     # No implicit whole-Run replay and no ambiguous multiple dispatch.
                     return RecoveryDecision(outcome="NO_UNIQUE_ACTIVE_EXECUTION")
                 old = active[0]
+                if old["attempt_id"] != interrupted_attempt_id:
+                    # Prevent a duplicate recovery command from killing its successor.
+                    return RecoveryDecision(outcome="ATTEMPT_ALREADY_HANDLED")
                 cur.execute(
                     "SELECT MAX(version) AS version FROM poc_plans WHERE run_id=%s",
                     (run_id,),
