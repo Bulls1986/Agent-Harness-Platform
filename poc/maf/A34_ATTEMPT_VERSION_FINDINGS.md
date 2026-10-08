@@ -34,12 +34,16 @@ Worker A 退出而 B 无需重启便能接续原生 HITL。
 
 ## 已证明和未证明的分界
 
-前次 A33 已在本地真实 MSSQL Durable Provider 上完成两轮并发双 Worker
-接管，4 个 Completed / 84 条 dt.History。A34 本轮增加 PostgreSQL
-真实集成与平台 Native Approval 绑定、版本错配负例；只有把平台 DSN
-提供给完整跨 Worker 测试，并看到同一 Attempt ID 跨故障持续存在，
-才记录本地整链 PASS。CI 独立 PostgreSQL 测试与静态合约校验同样
-不能取代双数据库完整整链。
+前次 A33 在 MSSQL Durable Provider 两轮在线双 Worker 故障测试通过。
+**本轮双数据库完整故障注入随后已实跑 PASS**：
+在同一次 Worker A 被 SIGKILL、Worker B 继续原生 HITL 的测试中，
+PostgreSQL 平台原子绑定确实参与恢复与版本错配阻断，并由独立 SQL
+查询核实两个 Run 各只有 1 个 CREATED Attempt。
+新 MSSQL 原生实例 2 个 Completed、42 条 History，
+整个 DurableA34 TaskHub 累计 8 Completed / 168 History。
+本地 PostgreSQL 6 项集成测试与 CI #37738700282 均通过。
+完整步骤、Worker IDs、平台最终状态及仍缺证据见
+[本机双数据库 A34 整链](functions-mssql/A34_PLATFORM_MSSQL_E2E.md)。
 
 **平台 Attempt 在 WAITING_APPROVAL 阶段为 CREATED，而不是某个正在进行的
 外部执行 Attempt 的原生 checkpoint 续跑。因此当前最多声称
@@ -61,5 +65,5 @@ Same Waiting State + Same Platform Attempt Identity 的映射，
 - SQL: poc/maf/sql/007_durable_attempt_binding.sql
 - Store: poc/maf/durable_approval_binding.py
 - PostgreSQL tests: poc/maf/tests/test_durable_approval_binding_pg.py
-- Local optional full join: poc/maf/functions-mssql/verify_concurrent_handoff.py
+- Local combined PostgreSQL + MSSQL PASS: poc/maf/functions-mssql/A34_PLATFORM_MSSQL_E2E.md
 - 已通过双 Worker 实验: poc/maf/functions-mssql/A34_CONCURRENT_WORKERS.md
