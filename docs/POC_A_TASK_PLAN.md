@@ -34,6 +34,9 @@ POC-A 必须给出三个独立结论：
 - A11（新增）：`poc/maf/workflow_probe.py` 通过真实 MAF WorkflowBuilder/Executor 验证平台 ID 沿图传播，且 terminal 成功必须有外部 Verification Fact + Evidence；完整 Plan/Execute/Verify/Replan 与持久化仍待实施。
 - A12（新增局部验证）：`poc/maf/document_workflow.py` 通过真实 MAF Workflow 调用独立 Document Verifier；通过与故意失败用例形成正反断言。Sandbox、OSS Evidence、完整 Execute 实现仍待 A12/A14/A15 后续集成。
 - A23（新增，**PARTIAL / 核心事实链路 CI PASS**）：PostgreSQL 已实测保存 Conversation/Turn/Run、版本化 Plan、Step/Attempt/Execution、Verification、Event、RuntimeBinding/RecoveryPoint 引用结构；真实 MAF Document Workflow 后经原子事务写入，4 项 PostgreSQL 集成测试 PASS，完整 Run 进程退出后通过独立 Python 进程读取成功。Approval、Artifact/Evidence 正式 Metadata、其他恢复关联字段及真实生产事务边界仍待补齐。CI 证据：[GitHub Actions #37717839849](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37717839849)。**不代表 G2/G6 已通过。**
+- A24（部分实现）：通过 MAF 公共 `AgentSession.to_dict()/from_dict()` 与独立 Runtime Store 持久化原生 Session；Run Binding + Provider Fingerprint + 乐观 Revision 防旧写入。已在真实 PostgreSQL 测试中验证往返读写。**真实模型多轮 History 和 Compaction 未验证；不属于任务恢复 G6 的 PASS 证据。**
+- A27（部分实现）：明确指定 interrupted Attempt 后，PURE/只读 Step 可从 Same Run + Same Step + New Attempt 恢复，旧 Attempt 最终结果不能提交；通过真实 MAF Document Workflow + PostgreSQL 实测。模拟 Worker 进程强制退出后，在独立进程中续跑的端到端证据见相应 CI。
+- A28（部分实现）：NON_RETRYABLE 中断判为 UNKNOWN，生成 `poc_reconciliations(PENDING)` 且不创建新 Attempt；暂未真正调用外部副作用或实现人工 Reconciliation 收口。
 - A31：已形成 [Durable preliminary findings](../poc/maf/DURABLE_FEASIBILITY.md)，但跨 Worker/Functions+MSSQL 尚未实测。
 
 ## 1. 阶段与详细任务
