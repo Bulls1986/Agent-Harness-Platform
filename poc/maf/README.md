@@ -438,6 +438,18 @@ are recorded in [DURABLE_FEASIBILITY.md](DURABLE_FEASIBILITY.md).
 - A23–A30: Postgres task facts and task-level recovery before claiming G2/G6.
 - A32/A33: real Python MAF Durable + Functions/MSSQL worker test.
 
+## G2/G6 RecoveryPoint reference and capability slice
+
+`recovery_point_store.py` persists only immutable Opaque checkpoint and
+Workspace/Repository/Sandbox references, plus Run/Step/Attempt Runtime identity
+and provider/environment fingerprints. Its read API explicitly returns
+CANDIDATE_REQUIRES_PROVIDER_VERIFICATION, never RECOVERED: actual MAF resume
+and workspace restore must be performed and verified by trusted Provider
+Adapters. Workspace-only references do not imply same-Attempt resume.
+The real PG tests in `test_recovery_point_store_pg.py` verify lineage,
+immutability and conservative refusal for version/capability mismatches.
+See [G2_G6_RECOVERY_POINT_FINDINGS.md](G2_G6_RECOVERY_POINT_FINDINGS.md).
+
 ## G6 bounded external HTTP Tool Receipt reconciliation
 
 `tool_receipt_reconciliation.py` adds a frozen, unique platform dispatch
