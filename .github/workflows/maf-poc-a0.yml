@@ -183,16 +183,6 @@ jobs:
         env:
           POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
         run: python -m unittest discover -s poc/maf/tests -p "test_execution_control_pg.py" -v
-      - name: A31-A33 DTS emulator probe (feature-branch validation only)
-        if: github.event_name == 'pull_request' && github.head_ref == 'poc/maf-a31-a33-durable-dts'
-        env:
-          POC_DTS_ENDPOINT: http://127.0.0.1:18080
-          POC_DTS_TASKHUB: pocmaf
-          POC_DTS_MARKERS: /tmp/maf-dts-markers
-        run: |
-          python -m pip install -r poc/maf/requirements-durable-emulator.txt
-          python poc/maf/durable_emulator_probe.py version
-          bash poc/maf/run_durable_emulator_ci.sh
       - name: Shutdown POC infrastructure
         if: always()
         env:
