@@ -132,7 +132,8 @@ async def main() -> None:
         print(json.dumps({
             "scenario":"C00-C03-TEMPORAL-NATIVE-WORKER-KILL-HITL-REPLAN",
             "status":"PASS",
-            "self_hosted_dev_server":True,
+            "self_hosted_dev_server":ADDRESS.endswith(":17233"),
+            "native_address":ADDRESS,
             "production_g1_g6_proven":False,
             "first_worker_sigkill":True,
             "independent_worker_b_continued_same_native_instance":True,
