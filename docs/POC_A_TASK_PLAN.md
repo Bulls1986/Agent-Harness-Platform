@@ -7,6 +7,8 @@
 
 **阶段性结论与门禁证据统一台账**：[POC_A_STAGE_FINDINGS.md](POC_A_STAGE_FINDINGS.md)。实际运行 PASS 与最终架构 ADR 不能混同。
 
+**2026-10-08 终局决策型收口**：见 [POC-A 最终评估与 NO-GO / Adapter 候选结论](../poc/maf/POC_A_DECISION_CLOSEOUT.md)。A34 完成不等于硬门禁全过；本报告将所有 A00–A39、G1–G8、S01–S12 定为 PASS/PARTIAL/GAP/DECIDED。MAF 可作为可替换 Runtime/Workflow/Durable Adapter 候选，但不单独充当 Harness Control Plane。
+
 ## 0. 评估目标与状态口径
 
 POC-A 必须给出三个独立结论：

@@ -21,6 +21,8 @@ jobs:
           python-version: "3.11"
       - name: Install public MAF packages
         run: python -m pip install -r poc/maf/requirements.txt
+      - name: Install restricted self-host POC HTTP protocol dependencies
+        run: python -m pip install -r poc/maf/requirements-protocol.txt
       - name: Capture complete Python 3.11 dependency resolution
         run: python -m pip freeze > maf-python311-dependencies.txt
       - uses: actions/upload-artifact@v4
@@ -87,6 +89,16 @@ jobs:
           python -c "import json; x=json.load(open('/tmp/maf-a23-reloaded.json')); assert x['run']['state']=='COMPLETED'; assert x['verifications'][0]['passed']; assert len(x['attempts'])==1; print('separate-process task fact readback OK')"
           python poc/maf/persisted_document.py --case buggy > /tmp/maf-a23-broken.json
           python -c "import json; x=json.load(open('/tmp/maf-a23-broken.json')); assert x['run']['state']=='FAILED'; assert x['attempts'][0]['failure_type']=='VERIFICATION_FAILURE'; print('failed run readback OK')"
+      - name: A13/A17 native MAF bounded Document Verify-Replan PostgreSQL
+        env:
+          POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
+        run: python -m unittest discover -s poc/maf/tests -p "test_bounded_replan_pg.py" -v
+      - name: A18-A21 restricted self-host Responses and typed SSE PostgreSQL
+        env:
+          POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
+        run: |
+          python -m unittest discover -s poc/maf/tests -p "test_protocol_service_pg.py" -v
+          python poc/maf/verify_selfhost_protocol.py
       - name: A24/A27/A28 native Session and safe recovery PostgreSQL tests
         env:
           POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
