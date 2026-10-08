@@ -39,6 +39,8 @@ POC-A 必须给出三个独立结论：
 - A24（部分实现）：通过 MAF 公共 `AgentSession.to_dict()/from_dict()` 与独立 Runtime Store 持久化原生 Session；Run Binding + Provider Fingerprint + 乐观 Revision 防旧写入。已在真实 PostgreSQL 测试中验证往返读写。**真实模型多轮 History 和 Compaction 未验证；不属于任务恢复 G6 的 PASS 证据。**
 - A27（部分实现）：明确指定 interrupted Attempt 后，PURE/只读 Step 可从 Same Run + Same Step + New Attempt 恢复，旧 Attempt 最终结果不能提交；通过真实 MAF Document Workflow + PostgreSQL 实测。模拟 Worker 进程强制退出后，在独立进程中续跑的端到端测试已通过：[GitHub Actions #37718726040](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37718726040)。
 - A28（部分实现）：NON_RETRYABLE 中断判为 UNKNOWN，生成 `poc_reconciliations(PENDING)` 且不创建新 Attempt；暂未真正调用外部副作用或实现人工 Reconciliation 收口。
+- A25（**部分通过**）：固定版 MAF 原生 `FileCheckpointStorage` 在受保护的单机目录保存 3 个 Checkpoint，新 Python 进程恢复到末端并完成 Workflow，已完成 PrepareExecutor 未重复执行；未验证私有分布式 Backend/生产 Same Attempt 恢复。[CI #37719461420](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37719461420)。
+- A26（**部分通过**）：PostgreSQL 平台 WAITING_APPROVAL + 审批信息/状态/拒绝持久化，3 项 DB 测试及进程外等待/审批 PASS；默认不创建 Execution，拒绝终止且不能篡改审批人、审批动作或决定。MAF 原生 request_info 与企业 IAM 仍未串接，G7 OPEN。[CI #37719461420](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37719461420)。
 - A31：已形成 [Durable preliminary findings](../poc/maf/DURABLE_FEASIBILITY.md)，但跨 Worker/Functions+MSSQL 尚未实测。
 
 ## 1. 阶段与详细任务
