@@ -8,8 +8,8 @@
 
 | Route | Python entry | Durable state owner | What is currently supported by documentation | POC evidence status |
 |---|---|---|---|---|
-| Standard MAF Workflow checkpoint | Framework Workflow/CheckpointStorage | Framework-specific checkpoint storage | Workflow checkpoint/resume and storage abstraction; not equivalent to distributed durable execution | Not tested |
-| MAF Durable BYOC | `agent-framework-durabletask` + `DurableAIAgentWorker` | Durable Task Scheduler / TaskHub-compatible service | Own worker/container; Durable Task Scheduler worker endpoint; official samples target scheduler/emulator | Docs reviewed, no backend deployed |
+| Standard MAF Workflow checkpoint | Framework Workflow/CheckpointStorage | Framework-specific checkpoint storage | Workflow checkpoint/resume and storage abstraction; not equivalent to distributed durable execution | A25 native FileCheckpoint cross-process PASS, only single host |
+| MAF Durable BYOC | `agent-framework-durabletask` + `DurableAIAgentWorker` | Durable Task Scheduler / TaskHub-compatible service | Own worker/container; Durable Task Scheduler worker endpoint; official samples target scheduler/emulator | **Official DTS dev emulator Worker A kill → Worker B HITL recovery CI PASS; production backend NOT RUN** |
 | MAF Durable Functions | `agent-framework-azurefunctions` / `AgentFunctionApp` | Azure Functions + Durable Functions storage provider | Durable Functions has independent MSSQL storage provider documented for disconnected/on-prem SQL Server | **Combined Python MAF + Functions + MSSQL end-to-end NOT verified** |
 | External Durable CP | Temporal adapter + MAF agent runtime | Existing Temporal cluster | Architecture candidate, to be measured in POC-C | Not tested |
 
@@ -17,7 +17,7 @@
 
 ## A31 remaining proof
 
-1. Resolve exact `agent-framework-durabletask` and `agent-framework-azurefunctions` compatible package versions and licensing/support levels.
+1. **PARTIAL**: fixed Python beta versions `agent-framework-durabletask==1.0.0b260922` and official `agent-framework-azurefunctions==1.0.0b260922` from upstream metadata; still need production support/licensing details and a fully offline Functions/MSSQL stack.
 2. On real self-hosted Functions Runtime + MSSQL storage provider, register a Python MAF agent and verify activity/workflow execution end to end.
 3. Restart two workers; verify persistent WAITING_APPROVAL and no repeat of completed side effects.
 4. Capture deployment topology, SQL Server edition/license and runtime/hosting package prerelease exposure.
@@ -111,4 +111,4 @@ This is a **distinct POC**, not a change of connection string:
 
 ## Explicit conclusion
 
-A31 is **IN_PROGRESS**. We have a source-grounded candidate pathway and identified a critical unproven integration. Neither G1 nor G6 nor G8 is PASS on this basis.
+A31 has a **validated DTS development emulator execution**: native Python MAF Durable Workflow with HITL remains pending after Worker A is killed and completes under a new Worker B. [CI #37722178889](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37722178889) shows successful approval and rejection, with no repeat of completed Prepare. Installed versions include `agent-framework-core==1.20.0`, `agent-framework-durabletask==1.0.0b260922`, and resolved `durabletask-azuremanaged==1.11.0`. This is a valid **A32/A33 developer-emulator subgate**, not proof of fully private **production** Durable state storage. Functions+MSSQL remains untested. G1/G2/G6/G8 are still OPEN for Durable Control Plane.
