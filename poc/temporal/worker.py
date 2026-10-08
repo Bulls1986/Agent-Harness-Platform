@@ -23,6 +23,12 @@ async def main() -> None:
         from guarded_tool import guarded_tool, pure_retry_probe
         workflows=[GuardedNonRetryableWorkflow]
         activities=[guarded_tool,pure_retry_probe]
+    elif os.environ.get("POC_C_REAL_SWAP")=="1":
+        from runtime_swap_workflow import RealRuntimeSwapWorkflow
+        from runtime_swap_activities import (run_real_agent,verify_runtime_model,
+                                              finalize_runtime_swap)
+        workflows=[RealRuntimeSwapWorkflow]
+        activities=[run_real_agent,verify_runtime_model,finalize_runtime_swap]
     else:
         workflows=[DocumentReviewWorkflow]
         activities=[fixture_agent_execute,independent_document_verify]

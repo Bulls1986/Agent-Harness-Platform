@@ -11,6 +11,22 @@ on:
   workflow_dispatch:
 
 jobs:
+  c09-agent-sdk-dependency-compat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install two official Agent SDKs alongside Temporal
+        run: |
+          python -m pip install -r poc/temporal/requirements-c09.txt
+          python -m pip check
+          python -c "from agent_framework import create_harness_agent; from agent_framework.openai import OpenAIChatClient; from agents import Agent, Runner, OpenAIChatCompletionsModel; from temporalio.worker import Worker; print('C09 two public SDKs import PASS - NO LIVE MODEL CALLED')"
+      - name: Compile C09 SDK/Temporal integration source
+        run: python -m compileall -q poc/temporal
+
   native-dev-server-proof:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -126,6 +142,10 @@ jobs:
           test "$(docker inspect -f '{{.State.Health.Status}}' poc-c-harness-pg)" = 'healthy'
       - name: C07 immutable platform Run/Step/Attempt/Execution native-binding PostgreSQL negative tests
         run: python -m unittest discover -s poc/temporal/tests -p "test_*.py" -v
+      - name: C09 offline Temporal Workflow plus Harness PostgreSQL facts (stub, no model)
+        env:
+          POC_C_TEMPORAL_ADDRESS: 127.0.0.1:17234
+        run: python poc/temporal/verify_c09_offline.py
       - name: C06+C07+C10 real Temporal crash, Tool fencing and HTTP/SSE restart
         env:
           POC_C_TEMPORAL_ADDRESS: 127.0.0.1:17234
