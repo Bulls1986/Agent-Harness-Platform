@@ -1,0 +1,19 @@
+{
+  "orders": [
+    {
+      "id": "O-001",
+      "status": "active",
+      "amount": 20
+    },
+    {
+      "id": "O-002",
+      "status": "paused",
+      "amount": 40
+    },
+    {
+      "id": "O-003",
+      "status": "active",
+      "amount": 35
+    }
+  ]
+}
