@@ -140,6 +140,45 @@ jobs:
           denied_run=$(python -c "import json; x=json.load(open('/tmp/maf-native-hitl-request-reject.json')); assert x['state']=='PENDING' and x['preapproval_execution_count']==0; print(x['run_id'])")
           python poc/maf/native_hitl_probe.py --resume "$denied_run" --decision REJECTED --checkpoint-root /tmp/maf-native-hitl-reject > /tmp/maf-native-hitl-result-reject.json
           python -c "import json; x=json.load(open('/tmp/maf-native-hitl-result-reject.json')); assert x['same_run'] and not x['sensitive_execution_simulated'] and x['outputs']==['DENIED_NO_EXECUTION'] and x['platform_run_state']=='FAILED'; print('MAF HITL denied across process boundary OK')"
+      - name: A26 crash-gap delivery intent PostgreSQL tests
+        env:
+          POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
+        run: python -m unittest discover -s poc/maf/tests -p "test_approval_delivery_pg.py" -v
+      - name: A29 per-Execution owner and fencing PostgreSQL tests
+        env:
+          POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
+        run: python -m unittest discover -s poc/maf/tests -p "test_execution_ownership_pg.py" -v
+      - name: A26 kill after approved decision and recover same native request
+        env:
+          POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
+        run: |
+          set -e
+          mkdir -p /tmp/maf-hitl-crash-before /tmp/maf-hitl-crash-after
+          chmod 700 /tmp/maf-hitl-crash-before /tmp/maf-hitl-crash-after
+          python poc/maf/native_hitl_probe.py --create --checkpoint-root /tmp/maf-hitl-crash-before > /tmp/maf-gap-before-request.json
+          run_id=$(python -c "import json;print(json.load(open('/tmp/maf-gap-before-request.json'))['run_id'])")
+          set +e
+          python poc/maf/native_hitl_probe.py --resume "$run_id" --decision APPROVED --inject-after-decision --checkpoint-root /tmp/maf-hitl-crash-before
+          status=$?
+          set -e
+          test "$status" -eq 92
+          python poc/maf/native_hitl_probe.py --resume "$run_id" --decision APPROVED --checkpoint-root /tmp/maf-hitl-crash-before > /tmp/maf-gap-recovered.json
+          python -c "import json;x=json.load(open('/tmp/maf-gap-recovered.json'));assert x['same_run'] and x['sensitive_execution_simulated'] and not x['already_applied'];print('post-decision crash recovered same Run')"
+          python poc/maf/native_hitl_probe.py --resume "$run_id" --decision APPROVED --checkpoint-root /tmp/maf-hitl-crash-before > /tmp/maf-gap-no-replay.json
+          python -c "import json;x=json.load(open('/tmp/maf-gap-no-replay.json'));assert x['already_applied'] and not x['sensitive_execution_simulated'];print('already applied delivery did not replay action')"
+          python poc/maf/native_hitl_probe.py --create --checkpoint-root /tmp/maf-hitl-crash-after > /tmp/maf-gap-after-request.json
+          uncertain_run=$(python -c "import json;print(json.load(open('/tmp/maf-gap-after-request.json'))['run_id'])")
+          set +e
+          python poc/maf/native_hitl_probe.py --resume "$uncertain_run" --decision APPROVED --inject-after-claim --checkpoint-root /tmp/maf-hitl-crash-after
+          status=$?
+          set -e
+          test "$status" -eq 93
+          set +e
+          python poc/maf/native_hitl_probe.py --resume "$uncertain_run" --decision APPROVED --checkpoint-root /tmp/maf-hitl-crash-after > /tmp/maf-gap-unsafe-output.json 2>/tmp/maf-gap-unsafe-error.log
+          status=$?
+          set -e
+          test "$status" -ne 0
+          UNCERTAIN_RUN="$uncertain_run" python -c "import os,psycopg;c=psycopg.connect(os.environ['POC_POSTGRES_DSN']);x=c.execute('SELECT d.state FROM poc_maf_hitl_deliveries d JOIN poc_approvals a ON a.approval_id=d.approval_id WHERE a.run_id=%s',(os.environ['UNCERTAIN_RUN'],)).fetchone();assert x[0]=='UNKNOWN';print('post-delivery intent crash stays UNKNOWN, no blind replay')"
       - name: Shutdown POC infrastructure
         if: always()
         env:
