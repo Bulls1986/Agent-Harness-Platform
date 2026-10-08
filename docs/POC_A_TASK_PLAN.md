@@ -8,6 +8,7 @@
 **阶段性结论与门禁证据统一台账**：[POC_A_STAGE_FINDINGS.md](POC_A_STAGE_FINDINGS.md)。实际运行 PASS 与最终架构 ADR 不能混同。
 
 **2026-10-08 终局决策型收口**：见 [POC-A 最终评估与 NO-GO / Adapter 候选结论](../poc/maf/POC_A_DECISION_CLOSEOUT.md)。A34 完成不等于硬门禁全过；本报告将所有 A00–A39、G1–G8、S01–S12 定为 PASS/PARTIAL/GAP/DECIDED。MAF 可作为可替换 Runtime/Workflow/Durable Adapter 候选，但不单独充当 Harness Control Plane。
+**追加 A40 对照（不重开 A00–A39）**：[MAF Workflow 真正适配 MAF HarnessAgent + OpenAI Agents SDK](../poc/maf/A40_AGENT_SDK_WORKFLOW_SWAP.md)；确认两种 SDK 可通过公开 AgentExecutor/SupportsAgentRun 接口共用原生 MAF Workflow，A40 不验证跨 SDK Streaming/Session/Checkpoint，也不改变原硬门禁状态。
 
 ## 0. 评估目标与状态口径
 

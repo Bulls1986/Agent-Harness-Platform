@@ -17,6 +17,8 @@
 | Durable Workflow / Activity/History | Temporal OSS；MAF Durable+Functions/MSSQL 为对照 | **Temporal 是下一阶段优先候选，不是本轮无条件生产选型** |
 | Sandbox / Object Storage | CubeSandboxProvider 生产候选；Docker fallback；外部 OSS/S3 | C11 仅 Docker 两种模式+真实 S3 成功，不证明 Cube |
 
+**A40 新增独立对照（2026-10-08）**：[MAF Native Workflow + AgentExecutor/SupportsAgentRun 双 SDK 真实执行](../maf/A40_AGENT_SDK_WORKFLOW_SWAP.md) 已证实：在基本非流式 Agent 调用、相同模型与独立 Verify 层面，MAF Workflow 也能换 Agent SDK，**不再将该能力列为 Temporal 独有选型优势**。此补证不更改 G4 Model Provider Swap GAP，也不更改 G2/G3/G6 硬门禁状态。
+
 应分别回答 **Runtime Fit、Durable Control Plane Fit、
 Harness Domain Ownership**；不可把 MAF Runtime 的真实模型
 成功当作 MAF Durable 的主控制面所有权证明。
