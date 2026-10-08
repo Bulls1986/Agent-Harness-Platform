@@ -183,6 +183,24 @@ jobs:
         env:
           POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
         run: python -m unittest discover -s poc/maf/tests -p "test_execution_control_pg.py" -v
+      - name: A32/A33 self-hosted Functions MSSQL POC static contract
+        env:
+          POC_MSSQL_SA_PASSWORD: ci-not-a-real-secret
+        run: |
+          python -m py_compile poc/maf/functions-mssql/function_app.py poc/maf/functions-mssql/init_mssql_db.py poc/maf/functions-mssql/verify_handoff.py
+          docker compose -p maf-mssql-poc-static -f poc/maf/compose-functions-mssql.yml config --quiet
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          h=json.loads(Path('poc/maf/functions-mssql/host.json').read_text())
+          assert h['extensions']['durableTask']['storageProvider']['type']=='mssql'
+          assert h['extensions']['durableTask']['storageProvider']['connectionStringName']=='SQLDB_Connection'
+          c=Path('poc/maf/compose-functions-mssql.yml').read_text()
+          assert '127.0.0.1:17071:80' in c
+          assert '127.0.0.1:11433:1433' in c
+          assert 'WEBSITE_HOSTNAME:' in c
+          print('Functions MSSQL local POC syntax/provider/loopback contracts PASS; this is NOT a runtime Durable test')
+          PY
       - name: Shutdown POC infrastructure
         if: always()
         env:
