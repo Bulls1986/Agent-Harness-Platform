@@ -107,3 +107,21 @@ NOT_RUN 表示只跑了原生 MSSQL Worker 故障测试。
 
 **结论**：A34 等待态身份与冻结版本子目标完成；A34 整体、G6/G8
 仍为 OPEN，平台不得自行实现 Durable TaskHub。
+
+## 2026-10-08 追加独立复验（原始历史不清理）
+
+在 PR #15 已合并的代码基础上，本轮重新运行 6 项 PostgreSQL 真实 DB 单测，
+**6/6 PASS**；再执行整条 MSSQL+PostgreSQL 双 Worker SIGKILL 链路，
+输出为 platform_approval_attempt_binding=PASS-WAITING-IDENTITY、
+workflow_frozen_version_negative_guard=true、
+platform_inflight_same_attempt_resume=NOT_PROVEN。两 Worker 均使用同一镜像，
+A=0ff90b3f5629、B=66aa7ba93f94；原生 Completed=2 / History=42，
+Prepare replay=0、批准 Action=1、拒绝 Action=0。
+
+随后的两库**独立只读查询**验证：PostgreSQL 最近两个不同 Run
+状态分别为 APPROVED→RUNNING、REJECTED→FAILED，均只有一个 Attempt，
+冻结版本均 maf_mssql_poc_hitl:v1；MSSQL 查询这两个精确 Native Instance，
+两条均 Completed、对应 History 42。没有清库，原始错误历史保留。
+
+同样只证明审批等待态身份连续性；不代表 RUNNING Execution 原生续跑、
+真实 Workflow 镜像升级/迁移、跨库原子提交或生产 HA。
