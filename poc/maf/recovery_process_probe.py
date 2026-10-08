@@ -37,6 +37,7 @@ def main() -> int:
     action.add_argument("--mark-unknown", metavar="RUN_ID")
     action.add_argument("--save-session", metavar="RUN_ID")
     action.add_argument("--load-session", metavar="RUN_ID")
+    parser.add_argument("--expected-attempt", help="Interrupted Attempt ID to recover (mandatory for recovery)")
     args = parser.parse_args()
     dsn = os.environ.get("POC_POSTGRES_DSN")
     if not dsn:
@@ -49,7 +50,7 @@ def main() -> int:
         if args.create_crashed_run:
             fact = VerificationFact.example(passed=False, evidence_ref=None)
             ledger.start(fact)
-            print(json.dumps({"run_id":fact.run_id, "crash_stage":"before_verification"}), flush=True)
+            print(json.dumps({"run_id":fact.run_id, "attempt_id":fact.attempt_id, "crash_stage":"before_verification"}), flush=True)
             # Simulate abrupt worker termination *after committing task facts*.
             os._exit(91)
         if args.save_session:
@@ -64,11 +65,13 @@ def main() -> int:
             print(json.dumps({"restored":passed,"revision":revision}))
             return 0 if passed else 1
         run_id = args.resume_pure or args.mark_unknown
+        if not args.expected_attempt:
+            raise ValueError("--expected-attempt required when recovering")
         if args.mark_unknown:
             # Deliberately no speculative externally dispatched write:
             # the test suite changes side_effect_class to NON_RETRYABLE
             # before invoking this option.
-            result = RecoveryCoordinator(dsn).recover(run_id)
+            result = RecoveryCoordinator(dsn).recover(run_id, interrupted_attempt_id=args.expected_attempt)
             print(json.dumps({"decision":result.outcome,"run_id":run_id}))
             return 0 if result.outcome == "RECONCILIATION" else 1
         result = RecoveryCoordinator(dsn).recover(run_id)
