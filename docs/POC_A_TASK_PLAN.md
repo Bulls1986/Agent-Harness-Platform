@@ -41,6 +41,8 @@ POC-A 必须给出三个独立结论：
 - A28（部分实现）：NON_RETRYABLE 中断判为 UNKNOWN，生成 `poc_reconciliations(PENDING)` 且不创建新 Attempt；暂未真正调用外部副作用或实现人工 Reconciliation 收口。
 - A25（**部分通过**）：固定版 MAF 原生 `FileCheckpointStorage` 在受保护的单机目录保存 3 个 Checkpoint，新 Python 进程恢复到末端并完成 Workflow，已完成 PrepareExecutor 未重复执行；未验证私有分布式 Backend/生产 Same Attempt 恢复。[CI #37719461420](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37719461420)。
 - A26（**部分通过**）：PostgreSQL 平台 WAITING_APPROVAL + 审批信息/状态/拒绝持久化，3 项 DB 测试及进程外等待/审批 PASS；默认不创建 Execution，拒绝终止且不能篡改审批人、审批动作或决定。MAF 原生 request_info 与企业 IAM 仍未串接，G7 OPEN。[CI #37719461420](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37719461420)。
+- A26（本轮追加，**PARTIAL**）：固定版 MAF 原生 Workflow `request_info` + `@response_handler` + FileCheckpointStorage 在跨 Python 进程中完成 APPROVED / REJECTED 两条路径；PostgreSQL 事务绑定原生 Request ID、Opaque Checkpoint ID 与平台 Approval/Run。审批前没有派发 Execution；拒绝不进入模拟敏感 Executor。**IAM/Policy 仍是可信 CI Fixture，生产 Durable Backend、实际 Tool Approval 和审批决策持久化后的崩溃窗口未验证**。[PR #9 CI（首次通过路径）](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37719872481)。
+- A25（恢复点选择修正）：`FileCheckpointStorage.list_checkpoints` **无有序保证**。回归测试发现按 `checkpoints[-2]` 选点会偶发重跑 Prepare；已改用 MAF 公开 `previous_checkpoint_id` 血缘选择唯一末端及其前驱，加入连续重复验证，不复制内部 Checkpoint 状态。
 - A31：已形成 [Durable preliminary findings](../poc/maf/DURABLE_FEASIBILITY.md)，但跨 Worker/Functions+MSSQL 尚未实测。
 
 ## 1. 阶段与详细任务
