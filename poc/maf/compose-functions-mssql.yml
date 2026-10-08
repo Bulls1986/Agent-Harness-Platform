@@ -1,0 +1,49 @@
+# Local-only MSSQL Durable Functions POC. Separate from normal POC Compose.
+services:
+  mssql:
+    image: mcr.azure.cn/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${POC_MSSQL_SA_PASSWORD:?Set a unique local POC password}
+    ports:
+      - "127.0.0.1:11433:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    networks: [functions-poc]
+  azurite:
+    image: mcr.azure.cn/azure-storage/azurite:3.35.0
+    command: azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --location /data
+    volumes:
+      - azurite-data:/data
+    networks: [functions-poc]
+  functions:
+    build: ./functions-mssql
+    ports:
+      - "127.0.0.1:17071:80"
+    environment:
+      AzureWebJobsStorage: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1"
+      WEBSITE_HOSTNAME: '127.0.0.1:17071'
+      AZURE_FUNCTIONS_ENVIRONMENT: Development
+      AzureFunctionsJobHost__logging__console__isEnabled: 'true'
+      AzureFunctionsJobHost__logging__logLevel__Default: Debug
+      AzureFunctionsJobHost__logging__logLevel__Host: Debug
+      FUNCTIONS_WORKER_RUNTIME: python
+      AzureWebJobsFeatureFlags: EnableWorkerIndexing
+      AzureFunctionsJobHost__extensions__durableTask__hubName: MafMssqlPoc
+      DURABLE_AGENTS_DEPLOYMENT_MODE: isolated_v2
+      TASKHUB_NAME: MafMssqlPoc
+      SQLDB_Connection: "Server=mssql,1433;Database=DurableDB;User Id=sa;Password=${POC_MSSQL_SA_PASSWORD};TrustServerCertificate=True;Encrypt=True"
+      POC_MARKER_DIR: /poc-markers
+    volumes:
+      - ./functions-mssql/markers:/poc-markers
+    depends_on:
+      - mssql
+      - azurite
+    networks: [functions-poc]
+volumes:
+  mssql-data:
+  azurite-data:
+networks:
+  functions-poc:
+    driver: bridge
