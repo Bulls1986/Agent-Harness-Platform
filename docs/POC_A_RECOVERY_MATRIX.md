@@ -14,6 +14,7 @@
 | W — Native HITL | Same Run WAITING_APPROVAL，MAF 原生 Request ID + Checkpoint 恢复 | Harness Approval + Runtime Request Binding | 批准/拒绝/跨进程及两处响应投递崩溃路径 PASS（模拟敏感 Executor） |
 | D-dev — DTS Emulator Durable | 官方 DurableTask Worker/Client + native MAF Workflow，两个不同 Worker 进程接续原生 HITL | 官方 DTS **开发 Emulator**；Harness 不复制 TaskHub | **PASS（仅开发 Emulator）：批准/拒绝跨 Worker、Prepare 无重复** |
 | D-local — Azure Functions + MSSQL 自托管 | 官方 Python MAF AgentFunctionApp 经 Functions Durable Storage Provider 将 Workflow/History 写入本地 SQL Server | SQL Server TaskHub 自托管，无 DTS/Azure 托管状态服务 | **PASS（本机 Docker 2 轮 Worker 强杀/重建 + HITL，非生产 HA）** |
+| D-live — 相同 Functions 应用双 Worker 同时在线 | 官方 Python MAF 同镜像两副本，绑定同一 SQL Provider Database/TaskHub，A 在 B 在线时 SIGKILL | 微软 MSSQL Provider 分发工作，未复制 TaskHub/lease | **PASS（两次单 Docker 主机在线接管，未验证跨物理节点/平台 Same Attempt）** |
 | D — Production Durable | 私有生产 Backend 下跨进程/跨节点可靠等待、恢复、接管 | 官方 Durable Backend / Engine，不由 Harness 复制 | **NOT RUN / G1/G2/G6/G8 未通过** |
 
 Session 恢复、Step Retry、Native Workflow Checkpoint **不是等价能力**。保留运行中 Run、Step、Attempt 的 identity 与历史事实，不隐式转换或覆盖。
@@ -39,6 +40,7 @@ Session 恢复、Step Retry、Native Workflow Checkpoint **不是等价能力**�
 | Workspace / Sandbox State 恢复与引用一致性 | NOT RUN | — | 仅需恢复任务相关 reference，不负责底层 Disk Backup/DR |
 | DTS Emulator — 原生 Python Durable HITL 跨 Worker | PASS（开发环境，非生产） | [CI #37722178889](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37722178889) | Worker A 被 kill、Worker B 接续；两条已完成 Prepare 未重复，批准/拒绝正确；没有外部真实副作用 |
 | Functions + MSSQL 自托管单主机、两个 Worker 进程接管/HITL | PASS (2 轮本机 Docker) | [本地操作与结果](../poc/maf/functions-mssql/README.md) | SQL Server dt.Instances/dt.History 写入，APPROVED/REJECTED 恢复，Prepare 零重放；不证明真实副作用 Exactly Once |
+| Functions + MSSQL 双 Worker 同时在线并接管 | PASS (本机 2 轮) | [A34 前置双 Worker 报告](../poc/maf/functions-mssql/A34_CONCURRENT_WORKERS.md) | A Prepare/等待，B 已并发运行，A SIGKILL 后 B 原地接管；SQL 真实 Completed/History；不代表 Same Attempt 领域绑定 |
 | 私有分布式 **生产** Durable Backend 与跨 Worker Recovery | PARTIAL / GAP | [A31 报告](../poc/maf/DURABLE_FEASIBILITY.md) | Functions+MSSQL 单机组合已通过；跨节点 HA、生产许可/支持、Harness 任务级绑定仍未验证 |
 | 真实模型双轮历史与 Compaction 恢复 | NOT RUN | — | A05/A07 必须有真实 Provider / Gateway |
 | OSS Evidence/Artifact Payload、Digest、RecoveryPoint PIN | NOT RUN | — | A15/A25 尚未做企业 S3 接入 |

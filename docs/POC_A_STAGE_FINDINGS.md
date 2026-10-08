@@ -24,6 +24,7 @@
 | A31 Durable feasibility | 官方 DTS Emulator 与 Functions+MSSQL 两条路径已独立核对；Python MAF+Functions+MSSQL 在完全本地 Docker 成功安装、使用正式 MSSQL Provider、跨 Worker HITL 恢复通过 | 生产支持/许可、SQL Server HA/容灾、跨物理节点及更丰富故障模型仍未实测 | [Durable 可行性报告](../poc/maf/DURABLE_FEASIBILITY.md) | LOCAL FEASIBILITY PASS / PRODUCTION GAP |
 | A32/A33 — 官方 DTS Emulator 跨 Worker | 真实 `DurableAIAgentWorker.configure_workflow` + `DurableWorkflowClient` 在 Docker DTS Emulator 上运行。Worker A 进入两个原生 HITL 等待后被 kill -9，Worker B 另进程接续；批准得到 SIMULATED_EXECUTION，拒绝无 Action；两条 Prepare 各仅执行一次。无模型/Foundry 凭证。 | DTS Emulator **只用于开发**；没有生产私有 DTS backend、Functions/MSSQL 分布式执行、真实 Tool SideEffectReceipt、任务 ID Same Attempt 绑定 | [Docker DTS Emulator CI #37722178889](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37722178889) | PASS (DEV EMULATOR) / PRODUCTION GAP |
 | A32/A33 — 自托管 Functions + MSSQL Durable（本机） | 官方 MAF Python AgentFunctionApp + Azure Functions v4 + MSSQL Durable Provider 在隔离 Docker 中真实启动；Host 明确输出 Using the mssql storage provider，MSSQL dt.Instances/dt.History 实际持续写入。两轮新 Workflow 进入原生 HITL 等待后，强制 kill Worker A，Worker B 继续相同 Instance/Request 并 APPROVED/REJECTED；两次均 Completed，Prepare 零次重放，批准 Action 1 次，拒绝 Action 0 次。SQL Server 与 Azurite 未重启。 | 单机开发主机 + Developer Edition；尚无生产许可/支持/HA、真实外部副作用、平台 Run/Attempt 映射、企业 IAM 与 OSS Workspace 恢复证据 | [本机真实执行手册与证据](../poc/maf/functions-mssql/README.md) | PASS (LOCAL SINGLE HOST) / PRODUCTION GATES OPEN |
+| A33/A34 前置 — 相同应用的双 Worker 并发 | **两轮本地实测**：Worker A 单独 Prepare→native request_info WAIT；B 在 A 存活时加入相同 SQL Server DurableA34 数据库/TaskHub，双方 MSSQL Provider/TaskHub 日志已核验且镜像 ID 一致。B 查询原生相同 Instance/Request ID；A 被 SIGKILL 后 B **不重启**，APPROVED/REJECTED 均完成；每轮 MSSQL Completed=2、History=42、Prepare replay=0、批准 Action=1、拒绝 Action=0 | 两容器位于同一 Docker 主机，未验证跨节点 HA/版本升级/企业 IAM/真实副作用，也没有平台 Same Attempt 绑定；**A34 整体仍 OPEN** | [本地双 Worker 实验记录](../poc/maf/functions-mssql/A34_CONCURRENT_WORKERS.md) | PASS (LOCAL 2 REPLICAS) / PRODUCTION GATES OPEN |
 
 **恢复能力完整清单**：[A30 恢复覆盖矩阵](POC_A_RECOVERY_MATRIX.md)，明确限制“单项 Fixture PASS ≠ 整体 G6 PASS”。
 
@@ -49,7 +50,7 @@
 - **G2 状态自主**：平台任务事实及限定原生 Session 可读，但 Approval/Artifact/Checkpoint 等完整可迁移状态尚未验收；OPEN。
 - **G3 协议桥接**：Responses/SSE/Typed Events 未实测；OPEN。
 - **G4/G5 Runtime/Model/Sandbox 可替换**：缺双模型真实切换、CubeSandbox Adapter；OPEN。
-- **G6 任务恢复**：已实测 PURE Step Retry、FileCheckpoint、Approval Crash Window、Execution Fencing、Cancel/Timeout、DTS Emulator，以及 Functions+MSSQL 的跨 Worker 原生 HITL 恢复（重复两轮）。真实副作用回执、Workspace/OSS、Harness 原生 Same Attempt 映射及跨节点场景仍缺证据；OPEN。
+- **G6 任务恢复**：已实测 PURE Step Retry、FileCheckpoint、Approval Crash Window、Execution Fencing、Cancel/Timeout、DTS Emulator，以及 Functions+MSSQL 的跨 Worker 原生 HITL 恢复（重复两轮）和同时在线双 Worker 接管（重复两轮）。真实副作用回执、Workspace/OSS、Harness 原生 Same Attempt 映射及跨节点场景仍缺证据；OPEN。
 - **G7 HITL**：MAF 原生请求 + Checkpoint 与平台 Approval 的批准/拒绝、两处进程故障注入已通过；仍待外部 Policy/IAM 和真实 Tool Approval + Reconciliation；OPEN。
 - **G8 License/Managed Cliff**：待完整私有 Durable 路线验证；OPEN。
 

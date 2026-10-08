@@ -187,8 +187,9 @@ jobs:
         env:
           POC_MSSQL_SA_PASSWORD: ci-not-a-real-secret
         run: |
-          python -m py_compile poc/maf/functions-mssql/function_app.py poc/maf/functions-mssql/init_mssql_db.py poc/maf/functions-mssql/verify_handoff.py
+          python -m py_compile poc/maf/functions-mssql/function_app.py poc/maf/functions-mssql/init_mssql_db.py poc/maf/functions-mssql/verify_handoff.py poc/maf/functions-mssql/verify_concurrent_handoff.py
           docker compose -p maf-mssql-poc-static -f poc/maf/compose-functions-mssql.yml config --quiet
+          docker compose -p maf-mssql-a34-static -f poc/maf/compose-functions-mssql-a34.yml config --quiet
           python - <<'PY'
           import json
           from pathlib import Path
@@ -199,6 +200,16 @@ jobs:
           assert '127.0.0.1:17071:80' in c
           assert '127.0.0.1:11433:1433' in c
           assert 'WEBSITE_HOSTNAME:' in c
+          import subprocess
+          a34=Path('poc/maf/compose-functions-mssql-a34.yml').read_text()
+          assert 'Database=DurableA34' in a34
+          assert 'external: true' in a34 and 'maf-mssql-poc_functions-poc' in a34
+          assert 'worker-a:' in a34 and 'worker-b:' in a34
+          assert '127.0.0.1:17081:80' in a34 and '127.0.0.1:17082:80' in a34
+          assert 'AzureFunctionsWebHost__hostid: maf34workera' in a34
+          assert 'AzureFunctionsWebHost__hostid: maf34workerb' in a34
+          assert 'image: maf-mssql-poc-functions:latest' in a34
+          print('A34 two-worker Compose static contract PASS (NOT multi-node runtime proof)')
           print('Functions MSSQL local POC syntax/provider/loopback contracts PASS; this is NOT a runtime Durable test')
           PY
       - name: Shutdown POC infrastructure
