@@ -13,7 +13,7 @@ import json
 import os
 from typing import Literal
 
-from fastapi import FastAPI, Header, HTTPException, Query
+from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -108,15 +108,18 @@ def _sse(event: dict) -> str:
 
 @app.get("/health")
 def health():
-    return {"status": "ready", "fixture_only": False,
+    return {"status": "ready", "fixture_only": True,
             "live_provider_configured": bool(os.getenv("POC_LITELLM_API_KEY") and
                                              os.getenv("POC_LITELLM_BASE_URL") and
                                              os.getenv("POC_LITELLM_MODEL"))}
 
 
 @app.post("/v1/live/responses")
-async def create_live_response(body: LiveModelRequest):
-    # Model-only local proof. No tools, file paths or enterprise IAM endpoint.
+async def create_live_response(body: LiveModelRequest, request: Request):
+    # Model-only local proof; refuse non-loopback transport before DB/model use.
+    # 'testclient' exists only for in-process ASGI conformance tests.
+    if request.client is None or request.client.host not in ('127.0.0.1', '::1', 'testclient'):
+        raise HTTPException(status_code=403, detail='Local-only model POC endpoint')
     model = os.getenv("POC_LITELLM_MODEL", "")
     base_url = os.getenv("POC_LITELLM_BASE_URL", "")
     key = os.getenv("POC_LITELLM_API_KEY", "")
@@ -180,9 +183,11 @@ async def replay_events(run_id: str, after: int | None = Query(default=None, ge=
     if last_event_id is not None:
         prefix = f"{run_id}:"
         suffix = last_event_id[len(prefix):] if last_event_id.startswith(prefix) else ""
-        if not suffix.isdecimal():
+        if not suffix.isascii() or not suffix.isdecimal() or len(suffix) > 10:
             raise HTTPException(status_code=422, detail="Invalid Last-Event-ID for Run")
         cursor = int(suffix)
+        if cursor > 2147483647:  # event seq is PostgreSQL integer
+            raise HTTPException(status_code=422, detail="Event cursor out of range")
         if after is not None and after != cursor:
             raise HTTPException(status_code=422, detail="Conflicting event cursors")
     else:

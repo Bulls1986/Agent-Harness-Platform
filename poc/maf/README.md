@@ -441,6 +441,8 @@ are recorded in [DURABLE_FEASIBILITY.md](DURABLE_FEASIBILITY.md).
 ## G3 bounded live model streaming (not yet full Gate PASS)
 
 New local-only POST /v1/live/responses accepts a text prompt with stream=true.
+It rejects non-loopback requests at the ASGI request boundary before model
+admission or platform database writes; a public API/IAM gateway is NOT provided.
 Only the one model configured in POC_LITELLM_MODEL is admitted. It calls actual
 MAF streaming via OpenAI-compatible LiteLLM, disables tools/file memory,
 persists each nonempty text delta into the platform PostgreSQL poc_events

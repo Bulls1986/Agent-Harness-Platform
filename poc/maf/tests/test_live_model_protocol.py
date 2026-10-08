@@ -52,7 +52,7 @@ class LiveProtocolUnitTests(unittest.TestCase):
             rows = asyncio.run(collect(ledger))
         return ledger, rows
 
-    def test_real_chunks_are_persisted_before_they_are_published(self):
+    def test_mocked_provider_chunks_are_persisted_before_they_are_published(self):
         ledger = RecordingLedger()
 
         async def observe():
@@ -107,6 +107,58 @@ class LiveProtocolUnitTests(unittest.TestCase):
         self.assertEqual(event["id"], "r:2")
         self.assertIn("event: response.output_text.delta\n", _sse(event))
 
+
+    def test_disconnected_model_stream_never_reports_success(self):
+        async def interrupted():
+            yield "partial"
+            raise asyncio.CancelledError()
+
+        ledger = RecordingLedger()
+        with patch("live_model_protocol.provider_deltas", lambda **kw: interrupted()):
+            with self.assertRaises(asyncio.CancelledError):
+                asyncio.run(collect(ledger))
+        self.assertEqual(ledger.end, (False, "STREAM_DISCONNECTED"))
+        self.assertEqual(len(ledger.rows), 1)
+
+    def test_consumer_closes_stream_midflight_leaves_no_running_run(self):
+        ledger = RecordingLedger()
+
+        async def close_early():
+            stream = persisted_model_events(
+                ledger, run_id="r", step_id="s", attempt_id="a",
+                execution_id="e", prompt="hello", model="m",
+                base_url="unused", api_key="not-a-real-key"
+            )
+            first = await anext(stream)
+            self.assertEqual(first["event_type"], "response.output_text.delta")
+            await stream.aclose()
+
+        with patch("live_model_protocol.provider_deltas", lambda **kw: chunks("first", "second")):
+            asyncio.run(close_early())
+        self.assertEqual(ledger.end, (False, "STREAM_DISCONNECTED"))
+        self.assertEqual(len(ledger.rows), 1)
+
+    def test_live_model_admission_and_loopback_restrictions(self):
+        local = TestClient(app)
+        with patch.dict(os.environ, {"POC_LITELLM_API_KEY": "",
+                                     "POC_LITELLM_BASE_URL": "",
+                                     "POC_LITELLM_MODEL": ""}):
+            self.assertEqual(local.post("/v1/live/responses",
+                             json={"input": "hello", "stream": True}).status_code, 503)
+        with patch.dict(os.environ, {"POC_LITELLM_API_KEY": "test-only",
+                                     "POC_LITELLM_BASE_URL": "http://unused.invalid/v1",
+                                     "POC_LITELLM_MODEL": "admitted"}):
+            self.assertEqual(local.post("/v1/live/responses",
+                             json={"input": "hello", "model": "unapproved", "stream": True}).status_code, 422)
+            self.assertEqual(local.post("/v1/live/responses",
+                             json={"input": "hello", "stream": False}).status_code, 422)
+            self.assertEqual(local.post("/v1/live/responses",
+                             json={"input": "hello", "stream": True, "tools": []}).status_code, 422)
+            remote = TestClient(app, client=("192.0.2.10", 40000))
+            self.assertEqual(remote.post("/v1/live/responses",
+                             json={"input": "hello", "stream": True}).status_code, 403)
+        self.assertTrue(local.get("/health").json()["fixture_only"])
+
     def test_sse_last_event_id_is_run_scoped_and_replays_durably(self):
         records = {"run": {"run_id": "r", "state": "COMPLETED",
                            "recipe_version": "poc-live-model-v1"},
@@ -132,6 +184,10 @@ class LiveProtocolUnitTests(unittest.TestCase):
                             headers={"Last-Event-ID": "other:1"}).status_code, 422)
             self.assertEqual(client.get("/v1/runs/r/events?after=2",
                             headers={"Last-Event-ID": "r:1"}).status_code, 422)
+            self.assertEqual(client.get("/v1/runs/r/events",
+                            headers={"Last-Event-ID": "r:" + "9" * 5000}).status_code, 422)
+            self.assertEqual(client.get("/v1/runs/r/events",
+                            headers={"Last-Event-ID": "r:2147483648"}).status_code, 422)
             self.assertEqual(client.get("/v1/runs/r/events?after=3").text, "")
 
 

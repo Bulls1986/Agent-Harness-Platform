@@ -16,16 +16,33 @@
   保留此前已落库的片段，不自动重试。
 - verify_live_model_protocol.py 提供真正的 Uvicorn/LiteLLM/PG/重启验收入口；
   API Key 从 stdin 读取，不进入 argv、仓库或测试报告。
+- 新增 Live Route 的非 loopback 拒绝和请求模型 allowlist 校验；异常取消不能
+  生成成功终态，过长或超出 PostgreSQL seq 范围的 Last-Event-ID 返回 422。
 
 ## 已执行验证
 
 - Python 3.12 开发环境已导入 FastAPI/httpx/psycopg/agent_framework。
-- test_live_model_protocol.py：离线 5 个 PASS；包括真实模型片段 Mock
-  的先持久化再 SSE、失败脱敏、空流失败、Responses Snapshot、游标约束。
-- 同一脚本连接本地 Docker PostgreSQL 隔离临时库：
-  6 个 PASS（包含 HTTP ASGI -> PostgreSQL -> Token Event -> 断线游标重放）。
-  本条明确为 **Mock Provider / Real PG**，不能冒充真实 LLM 验证。
+- test_live_model_protocol.py：当前离线 **8 PASS / 1 PG 集成按条件 SKIP**；
+  明确标识 Mock provider，测试先持久化再 SSE、失败脱敏、空流失败、
+  取消失败、GeneratorExit/aclose() 后不遗留 RUNNING、Responses Snapshot、
+  Loopback/Model Admission、超长或越界游标拒绝。GeneratorExit 用例先
+  复现失败再修复验证通过（red → green）。
+- 最终在独立一次性 Docker PostgreSQL（完成后删除）执行：
+  G3 协议集成 **9/9 PASS**，原 A18-A21 协议回归 **3/3 PASS**；
+  使用独立 HTTP 进程重启的 verify_selfhost_protocol.py **PASS**。
+  其中 Token 片段明确为 **Mock Provider / Real PG**；独立进程重启是
+  真实 MAF Document Fixture，不能冒充真实 LLM Token 全链路验证。
 - Python compileall 新实现通过。
+- LiteLLM 网关 /v1/models 在无凭据探测下返回 HTTP 401：证明目标可达，
+  **不能**据此判定凭据有效或 G3 E2E PASS。
+- Runner 全局 Python 缺 agent-framework-openai，且原有全局 openai SDK 版本
+  不兼容。已在系统临时目录创建隔离 venv，安装仓库锁定依赖；
+  **MAF OpenAIChatClient + create_harness_agent + Session 初始化 PASS**，
+  `pip check`、`compileall` PASS。隔离环境最新离线回归 **90 tests，
+  33 PASS、57 条因未启用所需集成条件而 SKIP**；上述独立 PostgreSQL
+  集成已另外执行 9+3 项，不把 SKIP 伪称 PASS。
+- 本轮试图通过执行工具递交聊天中已给的 API Key 受安全检查阻止；
+  禁止以改写/混淆密钥规避检查，也不从聊天复制密钥到代码或 CI。
 - A05 既有独立 LiteLLM + MAF 双轮流式与 History smoke PASS，不能替代本次
   全链路验证。
 

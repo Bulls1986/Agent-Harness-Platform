@@ -135,7 +135,9 @@ async def persisted_model_events(ledger: LiveModelLedger, *,
                 )
                 count += 1
                 yield row
-    except asyncio.CancelledError:
+    except (asyncio.CancelledError, GeneratorExit):
+        # Task cancellation and async-generator aclose() are distinct client
+        # disconnect paths. Neither may leave an active Run falsely RUNNING.
         await asyncio.to_thread(ledger.terminate, run_id, attempt_id, execution_id,
                                 completed=False, failure_type="STREAM_DISCONNECTED")
         raise
