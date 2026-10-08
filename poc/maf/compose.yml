@@ -1,0 +1,54 @@
+# POC-A infrastructure baseline: startup and provider execution are separately gated.
+# No Foundry Hosted Agents, secret management, OSS replication or Durable server.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: poc_harness
+      POSTGRES_USER: poc
+      POSTGRES_PASSWORD: ${POC_POSTGRES_PASSWORD:?set POC_POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:54329:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U poc -d poc_harness"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  object-store:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${POC_MINIO_ROOT_USER:-pocadmin}
+      MINIO_ROOT_PASSWORD: ${POC_MINIO_ROOT_PASSWORD:?set POC_MINIO_ROOT_PASSWORD}
+    ports:
+      - "127.0.0.1:9002:9000"
+      - "127.0.0.1:9003:9001"
+    volumes:
+      - objects:/data
+  otel-collector:
+    image: otel/opentelemetry-collector:0.136.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel-collector.yml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "127.0.0.1:14317:4317"
+      - "127.0.0.1:14318:4318"
+  maf-runtime-smoke:
+    profiles: ["live-model"]
+    build:
+      context: ../..
+      dockerfile: poc/maf/Dockerfile
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      MAF_POC_MODEL: ${MAF_POC_MODEL:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["python", "poc/maf/session_probe.py"]
+
+volumes:
+  pgdata:
+  objects:
