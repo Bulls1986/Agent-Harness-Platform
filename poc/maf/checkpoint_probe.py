@@ -64,7 +64,7 @@ async def restore(directory: Path) -> dict:
     manifest = json.loads((directory/"probe-manifest.json").read_text(encoding="utf-8"))
     if manifest["workflow"] != WORKFLOW_NAME:
         raise ValueError("Workflow identity mismatch")
-    storage = FileCheckpointStorage(str(directory))
+    storage = FileCheckpointStorage(str(directory / 'native-checkpoints'))
     known = await storage.list_checkpoints(workflow_name=WORKFLOW_NAME)
     if manifest["checkpoint_id"] not in {c.checkpoint_id for c in known}:
         raise ValueError("Checkpoint missing from provider storage")
