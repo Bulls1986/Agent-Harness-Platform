@@ -111,14 +111,14 @@ FOR EACH ROW EXECUTE FUNCTION poc_reject_final_attempt_mutation();
 
 -- Final Execution outcome is immutable, just like final Attempt outcome.
 CREATE OR REPLACE FUNCTION poc_reject_final_execution_mutation()
-RETURNS trigger LANGUAGE plpgsql AS $
+RETURNS trigger LANGUAGE plpgsql AS $execution_guard$
 BEGIN
   IF OLD.state IN ('SUCCEEDED','FAILED','CANCELLED','UNKNOWN') THEN
     RAISE EXCEPTION 'final Execution cannot be changed: %', OLD.execution_id;
   END IF;
   RETURN NEW;
 END;
-$;
+$execution_guard$;
 DROP TRIGGER IF EXISTS poc_final_execution_guard ON poc_executions;
 CREATE TRIGGER poc_final_execution_guard BEFORE UPDATE OR DELETE ON poc_executions
 FOR EACH ROW EXECUTE FUNCTION poc_reject_final_execution_mutation();
