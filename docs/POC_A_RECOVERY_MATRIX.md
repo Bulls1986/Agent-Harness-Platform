@@ -29,9 +29,9 @@ Session 恢复、Step Retry、Native Workflow Checkpoint **不是等价能力**�
 | 原生响应投递意图后结果不明 | PASS（保守进入 UNKNOWN，禁止重复投递） | [A26 crash CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37720639309) | 缺真实外部 Receipt / Reconciliation 收口 |
 | 非 PURE 失联，不重试、保留 UNKNOWN/PENDING Reconciliation | PASS（数据与决策），外部副作用 NOT RUN | [A27/A29 CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37720639309) | 未验证实际 Idempotency-Key 或 Receipt |
 | 平台 Execution Lease/Fencing、旧 Owner 拒绝和 PURE 新 Attempt | PASS (PostgreSQL fixture) | [A29 CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37720639309) | 仅 Harness Execution 权限，不代表 MAF 内部 Worker Lease |
-| WAITING_APPROVAL 的安全取消（不执行未批准的动作） | 本轮 A29 回归测试 | [本轮 PR #11](https://github.com/Bulls1986/Agent-Harness-Platform/pull/11) | 待 CI 验证，不将其提前标 PASS |
-| RUNNING Cancel：ACK != TERMINATED、CANCELLING 阻止新派发 | 本轮 A29 回归测试 | [本轮 PR #11](https://github.com/Bulls1986/Agent-Harness-Platform/pull/11) | 没有连接真实 Provider cancel/abort API |
-| Timeout：未 dispatch => FAILED/TIMEOUT，已 dispatch 非 PURE => UNKNOWN | 本轮 A29 回归测试 | [本轮 PR #11](https://github.com/Bulls1986/Agent-Harness-Platform/pull/11) | 未测真实工具请求超时、取消响应 |
+| WAITING_APPROVAL 的安全取消（不执行未批准的动作） | PASS (PostgreSQL fixture) | [A29 CI #37721115581](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37721115581) | 当前仅平台事实，不是实际 Provider Cancel API |
+| RUNNING Cancel：ACK != TERMINATED、CANCELLING 阻止新派发 | PASS (PostgreSQL fixture) | [A29 CI #37721115581](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37721115581) | 仍未连接真实 Provider cancel/abort API |
+| Timeout：未 dispatch => FAILED/TIMEOUT，已 dispatch 非 PURE => UNKNOWN | PASS (PostgreSQL fixture) | [A29 CI #37721115581](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37721115581) | 未测真实工具请求超时、取消响应 |
 | WAITING_INPUT 同 Run 跨进程恢复 | NOT RUN | — | 尚无平台 Input Request 事实与 MAF 入站响应桥接 |
 | Native Same Attempt 在真实 LLM/Tool 中途崩溃后续跑 | NOT RUN | — | 本地单 Superstep 不能外推到任意工具副作用 |
 | Workspace / Sandbox State 恢复与引用一致性 | NOT RUN | — | 仅需恢复任务相关 reference，不负责底层 Disk Backup/DR |
