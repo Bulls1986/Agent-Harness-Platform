@@ -44,6 +44,12 @@ class ApprovalWaitTests(unittest.TestCase):
                 "SELECT state FROM poc_attempts WHERE attempt_id=%s",
                 (fact.attempt_id,),
             ).fetchone()[0],"CREATED")
+        with psycopg.connect(self.dsn) as conn:
+            with self.assertRaises(psycopg.Error):
+                conn.execute(
+                    "UPDATE poc_approvals SET required_approver_principal_id='attacker' WHERE approval_id=%s",
+                    (request.approval_id,),
+                )
         with self.assertRaises(ApprovalConflict):
             self.store.decide(request.approval_id,authenticated_principal="wrong",authorized=True,decision="APPROVED")
         with self.assertRaises(ApprovalConflict):
