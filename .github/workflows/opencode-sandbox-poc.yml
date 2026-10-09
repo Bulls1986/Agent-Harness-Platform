@@ -1,0 +1,31 @@
+name: Cross-harness sandbox POC
+
+on:
+  push:
+    paths:
+      - "poc/opencode_sandbox/**"
+      - ".github/workflows/opencode-sandbox-poc.yml"
+  pull_request:
+    paths:
+      - "poc/opencode_sandbox/**"
+      - ".github/workflows/opencode-sandbox-poc.yml"
+
+jobs:
+  sdk-docker-real-sandbox:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install official OpenAI Agents SDK sandbox client
+        run: python -m pip install --disable-pip-version-check "openai-agents[docker]==0.23.1"
+      - name: Pin POC Docker image for real isolated execution
+        run: docker pull postgres:16-alpine
+      - name: Verify platform SandboxProvider isolation
+        run: python poc/opencode_sandbox/verify_unified_sandbox.py
+      - name: Verify official OpenAI Agents SDK DockerSandboxClient
+        run: python poc/opencode_sandbox/verify_agents_native_docker.py
+      - name: Verify SDK FunctionTools against unified Sandbox lease
+        run: python poc/opencode_sandbox/verify_agents_sdk_tool_bridge.py
