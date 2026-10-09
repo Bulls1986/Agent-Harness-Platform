@@ -1,6 +1,6 @@
 # POC-A G3 — 真实模型 Token → 平台 API / Typed Event / SSE
 
-> 2026-10-08 | 状态：IMPLEMENTED / DATABASE TESTED / **REAL PROVIDER E2E NOT YET VERIFIED**
+> 2026-10-08 初稿：IMPLEMENTED / DATABASE TESTED / REAL PROVIDER E2E 当时未验；**2026-10-09 增量：真实模型文本全链路 PASS**（详见末尾）
 
 ## 已新增的实现
 
@@ -73,7 +73,7 @@
 - A05 既有独立 LiteLLM + MAF 双轮流式与 History smoke PASS，不能替代本次
   全链路验证。
 
-## 必须补齐方可将 G3 本切片判 PASS
+## 原始待补验收清单（2026-10-08；2026-10-09 已完成）
 
 1. 在独立临时 PostgreSQL 库与现有 LiteLLM 网关运行
    verify_live_model_protocol.py；检查真实 Stream 产生多个（至少一个）
@@ -87,5 +87,26 @@
 这不是完整 Responses API（缺完整 item/content、Tool/Approval/Artifact/多模态）。
 没有模型会话跨请求的持久 Chat History、真生产运行中重启自动恢复、
 响应/Tool Exactly Once、生产 IAM/Admission 或公网安全边界。
-本轮没有启动 G2/G6 非幂等 Receipt 自动对账，因为 G3 真实 Provider
-端到端门禁尚未达到通过条件。旧 POC-A 决策 NO-GO 结论不被改写。
+此前 G3 尚未完成时 G2/G6 另有独立验收计划；2026-10-09 起 G2/G6 的本机真实 Native 故障、Receipt 及 Recovery 证据已在各自专项报告保存，不因此推导生产全门禁 PASS。原 POC-A 决策 NO-GO 不被改写。
+## 2026-10-09：已执行真实授权 LiteLLM 全链路（G3 文本 Token 切片 PASS）
+
+**结论：PASS_REAL_MODEL_TO_PLATFORM_TYPED_SSE_AND_REPLAY（本地受限文本场景）**。
+
+用户已在本机运行 `configure_g3_windows.ps1` 并在 Windows User 环境登记 Key。WebCodex Runner 仅核验 Key/Base URL/Model 三项**存在**，未打印、复制、提交凭据。随后以锁定版本 MAF SDK 的隔离 Python venv 执行 `python poc/maf/run_live_g3_local.py`：从已有私有 LiteLLM 网关发起真实模型请求，同时创建了独立临时 Docker PostgreSQL，最终脚本退出码 **0**、结构化 `outcome=PASS`。
+
+本次实际输出的无敏感证据：
+
+| 验证项 | 实测 |
+|---|---|
+| `real_model_invoked` | **true**（不是模拟上游） |
+| `live_delta_count` | **4** 个真实 Token/文本 Delta |
+| `persisted_event_count` | **6** 条 Platform Typed Event |
+| `nonce_echo_verified` | **true**（动态生成的随机验证码出现在真实流中） |
+| `http_process_restarted` | **true**（切换到另一个 HTTP 服务进程） |
+| `sse_cursor_replay_verified` | **true**（Last-Event-ID 精确回放并与 PG Snapshot 对齐） |
+| `raw_model_output_logged` | **false**（脚本只写汇总标志/计数） |
+
+真正的第一进程已停止；第二进程在**未携带模型 Key**的环境下仅从 PostgreSQL 重建并回放之前已提交的事件，不重发模型请求。一次性 PG 容器已清理。
+
+**收口边界：**这是 G3 **真实单轮文本 Token/Typed Event/SSE/重启恢复切片 PASS**，不是 OpenAI Responses 规范完整实现；Tool/Approval/Artifact 的统一流式 Item/Event、多模态、复杂 Agent History/Compaction、企业鉴权与真正生产级自动恢复仍按原 Gate GAP 保留。G3 全量规范合规门禁不得由此推导 PASS；原 POC-A 决策文件中「MAF 不能单独替代厂商无关 Harness 主控制平面」不变。此前文档内未配置 Key / 未执行真实 Gate 的陈述是该增量前的历史证据。
+

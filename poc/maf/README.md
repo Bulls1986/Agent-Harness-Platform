@@ -535,6 +535,24 @@ enterprise Tool Exactly Once is claimed. The wrapper uses temporary local
 Compose config and deletes the file on exit.
 See [single-chain report](G6_NATIVE_RECEIPT_SINGLE_CHAIN_FINDINGS.md).
 
+### 2026-10-09 authenticated G3 live-model acceptance result
+
+The local Windows user ran `configure_g3_windows.ps1`, and the authenticated
+acceptance was then re-run with the pinned venv and disposable Docker PG via
+`run_live_g3_local.py`. **Exit 0 / outcome PASS** for the bounded real-model
+text response chain (not the complete Responses API): **4** live content deltas,
+**6** persisted Typed Events, randomized nonce verified, HTTP worker restarted,
+and Last-Event-ID replay/snapshot comparison verified. The second worker had
+no model credentials and performed no second model call. No raw model output
+or credential was printed to the test log. Ephemeral PostgreSQL was removed.
+See [G3_LIVE_PROTOCOL_FINDINGS.md](G3_LIVE_PROTOCOL_FINDINGS.md).
+
+On Windows, `run_live_g3_local.py` also reads the **current user's** registry
+Environment when the connected WebCodex Runner predates the credential setup;
+a WebCodex restart is not needed for this POC helper. User Environment is not
+a secure vault: use only test-only credentials and rotate as required. Full
+Responses Tool/Approval/Artifact coverage is still outside this bounded PASS.
+
 ## G3 bounded live model streaming (not yet full Gate PASS)
 
 New local-only POST /v1/live/responses accepts a text prompt with stream=true.
