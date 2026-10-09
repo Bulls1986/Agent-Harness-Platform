@@ -1,0 +1,25 @@
+name: Pydantic harness offline POC
+
+on:
+  push:
+    paths:
+      - "poc/pydantic_harness/**"
+      - ".github/workflows/pydantic-harness-poc.yml"
+  pull_request:
+    paths:
+      - "poc/pydantic_harness/**"
+      - ".github/workflows/pydantic-harness-poc.yml"
+
+jobs:
+  offline-density-and-ref-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned public SDKs
+        run: python -m pip install --disable-pip-version-check "pydantic-ai-harness[e2b]==0.54.0" "pydantic-ai-slim[typesafe]==2.54.0"
+      - name: Verify shared Agent Run + optional E2B workspace without model or sandbox
+        run: python poc/pydantic_harness/verify_offline_density.py
