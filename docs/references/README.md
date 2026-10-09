@@ -39,6 +39,7 @@
 31. [Harness Scope Alignment Review](HARNESS_SCOPE_ALIGNMENT_REVIEW.md)
 32. [多 Harness 共享 Sandbox 与 Runtime 密度（2026-10-09 POC 候选，未 Accepted）](MULTI_HARNESS_SANDBOX_RUNTIME_DENSITY_CANDIDATE.md)
 33. [多 Harness 技术选型增量评估（Pydantic AI Harness / OpenAI Agents SDK / Temporal / CubeSandbox）](MULTI_HARNESS_TECH_SELECTION_20261009.md)
+34. [多 Harness 目标架构候选与 Cube 实测快照（2026-10-09，未 Accepted）](MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md)
 
 ## 使用原则
 

@@ -5,6 +5,8 @@
 > 不以“所有 OpenCode 原生执行入口已隔离”作为前置条件**；完整隔离与审计仍是
 > 生产门禁，不能因阶段降级而从正式架构契约中删除。
 
+> **最新权威候选快照：** [多 Harness 目标架构（2026-10-09）](MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md)。下方“Pydantic + Temporal + Cube 为首选组合”、 “Cube 未部署”及历史能力对照保留为**早期候选/当时证据**，不再表示最新默认 Durable 选型。当前默认 Runtime 候选为 Pydantic Adapter，Durable 后端未决；Cube 原生 SDK 真机已过、E2B 2.53.1 原生兼容仍失败。
+
 ## 2026-10-09 傍晚：技术选型收敛候选（尚非 Accepted ADR）
 
 **结论：默认轻量 Agent 执行适配器优先 Pydantic AI Harness，统一替换能力来自平台 AgentRuntime SPI，而不是 Pydantic AI 自动执行其他 Agent SDK。**
@@ -18,7 +20,9 @@
 - OpenCode 2 仍是独立 Coding Runtime。共享 Host 的原生 Shell/FS/PTY/Git/LSP 路径不能只靠 SessionID 自动转发到 Cube；生产必须关闭 Host 绕过入口或选择 Harness-in-Sandbox 拓扑。
 - Pydantic AI Harness 官方仍为 0.x，可能发生接口变更；需要冻结版本、隔离适配并维护升级验证。
 
-**新增本机原生协议反例：** Cube v0.7.2 对 E2B SDK 2.53.1 的创建请求返回 HTTP 405（E2B 使用 POST /v2/sandboxes；当前 Cube 的该路由仅支持 GET）。OpenAI Agents SDK 原生 E2BSandboxClient 同样因内部使用 E2B SDK 返回 405。Pydantic Harness 原生 E2BSandboxBackend 依赖相同协议，需要单独验证受支持的版本或通过 SandboxProvider 薄适配。已创建真实 Cube sandbox-code 实例验证其缺失 opencode/node/npm/bun 等，OpenCode 2 必须另建 OCI Template。此发现增强了自有 SPI 的必要性，但不代表 Pydantic 原生 E2B 已 GO。\n\n### 候选晋级门禁
+**新增本机原生协议反例：** Cube v0.7.2 对 E2B SDK 2.53.1 的创建请求返回 HTTP 405（E2B 使用 POST /v2/sandboxes；当前 Cube 的该路由仅支持 GET）。OpenAI Agents SDK 原生 E2BSandboxClient 同样因内部使用 E2B SDK 返回 405。Pydantic Harness 原生 E2BSandboxBackend 依赖相同协议，需要单独验证受支持的版本或通过 SandboxProvider 薄适配。已创建真实 Cube sandbox-code 实例验证其缺失 opencode/node/npm/bun 等，OpenCode 2 必须另建 OCI Template。此发现增强了自有 SPI 的必要性，但不代表 Pydantic 原生 E2B 已 GO。
+
+### 候选晋级门禁
 
 1. 使用同一真实 Cube Sandbox ID 对 Pydantic AI、OpenAI Agents SDK 原生 E2B Client 及 OpenCode 2 实际工具接力进行实测；记录 Native / Adapter / Untested。
 2. AgentRuntime SPI 分别运行 Pydantic、OpenAI SDK、OpenCode 2，保持统一任务事实、Sandbox Lease、Typed Events 与 Tool Receipt。

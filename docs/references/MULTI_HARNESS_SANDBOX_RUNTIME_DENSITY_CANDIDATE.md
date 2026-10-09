@@ -12,6 +12,16 @@
 > 新增 Pydantic AI Harness + Temporal + Cube(E2B) 高匹配度挑战者，
 > 并保留 OpenAI Agents SDK、MAF、OpenCode 2 的渐进共存方案。
 
+> **2026-10-09 晚间目标形态增量：**
+> [目标架构候选快照](MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md)
+> 明确由**平台 AgentRuntime SPI** 选择 Pydantic（通用默认候选）、
+> OpenAI SDK、OpenCode 2（Coding）、MAF Adapter；Pydantic 不原生承载别家的 SDK。
+> Durable 后端（Temporal / MAF Durable / PG Worker）不再与 Agent SDK 选型绑死；
+> 按需 Sandbox + 共享 Worker + Session/Scope/Lease 持久绑定维持不变。
+> Cube 原生 SDK 真机 Shell/Files/reconnect 已通过，但 E2B 2.53.1 /
+> OpenAI E2BSandboxClient 均存在创建 HTTP 405，OpenCode 2 Cube 模板未建；
+> 下一阶段由 ARCH-TODO-025～028 验收，不把未通过项归为已完成。
+>
 ## 1. 触发背景及变更范围
 
 未来 PDLC、AI 企业门户需要不同的逻辑专业 Agent（产品、研发、测试、知识、业务等），

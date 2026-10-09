@@ -21,9 +21,12 @@
 - [POC-C / C13 原生 OpenTelemetry 与 Harness Correlation/部署依赖](poc/temporal/C13_OTEL_FINDINGS.md)
 - [POC-C / C14 MAF 与 Temporal 全 Gate/场景比较与条件选型](poc/temporal/C14_COMPARATIVE_DECISION.md)
 - [OpenCode + E2B/CubeSandbox + 共享 Runtime 专项 POC（在研）](poc/opencode_sandbox/README.md)
+- [2026-10-09 多 Harness 目标架构候选快照与 Cube 实测矩阵（未 Accepted）](docs/references/MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md)
 - [POC-A 阶段性结论与证据台账](docs/POC_A_STAGE_FINDINGS.md)
 - [POC-A / A30 任务恢复覆盖矩阵](docs/POC_A_RECOVERY_MATRIX.md)
 - [架构待办 / Architecture Backlog](docs/ARCHITECTURE_BACKLOG.md)
+
+> **当前增量选型（2026-10-09，候选而非 Accepted）：** Pydantic AI Harness 为通用 Agent 默认 Runtime Adapter 首选；OpenCode 2 保留 Coding、OpenAI Agents SDK/MAF 保留可选 Adapter；平台自有 AgentRuntime SPI 才负责 SDK 切换，Process/Durable SPI 的 Temporal 或 PG Worker 仍待等价验证。Cube 原生 SDK 的真实 MicroVM/文件/命令/重连已通过，但 E2B 2.53.1/OpenAI 原生 E2B Client 对当前 Cube v0.7.2 的创建均返回 HTTP 405。详见上述目标架构快照与 [ARCH-TODO-025～028](docs/ARCHITECTURE_BACKLOG.md)。下文首轮 POC 优先级仅保留历史基线。
 
 ## 首轮 POC
 

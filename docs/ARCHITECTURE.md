@@ -31,6 +31,20 @@
 > 当前 POC 先完成可选 Sandbox/Session Binding 功能闭环；
 > 完整隔离仍是生产门禁，不因阶段放宽而从正式 Contract 移除。
 
+> **2026-10-09 晚间目标架构修订（Architecture Candidate，未 Accepted）：**
+> [多 Harness 目标拓扑及证据快照](references/MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md) 已归档：
+> 平台自有 `AgentRuntime SPI` + 共享 Runtime Worker Pool，**Pydantic AI Harness 为
+> 通用专业 Agent 默认 Adapter 的首选候选**；OpenAI Agents SDK、OpenCode 2 Coding、
+> MAF 各是独立 Adapter，而不是通过 Pydantic 直接切换其 Agent SDK。
+> `SandboxProvider SPI` 按隔离 Scope/Execution Capability 消费自建 Cube；
+> 无执行需求的 Session 不建 Sandbox，Session 数量不绑定 OS 进程数。
+> `Process/Durable SPI` 下的 Temporal / MAF Durable / PG Worker 均为候选，
+> Temporal 不因 Pydantic 获选而自动弃用或强制纳入首期。
+> 实测 Cube 原生 SDK 的 MicroVM/Shell/Files/reconnect 和 OpenAI FunctionTool 桥局部 PASS，
+> **E2B Python SDK 2.53.1 与 OpenAI 原生 E2BSandboxClient 对 Cube v0.7.2 创建均 HTTP 405**，
+> OpenCode 2 Cube OCI 模板未完成。关联 ARCH-TODO-024～028；既有架构正文
+> 中的首轮 MAF/Temporal/ADK 选型描述保留为历史基线，不表示上述新选型已正式获批。
+>
 # 执行摘要
 
 **本设计目标不是选择某一个 Agent Framework 作为企业平台本体，而是建设一个厂商无关的 Agent Harness Platform：控制平面掌握任务生命周期、策略、状态、恢复和审计；执行平面承载 Agent Runtime、模型、工具与 Sandbox。任何具体框架均通过 Adapter / SPI 接入。**
