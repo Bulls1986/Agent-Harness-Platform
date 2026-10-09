@@ -33,7 +33,7 @@ BEGIN
    WHERE e.execution_id=NEW.execution_id AND a.attempt_id=NEW.attempt_id
      AND s.step_id=NEW.step_id AND p.run_id=NEW.run_id
      AND r.runtime_type='temporal' AND r.state='RUNNING'
-     AND e.side_effect_class='PURE')
+     AND e.side_effect_class IN ('PURE','IDEMPOTENT'))
  THEN RAISE EXCEPTION 'C15 invalid lineage'; END IF;
  RETURN NEW;
 END;

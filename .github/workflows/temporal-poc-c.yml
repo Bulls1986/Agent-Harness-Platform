@@ -91,6 +91,21 @@ jobs:
         run: python -m unittest discover -s poc/temporal/tests -p "test_c11_artifact_pg.py" -v
       - name: C11 real isolated Docker adapters, SeaweedFS, PG and Temporal History
         run: python poc/temporal/verify_c11_real_s3.py
+      - name: ARCH025 same native Run Token SSE plus real S3 Artifact and independent verification
+        env:
+          POC_C_TEMPORAL_ADDRESS: 127.0.0.1:17234
+          POC_C_LITELLM_MODEL: ci-offline-model
+          POC_C15_FAKE_MODEL: "1"
+          POC_C15_TEST_ARTIFACT: "1"
+        run: python poc/temporal/verify_c15_g3_http.py
+      - name: ARCH025 S3 write committed but ACK lost remains UNKNOWN awaiting reconciliation
+        env:
+          POC_C_TEMPORAL_ADDRESS: 127.0.0.1:17234
+          POC_C_LITELLM_MODEL: ci-offline-model
+          POC_C15_FAKE_MODEL: "1"
+          POC_C15_TEST_ARTIFACT: "1"
+          POC_C15_INJECT_S3_WRITE_UNKNOWN: "1"
+        run: python poc/temporal/verify_c15_g3_http.py
       - name: Stop only isolated C11 infrastructure, keep persisted volumes
         if: always()
         run: |
