@@ -29,11 +29,59 @@
 | CubeSandbox + OpenCode 自定义模板 | NOT RUN | 缺 Cube API Endpoint 和已构建的 OpenCode 模板 |
 | 共享 OpenCode Runtime + Sandbox Tool Adapter | NOT PROVEN | 宿主机文件/Shell/LSP/插件路径未被完整隔离 |
 | 多 Session RSS/CPU、10/100/1000 负载 | NOT RUN | 尚无相同负载资源对照与容量边界 |
+| 统一 SandboxProvider / Docker 两个隔离 Scope | PASS（有限） | 真实非 root/只读根目录/无网络容器；同一绑定的两个逻辑角色顺序复用、异绑定拒绝 |
+| OpenAI Agents SDK 0.23.1 原生 DockerSandboxClient | PASS（有限） | 官方公开 API 创建 SandboxSession 并在 Docker 容器内执行命令；不调用模型 |
+| OpenAI Agents SDK 0.23.1 统一 Tool Adapter | PASS（有限） | SDK 原生 FunctionTool 解析与回调 → 平台提供的同一个 Docker SandboxProvider，真实 Shell/Read/Write |
 
 测试 **没有**证明 OpenCode 的任意 Tool 能在跨项目场景安全路由，
 更没有证明同一进程能够安全执行来自不同用户的任意不可信代码。
 不同 Git 仓库可能共享相同 root commit，OpenCode 的 Project ID
 也不适合用于授权、Sandbox Binding 或跨用户访问控制。
+
+## ④ 跨 Harness 统一 SandboxProvider / OpenAI Agents SDK
+
+官方 OpenAI Agents SDK 已支持 `SandboxAgent`、`SandboxRunConfig`，
+原生 `DockerSandboxClient`、`E2BSandboxClient` 及其他远程
+Sandbox 后端；可以选择让 SDK 用其内建完整 Sandbox 能力，
+也可以使用公开的 `FunctionTool` 调用平台批准的 Sandbox Lease。
+
+这里所谓 **一套 Sandbox** 指共享一个 Platform SandboxProvider
+契约、容量池和 Lifecycle/Binding/Policy，不是让所有不同信任域的
+Agent 共用同一个物理 Sandbox。Agent Runtime 可长期共享进程；
+不同隔离 Scope 的执行必须由 Sandbox Provider 保证隔离。
+
+```bash
+# 仅验证平台 SandboxProvider，使用已有本机 postgres:16-alpine
+python poc/opencode_sandbox/verify_unified_sandbox.py
+
+# 本机独立 Python 环境中安装官方 SDK（不会调用模型）
+python -m pip install "openai-agents[docker]==0.23.1"
+python poc/opencode_sandbox/verify_agents_native_docker.py
+python poc/opencode_sandbox/verify_agents_sdk_tool_bridge.py
+```
+
+在真实 Docker Engine 上执行三条测试：
+
+1. **Provider 契约**：Run A 的两个角色使用同一个 Sandbox Lease，
+   读取/写入共享临时文件；Run B 不能读取或写入 A，B 有独立
+   Sandbox；验证用户 10001、无网络、只读根 FS 和资源上限配置。
+2. **SDK Native**：使用官方 `DockerSandboxClient.create` 创建
+   `SandboxSession`，通过 `session.exec` 在实际容器中执行命令。
+3. **SDK Tool Bridge**：用 SDK 官方 `@function_tool` 创建
+   `sandbox_shell/read/write`，通过其公开回调与 ToolContext
+   走平台单个 Sandbox Lease，完成真实写入、读取和命令执行。
+
+这三个验证都无需 LLM；SDK Native 与 SDK Tool Bridge 是两条
+**独立运行路线**，不是同一个 SDK Session 已经跨两路迁移的证明。
+完整 Agent Runner、模型驱动 Tool Calling、Skill、Git、LSP、
+E2B/Cube 真机和跨 Harness 同 Sandbox Instance 的接力均待验。
+也不宣称该 POC 的最小 Docker Provider 是生产级 Sandbox 服务：
+内存中的 Lease 表、无任务级持久绑定、无进程重启恢复、无外部
+Workspace 恢复或平台实际 Policy/Approval 接口。
+
+SDK Native 优先复用官方客户端，不要在 Harness 中复制官方
+SandboxSession 的文件操作、Snapshot、Resume 等机制；工具层
+转发仅作为需要共享平台 Sandbox Lease 时的薄适配备选。
 
 ## 执行入口
 
@@ -94,6 +142,8 @@ python poc/opencode_sandbox/smoke_e2b_opencode.py --provider cube
 | H4 | Server A 退出后 Server B 能基于持久 Session/Workspace 状态在已声明能力边界继续；不把缓存当权威状态 |
 | H5 | 相同负载实测两种拓扑：OpenCode-in-Sandbox 与共享 OpenCode + remote Sandbox；记录 RSS、CPU、P95、活跃进程和 Sandbox 数量 |
 | H6 | 100/1000 空闲 Session 不应线性创建进程或 Sandbox；Coding 执行仍遵守独立的 Sandbox 安全边界 |
+| H7 | OpenCode、OpenAI Agents SDK、MAF 均声明 Sandbox Capability；同一业务任务的兼容阶段可复用同一 Lease，不同授权 Scope 无法串读写 |
+| H8 | OpenAI SDK 原生 E2B/Cube 与平台 SandboxProvider 的创建、挂载、取消、Evidence、恢复语义必须通过同口径 Conformance；不要求各 Harness 采用相同 SDK |
 
 若无法通过官方公开扩展点把 **全部** OpenCode 文件/执行入口
 安全路由到外部 Sandbox，则应继续采用 **OpenCode-in-Sandbox
@@ -109,3 +159,5 @@ OpenCode 内核。
 - [CubeSandbox Quickstart](https://github.com/TencentCloud/CubeSandbox/blob/master/docs/guide/quickstart.md)
 - [CubeSandbox Volume 兼容边界](https://github.com/TencentCloud/CubeSandbox/blob/master/docs/guide/volume-plugin.md)
 - [OpenCode 无提交 Git Project ID 问题](https://github.com/anomalyco/opencode/issues/15192)
+- [OpenAI Agents SDK Sandbox Agents](https://openai.github.io/openai-agents-python/sandbox_agents/)
+- [OpenAI Agents SDK Sandbox clients](https://openai.github.io/openai-agents-python/sandbox/clients/)
