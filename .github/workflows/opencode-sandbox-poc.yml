@@ -1,0 +1,82 @@
+name: Cross-harness sandbox POC
+
+on:
+  push:
+    paths:
+      - "poc/opencode_sandbox/**"
+      - ".github/workflows/opencode-sandbox-poc.yml"
+  pull_request:
+    paths:
+      - "poc/opencode_sandbox/**"
+      - ".github/workflows/opencode-sandbox-poc.yml"
+
+jobs:
+  cube-e2b-offline-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install public E2B and Cube client versions
+        run: python -m pip install --disable-pip-version-check "e2b==2.53.1" "cubesandbox==0.7.0" "openai-agents==0.23.1"
+      - name: Verify SDK public surface without contacting Cube
+        run: python poc/opencode_sandbox/verify_cube_e2b.py
+      - name: Verify Cube host preflight safely reports readiness or blockers
+        run: |
+          python - <<'PY'
+          import json, subprocess, sys
+          result = subprocess.run(
+              [sys.executable, "poc/opencode_sandbox/verify_cube_host_readiness.py"],
+              capture_output=True, text=True, timeout=20
+          )
+          print(result.stdout.strip())
+          assert result.returncode in (0, 2), result.stderr
+          report = json.loads(result.stdout.strip())
+          assert report["outcome"] in ("PASS_HOST_PREFLIGHT_ONLY", "BLOCKED")
+          assert report["cube_microvm_created"] is False
+          assert report["cube_e2b_live"] == "NOT_RUN"
+          assert report["mutated_host"] is False
+          PY
+      - name: Verify unconfigured Cube live tests fail closed
+        run: |
+          python - <<'PY'
+          import os, subprocess, sys
+          env = os.environ.copy()
+          for key in ("E2B_API_URL", "E2B_API_KEY", "CUBE_API_URL", "CUBE_API_KEY",
+                      "CUBE_TEMPLATE_ID", "CUBE_E2B_LIVE_CONFIRM"):
+              env.pop(key, None)
+          result = subprocess.run(
+              [sys.executable, "poc/opencode_sandbox/verify_cube_e2b.py", "--live"],
+              env=env, text=True, capture_output=True, timeout=35
+          )
+          print(result.stdout.strip())
+          assert result.returncode == 2, result.returncode
+          PY
+      - name: Verify Session to Sandbox Lease fail-closed admission
+        run: python poc/opencode_sandbox/verify_session_sandbox_binding.py
+      - name: Verify Session ID routes to distinct Cube E2B Sandbox.connect IDs
+        run: python poc/opencode_sandbox/verify_cube_e2b_session_routing.py
+  sdk-docker-real-sandbox:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install official OpenAI Agents SDK sandbox client
+        run: python -m pip install --disable-pip-version-check "openai-agents[docker]==0.23.1"
+      - name: Pin POC Docker image for real isolated execution
+        run: docker pull postgres:16-alpine
+      - name: Verify platform SandboxProvider isolation
+        run: python poc/opencode_sandbox/verify_unified_sandbox.py
+      - name: Verify official OpenAI Agents SDK DockerSandboxClient
+        run: python poc/opencode_sandbox/verify_agents_native_docker.py
+      - name: Verify SDK FunctionTools against unified Sandbox lease
+        run: python poc/opencode_sandbox/verify_agents_sdk_tool_bridge.py
+      - name: Pull pinned OpenCode 2 Sandbox image
+        run: docker pull ghcr.io/anomalyco/opencode@sha256:9500f3474188a4b89e165c65fada370dbde5e038cc3b751ed5dcbd27d7620315
+      - name: Verify real OpenCode 2 to Agents SDK same Sandbox handoff
+        run: python poc/opencode_sandbox/verify_opencode2_sdk_handoff.py

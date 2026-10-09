@@ -14,6 +14,23 @@
 
 **说明：本文件记录的是截至 2026-09-29 的技术事实与首轮架构决策。框架能力、许可和托管策略变化较快，进入采购或正式落地前必须重新核验。**
 
+> **2026-10-09 追加架构候选（尚未 Accepted）：** 针对 PDLC / AI 企业门户的
+> 多专业 Agent 和 OpenCode 2 / OpenAI Agents SDK / MAF 等多 Harness，
+> 已登记 [ARCH-TODO-024：按需共享 Sandbox 与高密度 Runtime 拓扑](references/MULTI_HARNESS_SANDBOX_RUNTIME_DENSITY_CANDIDATE.md)。
+> Agent Session 不直接等于 Worker 进程或 Sandbox，隔离执行统一通过
+> SandboxProvider SPI；现阶段保留 Harness-in-Sandbox 与共享 SDK Host +
+> Remote Sandbox Tool 两种候选，不能仅凭多 Session 或 SDK Host 存在
+> 就宣称后者安全。此补充不覆盖既有 Accepted Contract，也不改变首轮
+> MAF/Temporal Durable 架构选型结论。
+
+> **2026-10-09 选型候选补充（非 Accepted ADR）：**
+> 记录[基于当前实际可用能力的多 Harness 技术栈对比](references/MULTI_HARNESS_TECH_SELECTION_20261009.md)。
+> 新增 Pydantic AI Harness（Jev/TypeSafeModel + Coder/Skills/Subagents +
+> E2B Workspace + TemporalDurability）作为高匹配度**新候选**，仍保留
+> 既有 OpenCode 2 Coding Agent 和 OpenAI Agents SDK/MAF 等 Runtime。
+> 当前 POC 先完成可选 Sandbox/Session Binding 功能闭环；
+> 完整隔离仍是生产门禁，不因阶段放宽而从正式 Contract 移除。
+
 # 执行摘要
 
 **本设计目标不是选择某一个 Agent Framework 作为企业平台本体，而是建设一个厂商无关的 Agent Harness Platform：控制平面掌握任务生命周期、策略、状态、恢复和审计；执行平面承载 Agent Runtime、模型、工具与 Sandbox。任何具体框架均通过 Adapter / SPI 接入。**
@@ -831,10 +848,6 @@ Capability 表示组件具备的技术能力；Policy 只负责 Harness 当前 E
 
 > 上述匹配比例为 2026-09-29 的 POC 前架构映射估算，建议按 ±5 个百分点理解，不作为最终选型结论。
 
-## 16.1 POC-C 阶段选型裁决（2026-10-09）
-
-[POC-C C00–C16 技术评估](POC_C_EVALUATION_CLOSEOUT.md) 已 **CLOSED / CONDITIONAL**；Harness 自有 Task Facts/Policy/Event + Temporal Durable Adapter + MAF/OpenAI Agents SDK Runtime Adapter 是优先候选，不是生产 Accepted ADR。G1 本地 scoped PASS，G2/G3/G6 完整硬门禁仍 PARTIAL，**Production NO-GO**。仅 [ARCH-TODO-025](ARCHITECTURE_BACKLOG.md) 可继续生产准入；Temporal ID/History/Checkpoint 不能成为 Harness 业务事实源。
-
 # 17. LangGraph 本轮排除说明
 
 LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 POC。原因不是 Graph 能力不足，而是生产部署路径与平台能力存在明显绑定风险：官方 Self-Hosted Lite/Enterprise 需要 LangGraph Server 形态，常见部署要求 PostgreSQL + Redis；Enterprise 使用许可证密钥，Lite 也存在 LangSmith API key/节点规模等限制。对“企业内建、平台层掌握控制权”的目标，容易形成第二套控制平面与 Managed Feature Cliff。[R12]
@@ -873,7 +886,6 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 | ADR-026 | 冻结 Environment Supply Chain 边界：SBOM、签名、漏洞扫描、provenance 等由外部 CI/CD/Registry/Security 基础设施负责；Harness 只消费已验证 Environment metadata 与 immutable digest。 | Accepted |
 | ADR-027 | 冻结 MCP Trust 边界：MCP 准入与信任由外部 Governance 负责；Harness 对可调用 MCP 视为已准入，不建立 Trust Score/二次审核，只负责当前 Execution 的 Policy、Credential、SideEffect、Audit 与版本绑定。 | Accepted |
 | ADR-028 | 冻结 Cancellation/Timeout：Cancel Request 先进入 CANCELLING 并下传；ACK 不等于停止；Timeout 是 Failure Type；已 dispatch 副作用不确定时 UNKNOWN→Reconciliation；取消不隐式回滚。 | Accepted |
-| ADR-029 | POC-C C00–C16 阶段**技术评估**收口，Temporal 保留 Durable Adapter 优先候选；G2/G3/G6 完整硬门禁未过，生产主架构 NO-GO，后续归 ARCH-TODO-025。 | Accepted（仅评估处置；非生产 ADR） |
 
 # 19. MAF 扩展性验证要求
 
