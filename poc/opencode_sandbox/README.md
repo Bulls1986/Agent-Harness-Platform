@@ -6,6 +6,16 @@
 > 当前环境缺 Cube MicroVM/Template/Endpoint，真实 Cube 未通过；
 > Docker 与 OpenCode 2 的 PASS 仅作为对照证据。
 
+> **Session → Cube E2B 执行适配（新增离线 POC）**：
+> [`cube_e2b_session_adapter.py`](cube_e2b_session_adapter.py) 通过受信
+> `session_id/run_id/isolation_scope/lease_generation` 解析已分配的
+> `sandbox_id`，使用官方 E2B `Sandbox.connect(sandbox_id)`，
+> 然后调用 `commands.run`、`files.read/write`。离线夹具
+> [`verify_cube_e2b_session_routing.py`](verify_cube_e2b_session_routing.py)
+> 已验证两个 Session 路由到不同 ID、拒绝失效/跨 Scope 请求，并从
+> 重建的绑定表连接旧 ID。**此结果使用 Fake E2B Client，非真实 Cube，
+> 且尚未注入 OpenCode 2 原生 Tool Executor。**
+
 > **2026-10-09 当前关注点**：一个共享 OpenCode 2 Worker 服务多 Session；
 > 每个需要隔离执行的 Session 绑定其 CubeSandbox Lease。平台的绑定准入
 > 单元测试已通过，但 OpenCode 2 的原生 Shell/FS/PTY/Git/LSP/插件接口
