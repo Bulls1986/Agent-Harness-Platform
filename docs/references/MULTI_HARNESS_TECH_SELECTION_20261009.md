@@ -90,6 +90,9 @@ Pydantic AI Harness 0.54.0 + pydantic-ai-slim 2.54.0，
 并在不用工具时零次调用 E2B SDK create/connect。
 这些是**离线公开接口行为**，并未验证 Cube E2B 通信、工具执行和
 跨 Scope 隔离。Jev 只验证 `TypeSafeModel` 可导入。
+另在 Windows 本机实测 `LocalWorkspace` 创建抛 `NotImplementedError`
+（`LocalWorkspaceBackend` 只支持 POSIX），这是本地执行环境限制，
+不等于 Linux Worker 或 E2B/Cube 后端不支持。
 
 1. 对新候选 Pydantic AI Harness 先做公开接口无模型 smoke：
    `Agent + Coder/Tools`、`E2BSandbox` 是否接受既有 Workspace/Sandbox 引用，
