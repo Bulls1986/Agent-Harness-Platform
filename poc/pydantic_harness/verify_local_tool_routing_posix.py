@@ -84,7 +84,9 @@ async def main():
                 if isinstance(part, ToolReturnPart)
             ]
             assert len(returns) == 3, returns
-            assert all(identity in item for item in returns), returns
+            assert returns[0].startswith("Wrote "), returns
+            assert identity in returns[1], returns
+            assert identity in returns[2], returns
         print(json.dumps({
             "outcome": "PASS",
             "shared_agent_objects": 1,
