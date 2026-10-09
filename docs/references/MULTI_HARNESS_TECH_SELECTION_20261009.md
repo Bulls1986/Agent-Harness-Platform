@@ -106,6 +106,13 @@ Cube 真机 Pydantic `E2BSandbox + WorkspaceRef` 复用脚本已加入
 只在 `--live` 和 `CUBE_E2B_LIVE_CONFIRM=1` 同时满足时允许创建 Sandbox；
 未配置的环境保持 BLOCKED。
 
+**重连契约增量：** Pydantic AI Harness 0.54.0 的
+[`verify_e2b_ref_reconnect.py`](../../poc/pydantic_harness/verify_e2b_ref_reconnect.py)
+已使用公开 E2B SDK 接口的 Test Double 验证：
+一个 Session 的同一 SandboxRef 5 个并发获取者只有一次 `connect`；
+两个 Session Ref 连接句柄互不混用；既有/失效 Ref 不执行隐式
+`create`。这是 **SDK 边界 MOCK PASS**，不是 Cube 真实重连/恢复 PASS。
+
 1. 对新候选 Pydantic AI Harness 先做公开接口无模型 smoke：
    `Agent + Coder/Tools`、`E2BSandbox` 是否接受既有 Workspace/Sandbox 引用，
    Jev 的 `TypeSafeModel` 是否能在单独 Router 测试中工作；

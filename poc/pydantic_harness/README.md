@@ -19,6 +19,7 @@ RecoveryPoint、Approval、SandboxProvider SPI 的归属。
 | Coder 配合可选 Sandbox | `E2BSandbox() + Coder(repo_context=False, sub_agents=False)` 构造及无工具 Run，PASS |
 | 每 Run 明确 WorkspaceRef | 同一个 Coding Agent，两个不同 `WorkspaceRef(provider='e2b', ...)`，离线 Run PASS |
 | 不使用执行工具时惰性连接 | 通过 SDK `AsyncSandbox.create/connect` 反向监控，创建/连接调用为 0，PASS |
+| 已有 Session SandboxRef 的 E2B 重连 | **PASS（SDK mock）**：同一 Ref 5 个并发调用只 connect 一次；两个不同 Ref 对应两个 SDK 句柄，缺失 Ref 不自动创建（非 Cube 真机） |
 | 同一 Agent 并发 Run 的真实工具调用 | **PASS（Linux CI）**：两个独立 `LocalWorkspaceBackend`，共享 1 个 Agent，两个并发 Run 各执行 write_file/read_file/shell，最终文件分别为 alpha/beta，没有串写；不是 Cube 隔离证明 |
 | Cube E2B 真实复用 | `verify_cube_live.py --live` 测试脚本已提供，缺少 Cube Endpoint/Template，仍为 **BLOCKED** |
 | Jev / TypeSafeModel | Python API 可导入；无 TypeSafe 凭据、未完成决策质量验证 |
@@ -32,6 +33,7 @@ Linux 真实工具验证证据：[GitHub Actions 37890314786](https://github.com
 ```bash
 python -m pip install "pydantic-ai-harness[e2b]==0.54.0" "pydantic-ai-slim[typesafe]==2.54.0"
 python poc/pydantic_harness/verify_offline_density.py
+python poc/pydantic_harness/verify_e2b_ref_reconnect.py      # E2B 公共 SDK 边界模拟
 python poc/pydantic_harness/verify_local_tool_routing_posix.py  # Linux / POSIX
 python poc/pydantic_harness/verify_cube_live.py                 # 离线，不创建 Cube
 ```
@@ -64,3 +66,15 @@ E2B Endpoint、Template、数据面、Sandbox 生命周期：
 
 架构候选：[多 Harness 技术选型评估](../../docs/references/MULTI_HARNESS_TECH_SELECTION_20261009.md)；
 真实 Cube 合约入口：[`verify_cube_e2b.py`](../opencode_sandbox/verify_cube_e2b.py)。
+
+## Session 对应 SandboxRef 的当前结论
+
+- 同一 Pydantic AI Agent 可以跨 Run 使用不同 `WorkspaceRef`；
+  已有 SandboxRef 的真实 E2B 后端在工具首次使用时调用
+  `AsyncSandbox.connect(sandbox_id)` 而非 `AsyncSandbox.create()`。
+- 通过 SDK 公共接口的**离线替身**验证：2 个不同 Ref 隔离连接句柄，
+  每个 Ref 的 5 个并发获取者只产生 1 次 SDK connect；
+  Sandbox 不存在时不重新创建空环境。此行为符合平台任务级恢复对
+  WorkspaceRef 的预期，但仍未证明真实 Cube 的 resume、TTL 或网络可靠性。
+- 当前 CI 对跨 Session 的 Linux `LocalWorkspace` 文件/Shell 路由已有
+  真实执行证据；E2B 的 `connect` 和控制面语义依然必须通过 Cube 实测。
