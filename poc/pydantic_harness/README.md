@@ -19,11 +19,15 @@ RecoveryPoint、Approval、SandboxProvider SPI 的归属。
 | Coder 配合可选 Sandbox | `E2BSandbox() + Coder(repo_context=False, sub_agents=False)` 构造及无工具 Run，PASS |
 | 每 Run 明确 WorkspaceRef | 同一个 Coding Agent，两个不同 `WorkspaceRef(provider='e2b', ...)`，离线 Run PASS |
 | 不使用执行工具时惰性连接 | 通过 SDK `AsyncSandbox.create/connect` 反向监控，创建/连接调用为 0，PASS |
-| 同一 Agent 并发 Run 的真实工具调用 | Linux-only：两个独立 `LocalWorkspaceBackend`，真实 write_file/read_file/shell 工具三段链；新增 CI Gate，初次结果待确认 |
+| 同一 Agent 并发 Run 的真实工具调用 | **PASS（Linux CI）**：两个独立 `LocalWorkspaceBackend`，共享 1 个 Agent，两个并发 Run 各执行 write_file/read_file/shell，最终文件分别为 alpha/beta，没有串写；不是 Cube 隔离证明 |
 | Cube E2B 真实复用 | `verify_cube_live.py --live` 测试脚本已提供，缺少 Cube Endpoint/Template，仍为 **BLOCKED** |
 | Jev / TypeSafeModel | Python API 可导入；无 TypeSafe 凭据、未完成决策质量验证 |
 | Windows 本地执行 `LocalWorkspace` | **NOT SUPPORTED（本机实测）**：`LocalWorkspaceBackend` 因需要 POSIX 进程组超时/终止语义抛 `NotImplementedError`；可使用 Linux 或远程 E2B/Cube |
 | E2B 文件/Shell / Cube / Temporal | **未实测**，不可从以上结果推断 |
+
+Linux 真实工具验证证据：[GitHub Actions 37890314786](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37890314786)。
+验证的是 Pydantic Agent 的 **Run-scoped Workspace 路由**，不是
+`SessionRef` 自动透明路由，也不是 E2B/Cube MicroVM 隔离。
 
 ```bash
 python -m pip install "pydantic-ai-harness[e2b]==0.54.0" "pydantic-ai-slim[typesafe]==2.54.0"
