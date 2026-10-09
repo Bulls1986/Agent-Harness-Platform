@@ -9,6 +9,12 @@
 > 后者真实 Cube 未验证。OpenCode 2 Tool Transform、Shell Hook 等
 > 不应被理解为自动覆盖 FS/PTY/Git/LSP/插件等全部 Host 入口。
 
+> **新增执行路由夹具：**
+> `cube_e2b_session_adapter.py` + `verify_cube_e2b_session_routing.py`。
+> 使用公开 `E2B Sandbox.connect(sandbox_id)`/commands/files 调用形状；
+> 注入 Fake E2B 实例完成 2 Session/2 ID、错租约拒绝、绑定重建后继续读。
+> **OFFLINE MOCK PASS ≠ CUBE LIVE PASS ≠ OpenCode Native Tool 全接管。**
+
 ## 目标不是让各 Harness 自建 Sandbox
 
 `Agent Runtime SPI → SandboxProvider SPI → CubeSandbox E2B-compatible API`。

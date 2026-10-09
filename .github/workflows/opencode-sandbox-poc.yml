@@ -40,6 +40,8 @@ jobs:
           PY
       - name: Verify Session to Sandbox Lease fail-closed admission
         run: python poc/opencode_sandbox/verify_session_sandbox_binding.py
+      - name: Verify Session ID routes to distinct Cube E2B Sandbox.connect IDs
+        run: python poc/opencode_sandbox/verify_cube_e2b_session_routing.py
   sdk-docker-real-sandbox:
     runs-on: ubuntu-latest
     timeout-minutes: 18

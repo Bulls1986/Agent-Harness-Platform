@@ -138,6 +138,15 @@ Workspace/Task Facts 的恢复关系由平台掌握。
 该单测**只验证平台逻辑**，没有对 OpenCode Tool 或真实 Cube 发出请求，
 不能用于宣称架构门禁通过。
 
+**2026-10-09 离线执行链增量：** 已在 POC 中补
+[`CubeE2BSessionAdapter`](../../poc/opencode_sandbox/cube_e2b_session_adapter.py)，
+对每个来自可信控制平面的 Session 执行上下文解析 `sandbox_id`，
+调用官方 E2B `Sandbox.connect` 公开接口及 `commands/files`。
+2 Session → 2 模拟 Cube ID、错授权/过期 generation 拒绝、绑定重建后
+同 ID 复连单测 PASS（全部离线模拟 E2B Client，不创建 Cube MicroVM）。
+**OpenCode 2 Tool 的 `execute(input,context.sessionID)` 是下一步对接点，
+尚未运行真实模型工具调用，也未证明 Native Shell/FS/PTY 会经过此适配。**
+
 ## 4. 必须证明而非推断的验收矩阵
 
 > **2026-10-09 优先级调整**：先验证 CubeSandbox 作为生产 E2B Provider 的
