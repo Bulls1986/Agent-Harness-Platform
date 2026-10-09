@@ -6,6 +6,15 @@
 > 当前环境缺 Cube MicroVM/Template/Endpoint，真实 Cube 未通过；
 > Docker 与 OpenCode 2 的 PASS 仅作为对照证据。
 
+> **共享 Host Session→Sandbox 反向实验：**
+> [`verify_opencode2_shared_host_negative.py`](verify_opencode2_shared_host_negative.py)
+> 已证明（OpenCode 2.0.24、2 Session、2 模拟外部 Sandbox）：
+> 原生 `/api/shell` 在共享 Host 执行，**不会**仅凭 Session 的
+> Sandbox Binding 自动重定向。这是对共享 Host 拓扑的负面证据，
+> **不是 CubeSandbox 测试**。平台显式 Session Lease 路由的
+> `session_sandbox_router.py` 原型仍需完整复测；不能称为透明
+> OpenCode Tool Adapter。
+
 > **版本基线变更 2026-10-09：目标改为 OpenCode 2。**
 > [ARCH-TODO-024 架构变更候选（先登记、再验证）](../../docs/references/MULTI_HARNESS_SANDBOX_RUNTIME_DENSITY_CANDIDATE.md)；
 > 下文的 OpenCode 1.14.28 为不可删改的**历史实测**，不作为 OpenCode 2 通过证据。
