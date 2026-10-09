@@ -11,6 +11,33 @@ on:
       - ".github/workflows/opencode-sandbox-poc.yml"
 
 jobs:
+  cube-e2b-offline-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install public E2B and Cube client versions
+        run: python -m pip install --disable-pip-version-check "e2b==2.53.1" "cubesandbox==0.7.0" "openai-agents==0.23.1"
+      - name: Verify SDK public surface without contacting Cube
+        run: python poc/opencode_sandbox/verify_cube_e2b.py
+      - name: Verify unconfigured Cube live tests fail closed
+        run: |
+          python - <<'PY'
+          import os, subprocess, sys
+          env = os.environ.copy()
+          for key in ("E2B_API_URL", "E2B_API_KEY", "CUBE_API_URL", "CUBE_API_KEY",
+                      "CUBE_TEMPLATE_ID", "CUBE_E2B_LIVE_CONFIRM"):
+              env.pop(key, None)
+          result = subprocess.run(
+              [sys.executable, "poc/opencode_sandbox/verify_cube_e2b.py", "--live"],
+              env=env, text=True, capture_output=True, timeout=35
+          )
+          print(result.stdout.strip())
+          assert result.returncode == 2, result.returncode
+          PY
   sdk-docker-real-sandbox:
     runs-on: ubuntu-latest
     timeout-minutes: 18
