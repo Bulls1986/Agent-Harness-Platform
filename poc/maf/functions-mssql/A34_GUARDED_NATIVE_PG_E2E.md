@@ -79,6 +79,12 @@ python poc/maf/functions-mssql/verify_guarded_native_handoff.py
 Token 文件。生产环境绝不能暴露该临时 Gateway；真实 Tool/HTTP
 必须使用企业已有的 IAM、网络和 MCP 治理体系。
 
+
+## 2026-10-09：Native SIGKILL / Receipt 同链扩展
+
+`verify_guarded_receipt_local.py` 在原 A34 Guarded Gateway 增加可选独立 SQLite 副作用/Receipt 存储，调用平台真实 `ToolReceiptReconciler.prepare/observe`。实测官方 Worker A SIGKILL、B 原生 Handler **2** 次、受控外部实际写入 **1** 次；PostgreSQL 原 Attempt UNKNOWN，Reconciliation 经实际平台 Adapter 对账 **RESOLVED**；Native/MSSQL Failed 为预期 fail-closed。初次旧镜像缺冻结 Version Header 被 Gateway 拒绝，按当前代码通过本地缓存基础镜像重建后完整 PASS。
+
+环境临时 Compose 秘钥文件仅存在系统 Temp，退出删除，不提交到仓库。同链复测再次升级：本次仅通过可信测试 SQL **故障注入 Worker A Lease 已到期**，之后真实 `RecoveryCoordinator.recover()` 完成 Owner 撤销 / Fencing 2 / Attempt UNKNOWN / PENDING，再由真实 Receipt Adapter 置 RESOLVED；与 2026-10-08 原 A34 手工测试 SQL 完成 UNKNOWN 的历史实验严格区分。不宣称生产企业 Tool、自然 TTL 等待、跨节点或 Exactly Once。详见 [增量报告](../G6_NATIVE_RECEIPT_SINGLE_CHAIN_FINDINGS.md)。
 ## 仍然 OPEN
 
 - 真正生产 MCP/外部业务写与独立可信副作用 Receipt 的语义；

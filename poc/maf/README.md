@@ -438,6 +438,211 @@ are recorded in [DURABLE_FEASIBILITY.md](DURABLE_FEASIBILITY.md).
 - A23–A30: Postgres task facts and task-level recovery before claiming G2/G6.
 - A32/A33: real Python MAF Durable + Functions/MSSQL worker test.
 
+## A15 / G2 OSS Artifact, Evidence and Workspace actual S3 integration
+
+`oss_payload_refs.py` stores Harness-owned metadata (Run/Step/Attempt/
+Execution lineage, SHA-256, size, retention policy and tombstone) in PostgreSQL,
+while bytes live only in the ObjectStorage adapter. Actual S3 Put/Get/Delete
+is via optional `boto3`; no OSS engine, data-backup/HA layer or MCP governance
+is implemented. Restore enforces workspace-root paths, rejects symlinks and
+checks the object digest before atomic file replacement. RecoveryPoint references
+and explicit payload pins prevent purge while the Run remains recoverable;
+terminal Run cleanup preserves the minimal metadata tombstone.
+
+A repeatable **local isolated** S3-compatible SeaweedFS 3.99 + PostgreSQL
+acceptance (Docker required) creates disposable providers and ports, tests
+real Artifact/Evidence/Workspace bytes, tampering, recovery and retention,
+then removes only its own containers:
+
+    python -m pip install -r poc/maf/requirements-oss.txt
+    python poc/maf/verify_oss_acceptance.py
+
+Tests are in `test_oss_payload_refs_pg.py`; a generic CI run without boto3
+or an explicit isolated OSS endpoint SKIPs them. A local test result is NOT
+an enterprise OSS/Sandbox/Workspace multi-file restore certification.
+See [G2_G6_OSS_FINDINGS.md](G2_G6_OSS_FINDINGS.md).
+
+## G2/G6 Native Start ACK uncertainty (bounded)
+
+`native_start_ack.py` commits one immutable PG Native Launch Intent before
+calling the trusted adapter's native /run callback **once**. A lost HTTP ACK,
+invalid native instance ID or PG bind failure quarantines the original
+Attempt/Execution as UNKNOWN with PENDING Reconciliation; it never calls /run
+again. Retried prepare now deterministically fails as DurableBindingMismatch
+before dispatch, even when the original Attempt is UNKNOWN.
+
+The real PG test `test_native_start_ack_pg.py` uses a local HTTP server that
+commits a native-like instance into an independent SQLite DB and closes the
+actual TCP socket without an ACK. This is a **controlled native stub**, not
+MAF's official Durable Functions/MSSQL, and does not certify enterprise G6.
+See [G2_G6_NATIVE_ACK_FINDINGS.md](G2_G6_NATIVE_ACK_FINDINGS.md).
+
+The later `test_official_native_ack_pg.py` exercises **real official
+MAF Functions+MSSQL** on an existing trusted endpoint: a loopback proxy
+calls official /run exactly once and closes the downstream socket after the
+native instance was created but before platform ACK; PG quarantine/no replay
+is validated with the real coordinator and the test Instance is safely
+closed by a REJECTED HITL response. Set
+`POC_OFFICIAL_NATIVE_BASE_URL=http://127.0.0.1:17082` with an isolated
+`POC_POSTGRES_DSN` to opt in; it is intentionally NOT run by generic CI
+(disconnected CI has no local Functions+MSSQL service). This does not
+simulate an actual Functions Worker process crash.
+
+## G2/G6 RecoveryPoint reference and capability slice
+
+`recovery_point_store.py` persists only immutable Opaque checkpoint and
+Workspace/Repository/Sandbox references, plus Run/Step/Attempt Runtime identity
+and provider/environment fingerprints. Its read API explicitly returns
+CANDIDATE_REQUIRES_PROVIDER_VERIFICATION, never RECOVERED: actual MAF resume
+and workspace restore must be performed and verified by trusted Provider
+Adapters. Workspace-only references do not imply same-Attempt resume.
+The real PG tests in `test_recovery_point_store_pg.py` verify lineage,
+immutability and conservative refusal for version/capability mismatches.
+See [G2_G6_RECOVERY_POINT_FINDINGS.md](G2_G6_RECOVERY_POINT_FINDINGS.md).
+
+`verify_native_recovery_point.py` also performs a **real public MAF
+FileCheckpointStorage resume** from a PG RecoveryPoint across two different
+Python processes: restores identical Native Request/Run/Attempt, verifies
+the provider fingerprint before resuming and uses REJECTED to ensure no
+sensitive action. This is waiting-state MAF checkpoint, not a completed
+MSSQL RUNNING Executor/Workspace resume.
+
+## G6 bounded external HTTP Tool Receipt reconciliation
+
+`tool_receipt_reconciliation.py` adds a frozen, unique platform dispatch
+intent before an externally non-idempotent tool POST, and a separately recorded
+external COMMITTED receipt after an UNKNOWN/PENDING interruption. Reconciliation
+reads a receipt obtained from a trusted Tool Adapter; it **never re-POSTs the
+tool**. Original Attempt/Execution stay UNKNOWN and the Run stays RUNNING until
+a separate workflow decision. The PostgreSQL receipt fact is immutable and
+repeated observations are idempotent.
+
+`test_tool_receipt_reconciliation_pg.py` uses real PostgreSQL plus a distinct
+HTTP+SQLite sink with actual non-idempotent writes. It verifies lost ACK,
+service restart, receipt replay, missing/ambiguous receipts, invalid identities
+and concurrent reconciliation. The sink is a **controlled fixture**, not an
+enterprise MCP or business service and not a guarantee of Exactly Once.
+See [G6_TOOL_RECEIPT_FINDINGS.md](G6_TOOL_RECEIPT_FINDINGS.md).
+
+### G6 real Native fault and independent local Tool receipt, opt-in
+
+Run `python poc/maf/functions-mssql/verify_guarded_receipt_local.py` only on
+an isolated machine with the A34 MSSQL/PG/Azurite Docker fixtures and current
+v1 cached Guarded Worker. The test SIGKILLs Worker A while Worker B continues,
+checks exactly one actual local SQLite tool write, then calls the real platform
+ReceiptReconciler to RESOLVE its UNKNOWN/PENDING state; no business success or
+enterprise Tool Exactly Once is claimed. The wrapper uses temporary local
+Compose config and deletes the file on exit.
+See [single-chain report](G6_NATIVE_RECEIPT_SINGLE_CHAIN_FINDINGS.md).
+
+### 2026-10-09 authenticated G3 live-model acceptance result
+
+The local Windows user ran `configure_g3_windows.ps1`, and the authenticated
+acceptance was then re-run with the pinned venv and disposable Docker PG via
+`run_live_g3_local.py`. **Exit 0 / outcome PASS** for the bounded real-model
+text response chain (not the complete Responses API): **4** live content deltas,
+**6** persisted Typed Events, randomized nonce verified, HTTP worker restarted,
+and Last-Event-ID replay/snapshot comparison verified. The second worker had
+no model credentials and performed no second model call. No raw model output
+or credential was printed to the test log. Ephemeral PostgreSQL was removed.
+See [G3_LIVE_PROTOCOL_FINDINGS.md](G3_LIVE_PROTOCOL_FINDINGS.md).
+
+On Windows, `run_live_g3_local.py` also reads the **current user's** registry
+Environment when the connected WebCodex Runner predates the credential setup;
+a WebCodex restart is not needed for this POC helper. User Environment is not
+a secure vault: use only test-only credentials and rotate as required. Full
+Responses Tool/Approval/Artifact coverage is still outside this bounded PASS.
+
+## G3 bounded live model streaming (not yet full Gate PASS)
+
+New local-only POST /v1/live/responses accepts a text prompt with stream=true.
+It rejects non-loopback requests at the ASGI request boundary before model
+admission or platform database writes; a public API/IAM gateway is NOT provided.
+Only the one model configured in POC_LITELLM_MODEL is admitted. It calls actual
+MAF streaming via OpenAI-compatible LiteLLM, disables tools/file memory,
+persists each nonempty text delta into the platform PostgreSQL poc_events
+table, then emits the committed event over SSE. The GET
+/v1/responses/{run_id} snapshot reconstructs model output only from
+persisted deltas, and GET /v1/runs/{run_id}/events supports both ?after=N
+and run-scoped Last-Event-ID headers. No synthetic output or model retries.
+
+The MAF Harness enables Todo and Mode tools by default even with tool auto
+approval disabled. This model-only adapter explicitly uses disable_todo=True,
+disable_mode=True and tools=[]; the actual SDK request is checked for an empty
+toolset, stream=true, and store=false.
+
+An additional local contract gate uses **the real pinned MAF/OpenAI SDK**,
+a synthetic OpenAI-compatible SSE upstream, real PostgreSQL and two separate
+Uvicorn processes. It checks success, provider HTTP failure redaction and
+persistent Run/event replay, but it is NOT a real LiteLLM/model acceptance:
+
+    python poc/maf/verify_sdk_wire_protocol.py
+
+It requires POC_POSTGRES_DSN and needs no provider API Key. CI runs this
+real-SDK/simulated-upstream gate separately from any authenticated model proof.
+
+For the **authenticated live G3 gate**, supply environment variables to the
+**process that launches the local Runner / Python probe**:
+
+    POC_POSTGRES_DSN          # disposable, reachable PostgreSQL database
+    POC_LITELLM_API_KEY      # credential, never pass via CLI or logs
+    POC_LITELLM_MODEL        # the admitted model
+    POC_LITELLM_BASE_URL     # gateway OpenAI-compatible /v1 URL
+
+Then, from the repository root in the same environment, run:
+
+    python poc/maf/verify_live_model_protocol.py
+
+`--model` / `--base-url` are optional overrides; if set they take precedence
+over the corresponding environment variables. The key is **always read from
+POC_LITELLM_API_KEY first**. A trusted non-interactive stdin pipe remains
+optional for backward compatibility. The script does not try to read from
+an interactive terminal when no credential is set.
+
+Setting `$env:POC_LITELLM_API_KEY` in an unrelated PowerShell session does
+**not** inject it into an already-running WebCodex Runner. Configure the
+Runner's own launch environment and restart the Runner if needed. A `.env`
+file alone is not automatically loaded by an ordinary Python process.
+
+### Windows WebCodex Runner: one-time local configuration
+
+The locally connected WebCodex.exe launches webcodex-runner.exe in the
+interactive Windows user session. The nonsecret POC_LITELLM_BASE_URL and
+POC_LITELLM_MODEL values have already been registered in that user's Environment.
+
+Run this **locally** in PowerShell from the isolated Git worktree.
+It prompts once for the API key with hidden input, registers it for the current
+Windows user, and immediately runs the real-model G3 gate:
+
+    pwsh -NoProfile -File "poc/maf/configure_g3_windows.ps1"
+
+The Windows User environment is NOT an encrypted secret vault. Use only an
+approved, short-lived POC credential and remove or rotate it after testing.
+The API key is never part of the command-line arguments or committed files.
+The one-shot Python launcher reads newly set Windows User environment variables
+directly; an already-running WebCodex Runner does not need to restart.
+
+The one-shot launcher provisions disposable postgres:16-alpine on an ephemeral
+loopback port and removes the container on exit. A fresh per-run database
+credential travels only via process environment; no persistent PostgreSQL DSN
+or modification of the A34 database is required. Use the pinned temporary Python
+virtual environment installed during this POC. With the user variables ready:
+
+    python poc/maf/run_live_g3_local.py
+
+Add -ConfigureOnly to the PowerShell setup script to set the key without running
+the live gate. G3 stays NOT VERIFIED until an authenticated model run passes.
+
+It starts a real loopback HTTP process, streams an unpredictable nonce through
+the real model, shuts the process down, restarts without a model credential,
+then validates the same PG Run/Token SSE cursor and exact output reconstruction.
+Never pass a key through command-line arguments or commit it.
+
+This is a model-only restricted protocol slice, not complete Responses API
+compatibility. An in-flight stream lost with the HTTP worker is not
+automatically resumed or retried; G2/G6 recovery/reconciliation remains a
+separate hard gate. See [G3_LIVE_PROTOCOL_FINDINGS.md](G3_LIVE_PROTOCOL_FINDINGS.md).
+
 References: `docs/POC.md`, `docs/POC_A_TASK_PLAN.md` and Accepted Contracts.
 
 ## Upstream MinIO image caveat (2026-10-08)

@@ -124,3 +124,11 @@
    若新证据出现，建立新的 ADR 评审，不修改本次历史结论。
 
 **这是一个可封存的架构评估结论，不是生产系统已交付。**
+## 2026-10-09 后续验收增量（不改写 2026-10-08 历史决策）
+
+基于后续实施，G3 **真实内网 LiteLLM → 官方 MAF SDK → 平台 PostgreSQL Typed Event → HTTP Token SSE → 独立进程重启 → Last-Event-ID 精确回放**已在本机通过：4 个真实 Delta、6 条持久事件、随机验证码核验、第二 HTTP 进程无需模型密钥即可读取历史，验收脚本退出 0。详见 [G3 真实模型增量](G3_LIVE_PROTOCOL_FINDINGS.md)。
+
+G2/G6 后续在受控范围还新增了 [真实 MAF Durable Worker SIGKILL + 平台 RecoveryCoordinator + 非幂等外部回执同链](G6_NATIVE_RECEIPT_SINGLE_CHAIN_FINDINGS.md)，以及 [真实 MAF FileCheckpointStorage/PG RecoveryPoint](G2_G6_RECOVERY_POINT_FINDINGS.md)、[独立 OSS Workspace 单文件恢复](G2_G6_OSS_FINDINGS.md)。
+
+这些增量缩小了原来 Gate 中的技术 GAP，**没有**证明完整 Responses Tool/Approval/Artifact 协议、真实企业 MCP/业务系统副作用对账、正式生产 MSSQL HA/许可或所有 Coding Sandbox/Provider Swap Gate，故 2026-10-08 封存的「MAF 不单独担任 Harness Control Plane」结论**保持不变**。不得将多个局部 PASS 合并宣称整套生产 Gate PASS。
+

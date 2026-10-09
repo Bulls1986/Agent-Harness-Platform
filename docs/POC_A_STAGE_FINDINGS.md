@@ -75,6 +75,10 @@
 
 每次关键验证或缺口收敛，需要在本文件补充 **结论、验证范围、未证实部分、CI/日志链接、风险、下一决策点**。每个 POC-A 任务继续在 [执行计划](POC_A_TASK_PLAN.md) 中登记真实状态；实现细节写在 [POC README](../poc/maf/README.md)；需要改变架构边界时按 AGENTS.md 执行 Accepted Contract/ADR 流程，**不能仅靠台账认定架构已收口**。
 
+
+## 2026-10-09 / G3 真实模型到平台 Typed Event/SSE 收口增量
+
+新增本地实际验证：[G3 真实模型协议报告](../poc/maf/G3_LIVE_PROTOCOL_FINDINGS.md)。用户在 Windows 隐藏输入 Key 后，通过 `run_live_g3_local.py` 实际走内网 LiteLLM、锁定版 MAF SDK、平台 API、一次性 PostgreSQL、真实 Token SSE、独立 HTTP 进程重启与 Last-Event-ID Replay。报告输出 `outcome=PASS, real_model_invoked=true, live_delta_count=4, persisted_event_count=6, nonce_echo_verified=true, sse_cursor_replay_verified=true, http_process_restarted=true`。这是**受限文本模型流 G3 子门禁 PASS**；完整 Responses Item/Tool/Approval/Artifact 与多模态仍 GAP。早期未配置 Key 的说明不再代表最新执行状态；既有 2026-10-08 POC-A 独立控制平面 NO-GO 的历史决策仍有效。
 ## 6. 下一证据门槛
 
 - **A25**：单机 FileCheckpointStorage 的原生 Superstep Checkpoint 跨进程恢复在 POC 实测通过；接下来仍需验证绑定平台 RecoveryPoint、同 Attempt 真实阻断后恢复，以及私有分布式生产存储能否接入。

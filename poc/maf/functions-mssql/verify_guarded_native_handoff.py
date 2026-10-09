@@ -11,18 +11,25 @@ protected by a per-case random one-use fixture token; never expose in prod.
 """
 from __future__ import annotations
 
+import hashlib
 import json
+import os
 import re
 import secrets
+import sqlite3
 import subprocess
+import sys
+import tempfile
 import threading
 import time
+from contextlib import closing
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import verify_handoff as v
 
 ROOT = Path(__file__).resolve().parent
+sys.path.insert(0,str(ROOT.parent))  # platform-owned Receipt Adapter under poc/maf
 COMPOSE_FILE = ROOT.parent / "compose-functions-mssql-a34-guarded.yml"
 ENVFILE = ROOT / ".env.local"
 MIGRATION = ROOT.parent / "sql" / "008_durable_running_binding.sql"
@@ -37,6 +44,26 @@ PORT = 17105
 
 def shell(*argv: str) -> str:
     return subprocess.check_output(argv, text=True, stderr=subprocess.STDOUT).strip()
+
+
+def local_a34_pg_dsn() -> str:
+    """Read only a local disposable PG container's connection info.
+
+    Never print or persist database credentials. This is for the isolated
+    developer fixture; enterprise credential access belongs outside Harness.
+    """
+    from urllib.parse import quote
+    supplied = os.getenv("POC_A34_POSTGRES_DSN")
+    if supplied:
+        return supplied
+    envs = json.loads(subprocess.check_output(
+        ["docker","inspect","-f","{{json .Config.Env}}",POSTGRES],
+        text=True,timeout=15,
+    ))
+    password = next(item.split("=",1)[1] for item in envs
+                    if item.startswith("POSTGRES_PASSWORD="))
+    port = shell("docker","port",POSTGRES,"5432/tcp").rsplit(":",1)[1]
+    return f"postgresql://poc:{quote(password,safe='')}@127.0.0.1:{port}/poc_harness"
 
 
 def compose(*args: str) -> str:
@@ -175,6 +202,18 @@ class GateHandler(BaseHTTPRequestHandler):
                 if admitted == ["1"]:
                     # Controlled *external tool sink* receipt, only after
                     # committed PostgreSQL admission; no duplicate from replay.
+                    if ctx.get("receipt_sqlite"):
+                        # An independently committed SQLite business-effect
+                        # record; the MAF Worker never sees its receipt ID.
+                        with closing(sqlite3.connect(ctx["receipt_sqlite"])) as ext:
+                            ext.execute(
+                                """INSERT INTO external_effects
+                                   (receipt_id,operation_id,result_sha256)
+                                   VALUES (?,?,?)""",
+                                (secrets.token_hex(16),ctx["case"],
+                                 hashlib.sha256(("COMMITTED:"+ctx["case"]).encode()).hexdigest()),
+                            )
+                            ext.commit()
                     with (v.MARKERS / f"{ctx['case']}.tool_sink_effect").open(
                         "a", encoding="utf-8"
                     ) as f:
@@ -295,6 +334,17 @@ def main() -> None:
     token_file = v.MARKERS / (case + ".gateway_token")
     token_file.write_text(token, encoding="utf-8")
     ctx = {"case": case, "token": token}
+    receipt_mode = os.getenv("POC_A34_G6_RECEIPT") == "1"
+    receipt_tmp = None
+    reconciler = None
+    if receipt_mode:
+        receipt_tmp = tempfile.TemporaryDirectory(prefix="maf-a34-tool-receipt-")
+        ctx["receipt_sqlite"] = str(Path(receipt_tmp.name) / "external-effects.sqlite")
+        with closing(sqlite3.connect(ctx["receipt_sqlite"])) as db:
+            db.execute("""CREATE TABLE external_effects(
+                receipt_id text PRIMARY KEY, operation_id text NOT NULL,
+                result_sha256 text NOT NULL)""")
+            db.commit()
     # Version mismatch is also guarded in the normal single-fault test.
     server = GateServer(ctx)
     runner = threading.Thread(target=server.serve_forever, daemon=True)
@@ -302,6 +352,16 @@ def main() -> None:
     try:
         ids = prepare_pg(case)
         ctx["exec"] = ids["execution"]
+        if receipt_mode:
+            from tool_receipt_reconciliation import ToolDispatchIntent,ToolReceiptReconciler
+            pg((ROOT.parent / "sql" / "010_tool_receipt_reconciliation.sql").read_text(encoding="utf-8"))
+            reconciler = ToolReceiptReconciler(local_a34_pg_dsn())
+            reconciler.prepare(ToolDispatchIntent(
+                run_id=ids["run"],attempt_id=ids["attempt"],
+                execution_id=ids["execution"],
+                adapter_id="poc-http-sqlite-adapter",operation_id=case,
+                request_sha256=hashlib.sha256(("dispatch:"+case).encode()).hexdigest(),
+            ))
         v.BASE = FIRST
         compose("stop", "worker-b")
         compose("up", "-d", "--no-deps", "--force-recreate", "worker-a")
@@ -343,7 +403,28 @@ def main() -> None:
                    lambda: v.count(case, "guarded_admission_denied") >= 1, 20)
         if v.count(case, "tool_sink_effect") != 1:
             raise AssertionError("Duplicate external tool side effect observed")
-        set_unknown(ids)
+        if receipt_mode:
+            # The Worker A process has been SIGKILLed. Force only its
+            # platform-owned lease clock to expire in this trusted fault test;
+            # the real RecoveryCoordinator must perform all task transitions.
+            # This is NOT an organic production TTL-expiry observation.
+            expired = pg(
+                "UPDATE poc_execution_ownership "
+                "SET lease_expires_at=now()-interval '1 second' "
+                f"WHERE execution_id='{ids['execution']}' "
+                "AND owner_id='MAF-worker-A' AND dispatched_at IS NOT NULL "
+                "AND revoked_at IS NULL RETURNING 1;"
+            )
+            if expired != ["1"]:
+                raise AssertionError("Could not inject expired owner lease for recovery test")
+            from recovery_boundary import RecoveryCoordinator
+            recovery = RecoveryCoordinator(local_a34_pg_dsn()).recover(
+                ids["run"],interrupted_attempt_id=ids["attempt"]
+            )
+            if recovery.outcome != "RECONCILIATION":
+                raise AssertionError("Real RecoveryCoordinator did not quarantine UNKNOWN")
+        else:
+            set_unknown(ids)  # unchanged legacy A34 controlled-SQL scenario
         postgres = audit_pg(ids, instance)
         if len(postgres)!=1 or postgres[0].split("|")[:4]!=["t","2","UNKNOWN","UNKNOWN"]:
             raise AssertionError("Postgres state/owner fence mismatch: " + repr(postgres))
@@ -358,6 +439,38 @@ def main() -> None:
             raise AssertionError("Native must fail closed on unsafe replay")
         if "HARNESS_TOOL_REPLAY_DENIED" not in str(native.get("output")):
             raise AssertionError("Native failure reason did not reflect admission guard")
+        receipt_proof = None
+        if receipt_mode:
+            from tool_receipt_reconciliation import ExternalToolReceipt
+            with closing(sqlite3.connect(ctx["receipt_sqlite"])) as external_db:
+                row = external_db.execute(
+                    "SELECT receipt_id,result_sha256 FROM external_effects WHERE operation_id=?",
+                    (case,),
+                ).fetchall()
+            if len(row) != 1:
+                raise AssertionError("External persistent side-effect count must remain 1")
+            outcome = reconciler.observe(
+                ids["run"],ExternalToolReceipt(
+                    execution_id=ids["execution"],
+                    adapter_id="poc-http-sqlite-adapter",
+                    operation_id=case,external_receipt_id=row[0][0],
+                    result_sha256=row[0][1],result_kind="COMMITTED",
+                ),execution_id=ids["execution"],
+            )
+            if outcome != "RECEIPT_CONFIRMED_NO_REDISPATCH":
+                raise AssertionError("Trusted receipt reconciliation did not complete")
+            final_pg = pg(
+                "SELECT state FROM poc_reconciliations "
+                f"WHERE execution_id='{ids['execution']}';"
+            )
+            if final_pg != ["RESOLVED"]:
+                raise AssertionError("Reconciliation must be durably RESOLVED")
+            receipt_proof = {
+                "external_receipt_count":len(row),
+                "platform_reconciliation_state":"RESOLVED",
+                "receipt_adapter_invoked":True,
+                "external_sqlite_independent_from_pg":True,
+            }
         result = {
             "scenario": "A34-NATIVE-MSSQL-PG-GUARDED-EXECUTOR-REPLAY",
             "native_instance": instance,
@@ -372,10 +485,13 @@ def main() -> None:
             "tool_sink_effect_count": v.count(case,"tool_sink_effect"),
             "postgres_attempt_count": 1,
             "postgres_attempt_state": "UNKNOWN",
-            "postgres_reconciliation_state": "PENDING",
+            "postgres_reconciliation_state": "RESOLVED" if receipt_mode else "PENDING",
+            "real_recovery_coordinator_invoked": receipt_mode,
+            "owner_lease_expiry_fault_injected": receipt_mode,
             "postgres_fencing_token": 2,
             "native_binding_immutable": True,
             "production_exactly_once_proven": False,
+            "non_idempotent_receipt_reconciliation": receipt_proof,
             "status": "PASS_GUARDED_REPLAY_SINGLE_FAULT_CHAIN",
         }
         if result["native_executor_entry_count"] < 2:
@@ -385,6 +501,8 @@ def main() -> None:
         server.shutdown()
         server.server_close()
         token_file.unlink(missing_ok=True)
+        if receipt_tmp is not None:
+            receipt_tmp.cleanup()
 
 
 if __name__ == "__main__":

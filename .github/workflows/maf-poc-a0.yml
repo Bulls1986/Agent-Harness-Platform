@@ -98,11 +98,36 @@ jobs:
           POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
         run: |
           python -m unittest discover -s poc/maf/tests -p "test_protocol_service_pg.py" -v
+          python -m unittest discover -s poc/maf/tests -p "test_live_model_protocol.py" -v
+          python -m unittest discover -s poc/maf/tests -p "test_live_probe_configuration.py" -v
+          python -m unittest discover -s poc/maf/tests -p "test_run_live_g3_local.py" -v
           python poc/maf/verify_selfhost_protocol.py
+          # Real MAF SDK and separate HTTP/PG/SSE process; loopback fake upstream only.
+          python poc/maf/verify_sdk_wire_protocol.py
       - name: A24/A27/A28 native Session and safe recovery PostgreSQL tests
         env:
           POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
         run: python -m unittest discover -s poc/maf/tests -p "test_session_recovery_pg.py" -v
+      - name: G6 external non-idempotent Tool Receipt and reconciliation (HTTP SQLite + PostgreSQL)
+        env:
+          POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
+        run: python -m unittest discover -s poc/maf/tests -p "test_tool_receipt_reconciliation_pg.py" -v
+      - name: G2/G6 immutable RecoveryPoint references and capability gating (PostgreSQL)
+        env:
+          POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
+        run: python -m unittest discover -s poc/maf/tests -p "test_recovery_point_store_pg.py" -v
+      - name: A15 external object adapter regression (SKIP without approved S3 + optional boto3)
+        env:
+          POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
+        run: python -m unittest discover -s poc/maf/tests -p "test_oss_payload_refs_pg.py" -v
+      - name: G2 actual MAF public FileCheckpointStorage restore from PG RecoveryPoint across processes
+        env:
+          POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
+        run: python poc/maf/verify_native_recovery_point.py
+      - name: G2/G6 native start real TCP ACK loss safe PG quarantine (bounded HTTP stub)
+        env:
+          POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness
+        run: python -m unittest discover -s poc/maf/tests -p "test_native_start_ack_pg.py" -v
       - name: A24/A27 distinct worker-process kill and restart
         env:
           POC_POSTGRES_DSN: postgresql://poc:ci-not-a-real-secret@127.0.0.1:54329/poc_harness

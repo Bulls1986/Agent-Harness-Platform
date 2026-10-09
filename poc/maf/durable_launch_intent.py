@@ -50,6 +50,19 @@ class DurableLaunchIntentStore:
                 row = cur.fetchone()
                 if row is None or row[0] != "RUNNING":
                     raise DurableBindingMismatch("No active Run for native launch")
+                # A quarantined UNKNOWN Attempt fails the trigger before a
+                # duplicate-key check. Recognize any earlier intent while
+                # holding the Run lock, so duplicates always fail closed as
+                # the same typed no-relaunch decision.
+                cur.execute(
+                    """SELECT 1 FROM poc_maf_durable_launch_intents
+                       WHERE execution_id=%s OR attempt_id=%s LIMIT 1""",
+                    (binding.execution_id,binding.attempt_id),
+                )
+                if cur.fetchone() is not None:
+                    raise DurableBindingMismatch(
+                        "Native launch intent already exists: no blind /run replay"
+                    )
                 try:
                     cur.execute(
                         """INSERT INTO poc_maf_durable_launch_intents
