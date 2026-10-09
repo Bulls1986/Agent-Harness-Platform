@@ -9,7 +9,15 @@
 > 携带隔离环境内生成的临时凭据 `POST /api/session` 可创建 Session
 > 并返回 `location.directory=/workspace`。
 > 本地旧 `/api/health` 路径返回 404，不能直接沿用 V1 的健康探针。
-> 尚未验证 V2 SDK Host 的共享进程并发安全与实际跨 Harness 文件接力。
+> V2 SDK Host 的共享进程并发安全尚未验证；跨 Harness 的原生 API/Tool
+> 文件接力仅在**同一 Sandbox、零模型、限定命令**场景获得证据。
+>
+> **架构记录后的后续实测更新：** OpenCode 2.0.24（immutable image digest）
+> 与 OpenAI Agents SDK 0.23.1 在**同一 Docker Sandbox** 完成 SDK FunctionTool
+> 写文件 → OpenCode 2 原生 `/api/fs/read/*` 读文件 →
+> OpenCode 2 原生 `/api/shell` 写文件 → SDK FunctionTool 读取校验，
+> **限定 PASS**；零模型调用。共享 Host 多项目隔离、Git/LSP/插件、真机 Cube
+> 以及端到端 Agent Loop 未通过，仍不得作为生产 GO。
 
 > 2026-10-09。**专项进行中，不是 G5 或共享 Coding Runtime 的生产 GO。**
 > 本专项遵循既有 Workspace/Sandbox、Control/Data Plane 和容量契约，
@@ -43,6 +51,7 @@
 | 统一 SandboxProvider / Docker 两个隔离 Scope | PASS（有限） | 真实非 root/只读根目录/无网络容器；同一绑定的两个逻辑角色顺序复用、异绑定拒绝 |
 | OpenAI Agents SDK 0.23.1 原生 DockerSandboxClient | PASS（有限） | 官方公开 API 创建 SandboxSession 并在 Docker 容器内执行命令；不调用模型 |
 | OpenAI Agents SDK 0.23.1 统一 Tool Adapter | PASS（有限） | SDK 原生 FunctionTool 解析与回调 → 平台提供的同一个 Docker SandboxProvider，真实 Shell/Read/Write |
+| OpenCode 2.0.24 与 OpenAI SDK 同物理 Sandbox 双向接力 | PASS（有限） | 同一 Lease 内 V2 Server 创建 2 个逻辑 Session；SDK FunctionTools 与 V2 原生 FS/Shell 共享文件；无模型 |
 
 测试 **没有**证明 OpenCode 的任意 Tool 能在跨项目场景安全路由，
 更没有证明同一进程能够安全执行来自不同用户的任意不可信代码。
@@ -93,6 +102,20 @@ Workspace 恢复或平台实际 Policy/Approval 接口。
 SDK Native 优先复用官方客户端，不要在 Harness 中复制官方
 SandboxSession 的文件操作、Snapshot、Resume 等机制；工具层
 转发仅作为需要共享平台 Sandbox Lease 时的薄适配备选。
+
+### OpenCode 2 + OpenAI SDK 同物理 Sandbox 接力
+
+```bash
+docker pull ghcr.io/anomalyco/opencode@sha256:9500f3474188a4b89e165c65fada370dbde5e038cc3b751ed5dcbd27d7620315
+python poc/opencode_sandbox/verify_opencode2_sdk_handoff.py
+```
+
+这个 POC 使用带限制的 Docker Sandbox：网络关闭、只读根目录、独立
+`/workspace` tmpfs、非 root 用户和资源上限。OpenCode 2 的 HTTP
+只绑定 Sandbox 内的 127.0.0.1，Basic Auth 密码按次生成，仅在测试中
+内存持有，不记录密码、请求鉴权头或容器日志原文。
+验证的是 OpenAI SDK 公共 Tool Callback 与 OpenCode 2 原生
+Session/FS/Shell API 的可复用性，不是模型 Agent 已经自主完成交接。
 
 ## 执行入口
 
