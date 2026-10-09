@@ -5,6 +5,12 @@
 > [离线/真实 Cube 合约测试](verify_cube_e2b.py)。
 > 当前环境缺 Cube MicroVM/Template/Endpoint，真实 Cube 未通过；
 > Docker 与 OpenCode 2 的 PASS 仅作为对照证据。
+> **主机自检已修正：** WSL2 的 KVM 创建 VM ioctl 实际可用，
+> 先前基于未透传设备的普通容器得出的缺 KVM 结论不准确。
+> 当前真正阻塞项为 XFS/实际磁盘空间/共享机器的 RAM 预算以及
+> 尚未部署的 Cube Control/Data Plane。见
+> [Cube E2B 环境报告](CUBE_E2B_COMPATIBILITY_FINDINGS.md)
+> 和只读 [Host Readiness](verify_cube_host_readiness.py)。
 
 > **Session → Cube E2B 执行适配（新增离线 POC）**：
 > [`cube_e2b_session_adapter.py`](cube_e2b_session_adapter.py) 通过受信
