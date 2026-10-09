@@ -20,6 +20,7 @@
 - [POC-C / C11 隔离 Sandbox + S3 Artifact/Evidence 引用与 Tombstone](poc/temporal/C11_SANDBOX_ARTIFACT_FINDINGS.md)
 - [POC-C / C13 原生 OpenTelemetry 与 Harness Correlation/部署依赖](poc/temporal/C13_OTEL_FINDINGS.md)
 - [POC-C / C14 MAF 与 Temporal 全 Gate/场景比较与条件选型](poc/temporal/C14_COMPARATIVE_DECISION.md)
+- [OpenCode + E2B/CubeSandbox + 共享 Runtime 专项 POC（在研）](poc/opencode_sandbox/README.md)
 - [POC-A 阶段性结论与证据台账](docs/POC_A_STAGE_FINDINGS.md)
 - [POC-A / A30 任务恢复覆盖矩阵](docs/POC_A_RECOVERY_MATRIX.md)
 - [架构待办 / Architecture Backlog](docs/ARCHITECTURE_BACKLOG.md)
