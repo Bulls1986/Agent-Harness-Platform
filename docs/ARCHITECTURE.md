@@ -23,6 +23,14 @@
 > 就宣称后者安全。此补充不覆盖既有 Accepted Contract，也不改变首轮
 > MAF/Temporal Durable 架构选型结论。
 
+> **2026-10-09 选型候选补充（非 Accepted ADR）：**
+> 记录[基于当前实际可用能力的多 Harness 技术栈对比](references/MULTI_HARNESS_TECH_SELECTION_20261009.md)。
+> 新增 Pydantic AI Harness（Jev/TypeSafeModel + Coder/Skills/Subagents +
+> E2B Workspace + TemporalDurability）作为高匹配度**新候选**，仍保留
+> 既有 OpenCode 2 Coding Agent 和 OpenAI Agents SDK/MAF 等 Runtime。
+> 当前 POC 先完成可选 Sandbox/Session Binding 功能闭环；
+> 完整隔离仍是生产门禁，不因阶段放宽而从正式 Contract 移除。
+
 # 执行摘要
 
 **本设计目标不是选择某一个 Agent Framework 作为企业平台本体，而是建设一个厂商无关的 Agent Harness Platform：控制平面掌握任务生命周期、策略、状态、恢复和审计；执行平面承载 Agent Runtime、模型、工具与 Sandbox。任何具体框架均通过 Adapter / SPI 接入。**

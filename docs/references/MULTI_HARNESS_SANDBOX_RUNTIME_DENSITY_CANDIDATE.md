@@ -4,6 +4,14 @@
 > 日期：2026-10-09
 > 对应：ARCH-TODO-024、ARCH-TODO-020；[专项 POC](../../poc/opencode_sandbox/README.md)
 
+> **2026-10-09 范围澄清：** 当前实现原本就不是完全隔离；本期先报告
+> 各 Harness 能力的真实可用程度，Session→Sandbox 绑定/执行功能性
+> POC 不以完整隔离为前置条件。原文严格隔离条款是**生产验收约束**，
+> 不因本期 POC 放宽而删除。已另外登记
+> [多 Harness 技术选型增量评估](MULTI_HARNESS_TECH_SELECTION_20261009.md)：
+> 新增 Pydantic AI Harness + Temporal + Cube(E2B) 高匹配度挑战者，
+> 并保留 OpenAI Agents SDK、MAF、OpenCode 2 的渐进共存方案。
+
 ## 1. 触发背景及变更范围
 
 未来 PDLC、AI 企业门户需要不同的逻辑专业 Agent（产品、研发、测试、知识、业务等），
