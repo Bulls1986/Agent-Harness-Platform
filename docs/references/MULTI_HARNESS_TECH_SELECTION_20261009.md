@@ -22,7 +22,7 @@
 
 | 组合 | 贴合能力 | 缺口/风险 | 本仓库证据 |
 |---|---|---|---|
-| **Pydantic AI Harness + Temporal + Cube(E2B)** | Pydantic AI 有 Jev/TypeSafeModel 决策模型、标准 Agent/Tools；Harness 的 Coder、Skills、Subagents、E2BSandbox、WorkspaceRef 按需绑定；原生 TemporalDurability | Harness 当前 0.x，接口升级成本；E2BSandbox→Cube 真机、模型链、外部沙箱重连、安全/恢复尚未跑；不能直接替换已经成熟的 OpenCode 编码体验 | **新候选：仅官方公开文档核实，未实测** |
+| **Pydantic AI Harness + Temporal + Cube(E2B)** | Pydantic AI 有 Jev/TypeSafeModel 决策模型、标准 Agent/Tools；Harness 的 Coder、Skills、Subagents、E2BSandbox、WorkspaceRef 按需绑定；原生 TemporalDurability | Harness 当前 0.x，接口升级成本；E2BSandbox→Cube 真机、模型链、外部沙箱重连、安全/恢复尚未跑；不能直接替换已经成熟的 OpenCode 编码体验 | **0.54.0 离线 20 并发 Run、两种 WorkspaceRef、零 E2B 创建/连接 PASS**；Cube 未测 |
 | **OpenAI Agents SDK + Temporal + Cube(E2B)** | 官方 SandboxAgent + E2BSandboxClient；Temporal 官方独立集成（含 Sandbox），能在共享应用 Worker 中调用多个 Run；丰富 handoff/tool/审批机制 | Cube 官方案例有兼容修补；单独支持 Jev 必须做决策模型 Adapter；无法无代价复用 OpenCode 的 Coding 能力 | Docker 原生 SandboxClient、FunctionTool 已实测；Cube 真机未跑 |
 | **MAF + MAF Durable 或 Temporal + Cube Tool Adapter** | 强 Workflow/Executor + Checkpoint；业务型专业 Agent、SDK Runtime Pool 可行；已有 POC-A | SDK 没有可直接视作本项目全面通过的 Cube/E2B 原生 Sandbox Client；SQL Durable 许可/运行与跨 Harness 不确定窗口仍有待闭合 | MAF POC-A 相关 Gate 局部通过；Cube 路径未实测 |
 | **OpenCode 2 + Cube(E2B)** | 完整 Coding Harness、Skills、Session、Plugin；共享 V2 Server/嵌入 Host 为高密度候选；既有 PDLC 资产可直接继承 | 原生 Shell/FS/PTY 等**不会**因 Session 绑定自动远程执行；不能宣称共享 Host + 每 Session Cube 完全透明可用 | V2 Docker Sandbox 内 Session + SDK 文件接力通过；原生 Shell 路由的反向实验已确认 |
@@ -81,6 +81,15 @@ MAF Durable 与 Temporal 的平台级二选一继续依原 POC-C 比较，
 Docker 基线，**尚无 Cube 实际运行实例**。
 
 ## 5. 推荐最短 POC（暂不改 Accepted ADR）
+
+**2026-10-09 执行增量：** 已运行
+[`poc/pydantic_harness/verify_offline_density.py`](../../poc/pydantic_harness/README.md)：
+Pydantic AI Harness 0.54.0 + pydantic-ai-slim 2.54.0，
+20 个并发模拟 Run 使用同一个 Agent 实例，
+同一个 Coding Agent 可在不同 Run 接收独立 `WorkspaceRef`，
+并在不用工具时零次调用 E2B SDK create/connect。
+这些是**离线公开接口行为**，并未验证 Cube E2B 通信、工具执行和
+跨 Scope 隔离。Jev 只验证 `TypeSafeModel` 可导入。
 
 1. 对新候选 Pydantic AI Harness 先做公开接口无模型 smoke：
    `Agent + Coder/Tools`、`E2BSandbox` 是否接受既有 Workspace/Sandbox 引用，
