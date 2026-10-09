@@ -25,3 +25,19 @@ jobs:
         run: python poc/pydantic_harness/verify_offline_density.py
       - name: Verify actual Coder tools with concurrent Run-scoped POSIX workspaces
         run: python poc/pydantic_harness/verify_local_tool_routing_posix.py
+      - name: Verify Cube compatibility test refuses unconfigured live requests
+        run: |
+          python poc/pydantic_harness/verify_cube_live.py
+          python - <<'PY'
+          import os, subprocess, sys
+          env = os.environ.copy()
+          for key in ("CUBE_API_URL", "E2B_API_URL", "CUBE_TEMPLATE_ID",
+                      "E2B_API_KEY", "CUBE_API_KEY", "CUBE_E2B_LIVE_CONFIRM"):
+              env.pop(key, None)
+          result = subprocess.run(
+              [sys.executable, "poc/pydantic_harness/verify_cube_live.py", "--live"],
+              env=env, text=True, capture_output=True, timeout=30
+          )
+          print(result.stdout.strip())
+          assert result.returncode == 2, result.returncode
+          PY
