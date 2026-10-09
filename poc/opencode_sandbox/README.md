@@ -6,6 +6,12 @@
 > 当前环境缺 Cube MicroVM/Template/Endpoint，真实 Cube 未通过；
 > Docker 与 OpenCode 2 的 PASS 仅作为对照证据。
 
+> **2026-10-09 当前关注点**：一个共享 OpenCode 2 Worker 服务多 Session；
+> 每个需要隔离执行的 Session 绑定其 CubeSandbox Lease。平台的绑定准入
+> 单元测试已通过，但 OpenCode 2 的原生 Shell/FS/PTY/Git/LSP/插件接口
+> 尚未证明全部受此绑定控制。详见
+> [架构候选 3.5](../../docs/references/MULTI_HARNESS_SANDBOX_RUNTIME_DENSITY_CANDIDATE.md)。
+
 > **共享 Host Session→Sandbox 反向实验：**
 > [`verify_opencode2_shared_host_negative.py`](verify_opencode2_shared_host_negative.py)
 > 已证明（OpenCode 2.0.24、2 Session、2 模拟外部 Sandbox）：
@@ -67,6 +73,14 @@
 | OpenAI Agents SDK 0.23.1 原生 DockerSandboxClient | PASS（有限） | 官方公开 API 创建 SandboxSession 并在 Docker 容器内执行命令；不调用模型 |
 | OpenAI Agents SDK 0.23.1 统一 Tool Adapter | PASS（有限） | SDK 原生 FunctionTool 解析与回调 → 平台提供的同一个 Docker SandboxProvider，真实 Shell/Read/Write |
 | OpenCode 2.0.24 与 OpenAI SDK 同物理 Sandbox 双向接力 | PASS（有限） | 同一 Lease 内 V2 Server 创建 2 个逻辑 Session；SDK FunctionTools 与 V2 原生 FS/Shell 共享文件；无模型 |
+| 平台 Session→Sandbox 绑定准入 | PASS（仅逻辑） | 2 Session / 2 Sandbox ID，未知、跨 Scope、陈旧 generation 拒绝；非 OpenCode 原生工具接入 |
+| 共享 V2 Host 所有工具根据 Session 切到指定 Cube Sandbox | **NOT PROVEN** | Tool Transform 候选可行，但原生 Shell/FS/PTY/Git/LSP/插件路径未封闭 |
+
+可复验绑定层纯逻辑夹具：
+
+```bash
+python poc/opencode_sandbox/verify_session_sandbox_binding.py
+```
 
 测试 **没有**证明 OpenCode 的任意 Tool 能在跨项目场景安全路由，
 更没有证明同一进程能够安全执行来自不同用户的任意不可信代码。

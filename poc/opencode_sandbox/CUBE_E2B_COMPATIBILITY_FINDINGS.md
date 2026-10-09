@@ -3,6 +3,12 @@
 > 日期：2026-10-09。状态：**主线 POC / NOT GO**。优先级高于共享 OpenCode
 > SDK Host 密度测试。此文件记录候选能力，不替代 Accepted Architecture Contract。
 
+> **Session 绑定门禁补充**：每个需隔离执行的 OpenCode 2 Session
+> 必须由平台映射到经 Policy 授权的 Cube Sandbox Lease；
+> 绑定映射与 E2B SDK 创建/连接分属两层。前者单元测试 PASS，
+> 后者真实 Cube 未验证。OpenCode 2 Tool Transform、Shell Hook 等
+> 不应被理解为自动覆盖 FS/PTY/Git/LSP/插件等全部 Host 入口。
+
 ## 目标不是让各 Harness 自建 Sandbox
 
 `Agent Runtime SPI → SandboxProvider SPI → CubeSandbox E2B-compatible API`。

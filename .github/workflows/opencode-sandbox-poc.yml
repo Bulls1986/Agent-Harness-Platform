@@ -38,6 +38,8 @@ jobs:
           print(result.stdout.strip())
           assert result.returncode == 2, result.returncode
           PY
+      - name: Verify Session to Sandbox Lease fail-closed admission
+        run: python poc/opencode_sandbox/verify_session_sandbox_binding.py
   sdk-docker-real-sandbox:
     runs-on: ubuntu-latest
     timeout-minutes: 18
