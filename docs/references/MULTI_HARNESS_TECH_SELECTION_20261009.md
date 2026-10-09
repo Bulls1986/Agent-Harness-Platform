@@ -94,6 +94,18 @@ Pydantic AI Harness 0.54.0 + pydantic-ai-slim 2.54.0，
 （`LocalWorkspaceBackend` 只支持 POSIX），这是本地执行环境限制，
 不等于 Linux Worker 或 E2B/Cube 后端不支持。
 
+**2026-10-09 真实工具增量：** Linux CI 中共享 1 个 Pydantic Agent
+分别给两个并发 Run 传入独立 `LocalWorkspaceBackend`，通过
+确定性 FunctionModel 真实触发各自的 `write_file`、`read_file`
+和 `shell`；文件最终分别为 `alpha` 和 `beta`，没有发生
+跨 Workspace 串写。这证明 Pydantic **公开的 Run-scoped Tool
+执行路由**符合当前功能性 POC，但并未涉及 Cube/E2B 协议、
+MicroVM、暂停恢复或多框架完整 Agent Loop。
+Cube 真机 Pydantic `E2BSandbox + WorkspaceRef` 复用脚本已加入
+[`verify_cube_live.py`](../../poc/pydantic_harness/verify_cube_live.py)，
+只在 `--live` 和 `CUBE_E2B_LIVE_CONFIRM=1` 同时满足时允许创建 Sandbox；
+未配置的环境保持 BLOCKED。
+
 1. 对新候选 Pydantic AI Harness 先做公开接口无模型 smoke：
    `Agent + Coder/Tools`、`E2BSandbox` 是否接受既有 Workspace/Sandbox 引用，
    Jev 的 `TypeSafeModel` 是否能在单独 Router 测试中工作；
