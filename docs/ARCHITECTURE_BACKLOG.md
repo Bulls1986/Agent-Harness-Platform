@@ -585,6 +585,14 @@ Harness 仍负责具体 Execution 的 Capability / Policy / Approval / Credentia
 
 **状态：TODO**
 
+**2026-10-09 增量 POC：** 已开始验证同一个 SandboxProvider
+在 OpenCode 与 OpenAI Agents SDK 等不同 Harness 之间的适配。
+见 [OpenCode / OpenAI Agents SDK 统一 Sandbox 专项](../poc/opencode_sandbox/README.md)。
+目前 Docker 统一 Provider 的任务 Scope 隔离和 SDK Native/FunctionTool
+局部实测通过，但 Cube/E2B 真机、OpenCode 全工具隔离、真实
+跨 Harness 同物理 Sandbox 接力、容量压测都未验，**本待办保持 TODO，
+不得将专项局部 PASS 升级为跨 Harness Provider Contract 全面通过**。
+
 需要建立平台级 Contract Suite，而不是只靠接口签名保证可替换性。
 
 至少覆盖：
