@@ -608,6 +608,28 @@ Harness 仍负责具体 Execution 的 Capability / Policy / Approval / Credentia
 
 目标：替换实现后，上层 Workflow 与领域模型无需修改。
 
+## ARCH-TODO-024 Multi-Harness Sandbox & Shared Runtime Density
+
+**状态：POC / ARCHITECTURE CANDIDATE（未接受）**
+
+**触发：** PDLC 与 AI 企业门户的专业 Agent 将运行于 OpenCode 2、
+OpenAI Agents SDK、MAF 等不同 Harness。高密度要求逻辑 Session 不与
+Runtime Worker/Sandbox 一一绑定；Sandbox 由 Execution Capability
+按需申请，且跨 Harness 可共享**平台 SandboxProvider 契约**。
+
+**本轮候选文档：** [多 Harness 共享 Sandbox 与 Runtime 密度](references/MULTI_HARNESS_SANDBOX_RUNTIME_DENSITY_CANDIDATE.md)。
+
+**核心未决：** OpenCode 2 SDK Host 的多 Session/CWD/LSP/PTY/插件文件隔离能否
+通过公开扩展点建立；Harness-in-Sandbox 与 Shared Host 两拓扑的真实
+资源优势；OpenCode 2 和 OpenAI Agents SDK 使用同一个实际 Sandbox
+完成 Workspace 接力；CubeSandbox 全链 conformance 和安全恢复。
+
+**收口要求：** 对照同等隔离/负载完成安全、资源和任务级恢复验收后，
+再决定生产主拓扑、更新 Accepted ADR。当前不改变 P0/P1 已接受约束，
+不得因为 OpenCode 2 新 API 就修改平台领域模型。
+
+---
+
 # 5. 推荐讨论顺序
 
 按依赖关系建议：
@@ -736,50 +758,3 @@ MAF SkillsProvider
 - E2E Evidence、失败恢复与成本控制。
 
 该主题单独讨论，避免 Workspace/Git Contract 承担部署环境职责。
-
----
-
-## ARCH-TODO-024 Microsoft Execution Containers（MXC）Sandbox Backend 候选
-
-**状态：DEFERRED（Candidate / 未采纳 / 未验证）**
-
-**来源：** Microsoft 于 2026-10-07 宣布 MXC GA，需判断 OS 级执行隔离能否作为可选 Sandbox 后端；但官方仓库仍带有 early preview 与 security-boundary 警告。
-
-**候选结论：**
-
-- MXC 仅作为现有 **SandboxProvider SPI** 下的可选执行后端候选；不新增平行 SPI，不调整当前 CubeSandbox 生产候选及 Docker 开发/兼容定位。
-- TaskContext/Workspace 路由是逻辑隔离，不能替代 OS 沙箱；共享 Harness Worker、MAF/Agent SDK 与平台领域模型不变。
-- 不承诺 MXC 在 Linux 默认后端实现 Windows Session、持久 Sandbox、快照或同等级网络强隔离能力；须按 host/backend/version 独立验证。
-- 不改变现有 Checkpoint、RecoveryPoint、UNKNOWN → Reconciliation、Tool Receipt、OSS Artifact/Evidence 和外围治理 Ownership Boundary。
-- **本条属于 P2 技术观察，不纳入当前 POC-A / POC-C Hard Gates，不阻塞 G3/G2/G6 收口。**
-
-**后续触发：** 当前核心 POC 收口后，若存在轻量 Tool/Code Execution 需求，则按同负载对照验证隔离正确性、网络/凭据、cancel/cleanup、任务恢复、环境一致性及并发性能，再决定 Adopt / Keep Candidate / Reject。
-
-**候选评估记录：** [MXC_EXECUTION_CONTAINER_CANDIDATE.md](references/MXC_EXECUTION_CONTAINER_CANDIDATE.md)
-
----
-
-## ARCH-TODO-025 Durable Control Plane 生产架构准入
-
-**状态：POC（未通过生产硬门禁，非重启 POC-C）**
-
-**优先级：P0（完整 G2/G3/G6）；P1（G4/G5/生产成熟度）**
-
-**来源：** [POC-C 阶段评估收口](POC_C_EVALUATION_CLOSEOUT.md) / [C14 同口径评估](../poc/temporal/C14_COMPARATIVE_DECISION.md)。本条是 C00–C16 阶段性评估之后的**唯一开放行动台账**，不创建 C17/C18。
-
-### P0 实证验收（必须成功与故障注入）
-
-1. **G3 / 同一真实 Run 协议**：自托管 Responses-compatible Create/GET、真实 Token SSE、Plan/Tool/Verify/Artifact/Approval/UNKNOWN 持久 Typed Event 在同一 Run 对齐，HTTP/API/Worker 重启、Last-Event-ID 重放、游标隔离、Cancel→CANCELLING/UNKNOWN/终态的完整边界均需正反例；不支持的官方语义明确 UNSUPPORTED，不伪装完全兼容。
-   - **2026-10-09 增量（G3 仍 PARTIAL）：** [统一 Typed Event Feed](../poc/temporal/ARCH025_G3_EVENT_FEED_FINDINGS.md) 已扩展 C15 Token/C11 Artifact/C16 UNKNOWN/Receipt 的只读 Run SSE 投影及 provider 私有字段隔离；仍是**不同 POC Run** 的读取兼容，不是单 Run 业务闭环；独立本地 PostgreSQL 5/5 PASS、[Linux CI #37848460468](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37848460468) 5/5 Job SUCCESS（对应 5 项新测试均实际执行）。当时发现 C15 Cancel ACK 即终态的契约缺口；已由下方 2026-10-09 的限定 `PURE` 取消专项补证处理，非幂等业务取消仍未通过完整准入。
-   - **同日同一 Run 的真实 S3 增量（G3/G6 仍 PARTIAL）：** [G3 Token→Artifact→Verify 与 ACK UNKNOWN 证据](../poc/temporal/ARCH025_SAME_RUN_S3_FINDINGS.md) 已在单个实际 Temporal Workflow/Run 上验证同一平台 PG Typed SSE 的 Token、真实 SeaweedFS S3 Artifact、独立 SHA256 验证与业务终态；物理 S3 PUT 后 ACK 丢失保持 Execution `UNKNOWN`/Reconciliation `PENDING`，不虚构成功或 blind retry。本地 PG 10/10 PASS，正常/负例两条实际 Temporal/S3 E2E PASS；模型使用显式 Fake Tokens；同一 Run 真实 Tool/Approval 和最终 Receipt 恢复仍未覆盖。
-2. **G2/G6 / Native Start & RecoveryPoint**：验证 Server 接受但平台 ACK 丢失、确定未启动、Timeout 导致是否启动未知等窗口；冻结 Native Binding，持久 Opaque RecoveryPoint，使用官方接口反查；未查明时拒绝盲 Start。真实 Worker 故障后按 Run/Step/Attempt/Execution 恢复到最深安全点，覆盖 WAITING_APPROVAL、UNKNOWN、Same Attempt Resume 能力限制、新 Attempt 与 terminal never reopen。
-   - **2026-10-09 取消契约增量（仍 G3/G6 PARTIAL）：** [C15 PURE Cancel Native 确认](../poc/temporal/ARCH025_CANCEL_CONFIRMATION_FINDINGS.md) 将早期错误的即时 CANCELLED 改为 CANCELLING→官方 Native describe 确认→平台终态；本地独立 PG 合约 7/7 PASS、真实 OSS Temporal/Worker 正常取消 ACK 与取消信号 UNKNOWN 两条 E2E PASS；对外部非幂等 Tool 未宣称通过，完整 Run/Tool 恢复门禁仍开放。
-3. **G6 / 企业非幂等工具闭环**：在可获授权的已治理企业 Tool/MCP 真实 Receipt 接口上验证单次外部效果、崩溃后只读对账、Receipt 缺失/血缘不符/effect_count>1 均安全 fail-closed 或人工介入；Reconciliation RESOLVED 不直接将历史 UNKNOWN 或 Run 标成功，必须经过独立业务 Verifier/Decision 最终裁决。无真实企业接口时保留 GAP，不以受控 POC Tool 冒充企业验收。
-
-### P1 真替换和生产成熟度
-
-- **G4/G5**：第二真实 Model/Provider；CubeSandbox↔Docker SandboxProvider SPI 最小 conformance smoke，记录修改范围、降级模式和替代成本。
-- **G1/G8**：Temporal 自托管 TLS/发布/Worker versioning 与 replay/rollout/rollback；外部 DB/OSS ownership；同负载 MAF vs Temporal TTFT/P95/CPU/Memory/依赖和运维工时对比。缺乏实测不生成分数；不自建企业 IAM、MCP Governance、APM、对象存储或数据库 Backup/DR。
-- **退出条件**：同口径 G1/G2/G3/G6 真实复跑证据与 CI、部署差异及风险；任一完整硬门禁仍 PARTIAL/GAP 则**生产 NO-GO**。P1 要明确 Adopt / Conditional / Reject 和业务成本。最终形成独立新的 Accepted Production ADR，同步 `docs/ARCHITECTURE.md` / `docs/POC.md` 后，本条才能 CLOSED。
-
-**架构边界：** Task Facts 和业务终态始终归 Harness；Temporal History/Checkpoint 不复制、不新建重复 Scheduler；MXC 属独立 P2 候选，不成为本项硬门禁。
