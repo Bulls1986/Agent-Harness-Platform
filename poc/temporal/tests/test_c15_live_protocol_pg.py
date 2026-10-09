@@ -55,11 +55,27 @@ class LiveG3PG(unittest.TestCase):
                         VALUES('forged',%s,%s,%s,'temporal://forged')""",
                            (run["run"],run["step"],run["attempt"]))
 
-    def test_cancel_immutable_terminal_and_cannot_emit_late_tokens(self):
+    def test_cancel_intent_is_not_terminal_until_native_termination_confirmed(self):
         run=self.fixture()
-        self.assertEqual(self.store.cancel(run["run"]),"CANCELLED")
-        self.assertEqual(self.store.cancel(run["run"]),"CANCELLED")
+        self.assertEqual(self.store.request_cancel(run["run"]),"CANCELLING")
+        self.assertEqual(self.store.request_cancel(run["run"]),"CANCELLING")
         self.assertFalse(self.store.append(run,"response.output_text.delta",{"delta":"late"}))
+        self.assertEqual(self.store.terminal(run,"COMPLETED"),"CANCELLING")
+        self.assertFalse(self.store.verify(run,"f"*64,1))
+        state,events=self.store.snapshot(run["run"])
+        self.assertEqual(state["state"],"CANCELLING")
+        self.assertEqual([e["event_type"] for e in events].count("cancellation.requested"),1)
+        self.assertNotIn("run.terminal",[e["event_type"] for e in events])
+        # ACK alone must NOT count as termination.
+        self.assertTrue(self.store.note_cancel_ack(run["run"]))
+        self.assertFalse(self.store.note_cancel_ack(run["run"]))
+        self.assertEqual(self.store.snapshot(run["run"])[0]["state"],"CANCELLING")
+        for unsafe_status in ("RUNNING","CONTINUED_AS_NEW","UNKNOWN"):
+            with self.subTest(native=unsafe_status),self.assertRaises(ValueError):
+                self.store.finish_cancel(run["run"],unsafe_status)
+        self.assertEqual(self.store.finish_cancel(run["run"],"CANCELED"),"CANCELLED")
+        self.assertEqual(self.store.request_cancel(run["run"]),"CANCELLED")
+        self.assertEqual(self.store.finish_cancel(run["run"],"CANCELED"),"CANCELLED")
         self.assertEqual(self.store.terminal(run,"COMPLETED"),"CANCELLED")
         state,events=self.store.snapshot(run["run"])
         self.assertEqual(state["state"],"CANCELLED")
@@ -69,6 +85,64 @@ class LiveG3PG(unittest.TestCase):
             with self.assertRaises(psycopg.Error):
                 db.execute("UPDATE poc_runs SET state='RUNNING' WHERE run_id=%s",
                            (run["run"],))
+
+    def test_failed_native_termination_keeps_truthful_failed_terminal(self):
+        run=self.fixture()
+        self.assertEqual(self.store.request_cancel(run["run"]),"CANCELLING")
+        self.assertEqual(self.store.finish_cancel(run["run"],"TIMED_OUT"),"FAILED")
+        state,events=self.store.snapshot(run["run"])
+        self.assertEqual(state["state"],"FAILED")
+        self.assertEqual(events[-1]["payload"]["state"],"FAILED")
+        self.assertFalse(self.store.append(run,"response.output_text.delta",{"delta":"late"}))
+
+    def test_original_pure_execution_success_is_not_rewritten(self):
+        from hashlib import sha256
+        run=self.fixture()
+        text="already verified model text"
+        digest=sha256(text.encode()).hexdigest()
+        self.store.append(run,"response.output_text.delta",{"delta":text})
+        self.store.append(run,"response.output_text.done",
+                          {"sha256":digest,"chars":len(text)})
+        self.assertTrue(self.store.verify(run,digest,len(text)))
+        self.assertEqual(self.store.request_cancel(run["run"]),"CANCELLING")
+        self.assertEqual(self.store.finish_cancel(run["run"],"COMPLETED"),"CANCELLED")
+        with psycopg.connect(self.store.dsn) as db:
+            attempt=db.execute("SELECT state FROM poc_attempts WHERE attempt_id=%s",
+                               (run["attempt"],)).fetchone()[0]
+            execution=db.execute("SELECT state FROM poc_executions WHERE execution_id=%s",
+                                 (run["execution"],)).fetchone()[0]
+        self.assertEqual((attempt,execution),("SUCCEEDED","SUCCEEDED"))
+
+    def test_native_unreachable_or_running_cannot_finalize_cancel(self):
+        from unittest.mock import AsyncMock, MagicMock, patch
+        from types import SimpleNamespace
+        from fastapi.testclient import TestClient
+        from live_g3_api import app
+        run=self.fixture()
+        self.assertEqual(self.store.request_cancel(run["run"]),"CANCELLING")
+        http=TestClient(app)
+        url=f"/v1/responses/{run['run']}/reconcile-cancel"
+        with patch("live_g3_api.Client.connect",
+                   new=AsyncMock(side_effect=ConnectionError("Native unreachable"))):
+            denied=http.post(url)
+            self.assertEqual(denied.status_code,409)
+        handle=MagicMock()
+        native=MagicMock()
+        native.get_workflow_handle.return_value=handle
+        handle.describe=AsyncMock(return_value=SimpleNamespace(
+            id=run["native_workflow_id"],status=SimpleNamespace(name="RUNNING")))
+        with patch("live_g3_api.Client.connect",new=AsyncMock(return_value=native)):
+            pending=http.post(url)
+            self.assertEqual(pending.status_code,202)
+            self.assertEqual(pending.json()["native_termination"],"RUNNING")
+        handle.describe=AsyncMock(return_value=SimpleNamespace(
+            id="tampered-native-id",status=SimpleNamespace(name="CANCELED")))
+        with patch("live_g3_api.Client.connect",new=AsyncMock(return_value=native)):
+            mismatch=http.post(url)
+            self.assertEqual(mismatch.status_code,409)
+        state,events=self.store.snapshot(run["run"])
+        self.assertEqual(state["state"],"CANCELLING")
+        self.assertNotIn("run.terminal",[event["event_type"] for event in events])
 
     def test_token_verification_must_match_actual_persisted_events(self):
         from hashlib import sha256

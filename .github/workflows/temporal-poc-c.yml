@@ -242,6 +242,15 @@ jobs:
           POC_C15_TEST_CANCEL: "1"
           POC_C15_FAKE_TOKEN_DELAY: "0.25"
         run: python poc/temporal/verify_c15_g3_http.py
+      - name: ARCH025 real Native cancel signal uncertainty never creates false CANCELLED
+        env:
+          POC_C_TEMPORAL_ADDRESS: 127.0.0.1:17234
+          POC_C_LITELLM_MODEL: ci-offline-model
+          POC_C15_FAKE_MODEL: "1"
+          POC_C15_TEST_CANCEL: "1"
+          POC_C15_INJECT_CANCEL_SIGNAL_LOSS: "1"
+          POC_C15_FAKE_TOKEN_DELAY: "0.25"
+        run: python poc/temporal/verify_c15_g3_http.py
       - name: C15 fake model failure cannot be marked successful
         env:
           POC_C_TEMPORAL_ADDRESS: 127.0.0.1:17234
