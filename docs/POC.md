@@ -14,6 +14,13 @@
 
 **说明：本文件记录的是截至 2026-09-29 的技术事实与首轮架构决策。框架能力、许可和托管策略变化较快，进入采购或正式落地前必须重新核验。**
 
+> **2026-10-09 增量专项（不回写历史首轮 Gate）：** OpenCode 2 /
+> OpenAI Agents SDK / MAF 的共享 Sandbox 与高密度 Runtime 候选已登记
+> [ARCH-TODO-024](references/MULTI_HARNESS_SANDBOX_RUNTIME_DENSITY_CANDIDATE.md)。
+> [可执行专项 POC](../poc/opencode_sandbox/README.md) 先验证
+> OpenCode 2 真实 Sandbox 与跨 Harness 同 Workspace 接力，
+> 再检查共享 SDK Host 安全边界和资源效率；局部 PASS 不等于 G5 全面通过。
+
 # 执行摘要
 
 本 POC 不以“谁的 Demo 最快跑起来”为目标，而是验证三条架构路线在企业内建场景下是否满足可自托管、可恢复、可替换、可审计、可桥接 UI 协议等关键约束。所有候选必须使用同一组场景和失败注入测试，避免因示例复杂度不同导致结论失真。
@@ -242,10 +249,6 @@ Temporal 不提供 Agent Harness，而提供 Durable Execution。该路线验证
 ## 9.5 Temporal 退出条件
 
 若引入 Temporal Service、数据库和 Worker 体系带来的运维复杂度明显高于长任务可靠性收益，或团队无法接受 Workflow 的确定性/replay 编程约束，则 Temporal 不作为默认内核；但仍可作为高可靠长任务的专用执行层。
-
-## 9.6 2026-10-09 POC-C 技术评估收口
-
-[POC-C C00–C16](POC_C_EVALUATION_CLOSEOUT.md) **EVALUATION CLOSED / CONDITIONAL**：OSS Temporal+PG、真实模型 Token SSE 和受控非幂等 Receipt 在各自约定范围验证成功，但完整 **G2/G3/G6 仍 PARTIAL / 生产 NO-GO**。仅关闭 POC-C 技术评估；不代表三组首轮 POC 均完成，也不构成正式生产选型。后续完整准入由 [ARCH-TODO-025](ARCHITECTURE_BACKLOG.md) 承接。
 
 # 10. POC 统一数据采集
 
