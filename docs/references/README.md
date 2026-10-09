@@ -38,6 +38,7 @@
 30. [Cancellation / Timeout Propagation 契约](CANCELLATION_TIMEOUT_PROPAGATION.md)
 31. [Harness Scope Alignment Review](HARNESS_SCOPE_ALIGNMENT_REVIEW.md)
 32. [多 Harness 共享 Sandbox 与 Runtime 密度（2026-10-09 POC 候选，未 Accepted）](MULTI_HARNESS_SANDBOX_RUNTIME_DENSITY_CANDIDATE.md)
+33. [多 Harness 技术选型增量评估（Pydantic AI Harness / OpenAI Agents SDK / Temporal / CubeSandbox）](MULTI_HARNESS_TECH_SELECTION_20261009.md)
 
 ## 使用原则
 
