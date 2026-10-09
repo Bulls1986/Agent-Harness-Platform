@@ -638,6 +638,14 @@ OpenCode 原生 Shell 仍在 Host 执行。已记录于
 因此不采纳“仅 Session ID→Sandbox ID 配置即可实现透明工具隔离”
 这一假设；Topology B 保持未通过，待公开扩展点完整覆盖。
 
+**2026-10-09 阶段性验收/选型增量：** 用户明确当前系统本就未完成隔离，
+故先记录每种技术实际达到的能力，Session→Sandbox 功能性验证
+不再被全部宿主机执行入口安全重定向阻断；生产隔离要求保持不变。
+引入 [多专业 Agent 技术选型评估](references/MULTI_HARNESS_TECH_SELECTION_20261009.md)，
+重点对照 **Pydantic AI Harness + Temporal + Cube(E2B)**、
+**OpenAI Agents SDK + Temporal + Cube(E2B)** 与已投入的
+OpenCode 2 / MAF；目前全部为候选，尚无完美零适配技术栈。
+
 ---
 
 # 5. 推荐讨论顺序
