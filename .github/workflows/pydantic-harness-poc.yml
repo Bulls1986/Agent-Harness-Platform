@@ -23,3 +23,5 @@ jobs:
         run: python -m pip install --disable-pip-version-check "pydantic-ai-harness[e2b]==0.54.0" "pydantic-ai-slim[typesafe]==2.54.0"
       - name: Verify shared Agent Run + optional E2B workspace without model or sandbox
         run: python poc/pydantic_harness/verify_offline_density.py
+      - name: Verify actual Coder tools with concurrent Run-scoped POSIX workspaces
+        run: python poc/pydantic_harness/verify_local_tool_routing_posix.py
