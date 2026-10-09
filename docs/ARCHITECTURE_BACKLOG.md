@@ -632,6 +632,12 @@ Runtime Worker/Sandbox 一一绑定；Sandbox 由 Execution Capability
 门禁；[Cube E2B 兼容性与环境阻塞记录](../poc/opencode_sandbox/CUBE_E2B_COMPATIBILITY_FINDINGS.md)。
 只有 Cube 原生端到端 conformance 通过，才继续讨论共享 Host 的资源优化。
 
+**OpenCode 2 反向实测：** 共享 Host 两 Session + 两个外部隔离 Sandbox，
+OpenCode 原生 Shell 仍在 Host 执行。已记录于
+[架构候选](references/MULTI_HARNESS_SANDBOX_RUNTIME_DENSITY_CANDIDATE.md)。
+因此不采纳“仅 Session ID→Sandbox ID 配置即可实现透明工具隔离”
+这一假设；Topology B 保持未通过，待公开扩展点完整覆盖。
+
 ---
 
 # 5. 推荐讨论顺序
