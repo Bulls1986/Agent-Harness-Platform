@@ -608,6 +608,28 @@ Harness 仍负责具体 Execution 的 Capability / Policy / Approval / Credentia
 
 目标：替换实现后，上层 Workflow 与领域模型无需修改。
 
+## ARCH-TODO-024 Multi-Harness Sandbox & Shared Runtime Density
+
+**状态：POC / ARCHITECTURE CANDIDATE（未接受）**
+
+**触发：** PDLC 与 AI 企业门户的专业 Agent 将运行于 OpenCode 2、
+OpenAI Agents SDK、MAF 等不同 Harness。高密度要求逻辑 Session 不与
+Runtime Worker/Sandbox 一一绑定；Sandbox 由 Execution Capability
+按需申请，且跨 Harness 可共享**平台 SandboxProvider 契约**。
+
+**本轮候选文档：** [多 Harness 共享 Sandbox 与 Runtime 密度](references/MULTI_HARNESS_SANDBOX_RUNTIME_DENSITY_CANDIDATE.md)。
+
+**核心未决：** OpenCode 2 SDK Host 的多 Session/CWD/LSP/PTY/插件文件隔离能否
+通过公开扩展点建立；Harness-in-Sandbox 与 Shared Host 两拓扑的真实
+资源优势；OpenCode 2 和 OpenAI Agents SDK 使用同一个实际 Sandbox
+完成 Workspace 接力；CubeSandbox 全链 conformance 和安全恢复。
+
+**收口要求：** 对照同等隔离/负载完成安全、资源和任务级恢复验收后，
+再决定生产主拓扑、更新 Accepted ADR。当前不改变 P0/P1 已接受约束，
+不得因为 OpenCode 2 新 API 就修改平台领域模型。
+
+---
+
 # 5. 推荐讨论顺序
 
 按依赖关系建议：

@@ -14,6 +14,15 @@
 
 **说明：本文件记录的是截至 2026-09-29 的技术事实与首轮架构决策。框架能力、许可和托管策略变化较快，进入采购或正式落地前必须重新核验。**
 
+> **2026-10-09 追加架构候选（尚未 Accepted）：** 针对 PDLC / AI 企业门户的
+> 多专业 Agent 和 OpenCode 2 / OpenAI Agents SDK / MAF 等多 Harness，
+> 已登记 [ARCH-TODO-024：按需共享 Sandbox 与高密度 Runtime 拓扑](references/MULTI_HARNESS_SANDBOX_RUNTIME_DENSITY_CANDIDATE.md)。
+> Agent Session 不直接等于 Worker 进程或 Sandbox，隔离执行统一通过
+> SandboxProvider SPI；现阶段保留 Harness-in-Sandbox 与共享 SDK Host +
+> Remote Sandbox Tool 两种候选，不能仅凭多 Session 或 SDK Host 存在
+> 就宣称后者安全。此补充不覆盖既有 Accepted Contract，也不改变首轮
+> MAF/Temporal Durable 架构选型结论。
+
 # 执行摘要
 
 **本设计目标不是选择某一个 Agent Framework 作为企业平台本体，而是建设一个厂商无关的 Agent Harness Platform：控制平面掌握任务生命周期、策略、状态、恢复和审计；执行平面承载 Agent Runtime、模型、工具与 Sandbox。任何具体框架均通过 Adapter / SPI 接入。**

@@ -1,5 +1,16 @@
 # OpenCode + E2B-compatible Sandbox / Shared Runtime POC
 
+> **版本基线变更 2026-10-09：目标改为 OpenCode 2。**
+> [ARCH-TODO-024 架构变更候选（先登记、再验证）](../../docs/references/MULTI_HARNESS_SANDBOX_RUNTIME_DENSITY_CANDIDATE.md)；
+> 下文的 OpenCode 1.14.28 为不可删改的**历史实测**，不作为 OpenCode 2 通过证据。
+> 下一批验收使用 OpenCode 2.0.24 容器镜像
+> `sha256:9500f3474188a4b89e165c65fada370dbde5e038cc3b751ed5dcbd27d7620315`。
+> 当前完成的 V2 预检：受限 Docker 内 Server 启动、默认 401 鉴权、
+> 携带隔离环境内生成的临时凭据 `POST /api/session` 可创建 Session
+> 并返回 `location.directory=/workspace`。
+> 本地旧 `/api/health` 路径返回 404，不能直接沿用 V1 的健康探针。
+> 尚未验证 V2 SDK Host 的共享进程并发安全与实际跨 Harness 文件接力。
+
 > 2026-10-09。**专项进行中，不是 G5 或共享 Coding Runtime 的生产 GO。**
 > 本专项遵循既有 Workspace/Sandbox、Control/Data Plane 和容量契约，
 > 不更改 Runtime Domain Model，也不让 E2B Cloud 成为生产强制依赖。
