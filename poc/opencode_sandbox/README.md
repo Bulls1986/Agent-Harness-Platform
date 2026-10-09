@@ -1,5 +1,11 @@
 # OpenCode + E2B-compatible Sandbox / Shared Runtime POC
 
+> **当前首要门禁：CubeSandbox 提供 E2B 兼容接口。**
+> [Cube E2B 兼容性与实测记录](CUBE_E2B_COMPATIBILITY_FINDINGS.md)，
+> [离线/真实 Cube 合约测试](verify_cube_e2b.py)。
+> 当前环境缺 Cube MicroVM/Template/Endpoint，真实 Cube 未通过；
+> Docker 与 OpenCode 2 的 PASS 仅作为对照证据。
+
 > **版本基线变更 2026-10-09：目标改为 OpenCode 2。**
 > [ARCH-TODO-024 架构变更候选（先登记、再验证）](../../docs/references/MULTI_HARNESS_SANDBOX_RUNTIME_DENSITY_CANDIDATE.md)；
 > 下文的 OpenCode 1.14.28 为不可删改的**历史实测**，不作为 OpenCode 2 通过证据。

@@ -628,6 +628,10 @@ Runtime Worker/Sandbox 一一绑定；Sandbox 由 Execution Capability
 再决定生产主拓扑、更新 Accepted ADR。当前不改变 P0/P1 已接受约束，
 不得因为 OpenCode 2 新 API 就修改平台领域模型。
 
+**2026-10-09 顺序修正：** 将 CubeSandbox 提供 E2B 兼容接口作为当前首要
+门禁；[Cube E2B 兼容性与环境阻塞记录](../poc/opencode_sandbox/CUBE_E2B_COMPATIBILITY_FINDINGS.md)。
+只有 Cube 原生端到端 conformance 通过，才继续讨论共享 Host 的资源优化。
+
 ---
 
 # 5. 推荐讨论顺序
