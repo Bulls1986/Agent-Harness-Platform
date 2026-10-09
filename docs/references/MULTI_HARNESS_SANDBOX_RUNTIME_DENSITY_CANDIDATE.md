@@ -93,6 +93,14 @@ OpenAI Agents SDK 0.23.1 的官方 `DockerSandboxClient` + `SandboxSession`
 
 ## 4. 必须证明而非推断的验收矩阵
 
+> **2026-10-09 优先级调整**：先验证 CubeSandbox 作为生产 E2B Provider 的
+> SDK 兼容性、Data Plane、Template、跨 Harness 接力和任务级恢复，
+> 再决定 OpenCode 2 SDK Host 的密度优化是否值得投入。
+> 对应新增 [Cube E2B 兼容专项门禁](../../poc/opencode_sandbox/CUBE_E2B_COMPATIBILITY_FINDINGS.md)。
+> Cube 官方资料已揭示 Volume 官方 E2B Python SDK 不完全兼容，
+> OpenAI Agents SDK 的官方 Cube 集成示例涉及运行时补丁；仍须遵守
+> Public Extension Point 原则，未验不得称为 drop-in 全兼容。
+
 | Gate | 最小证据 | 当前状态 |
 |---|---|---|
 | S1 | OpenCode 2 真实容器 Server/Session、文件/命令/Git/PTY/插件完整边界 | PARTIAL：Server + Session |
@@ -100,7 +108,7 @@ OpenAI Agents SDK 0.23.1 的官方 `DockerSandboxClient` + `SandboxSession`
 | S3 | OpenAI Agents SDK 真实 Native SandboxSession 和平台 Tool Bridge | PASS（局部无模型） |
 | S4 | 同一**物理 Sandbox** 中 OpenCode 2 ↔ OpenAI SDK → 同一 Workspace 的可核验接力 | PASS（有限：公开 FS/Shell API + SDK FunctionTool、无模型；未验 Agent Loop/Git/LSP） |
 | S5 | 两个不同 Isolation Scope 跨容器拒绝读写/宿主机逃逸检查 | PARTIAL：Docker 基线 |
-| S6 | OpenCode + SDK + 后续 MAF 的 CubeSandbox/E2B 兼容 conformance | NOT RUN |
+| S6 | OpenCode + SDK + 后续 MAF 的 CubeSandbox/E2B 兼容 conformance | **BLOCKED：当前无 Cube 实例、Template、Proxy，Docker 缺 /dev/kvm；Cube 官方存在 SDK 兼容限制** |
 | S7 | 一致负载下 Topology A/B 的 RSS/CPU/P95/进程数/Sandbox 数和回收情况 | NOT RUN |
 | S8 | Worker/Sandbox 崩溃后任务级 RecoveryPoint/Workspace/Receipt 安全边界 | NOT RUN |
 
