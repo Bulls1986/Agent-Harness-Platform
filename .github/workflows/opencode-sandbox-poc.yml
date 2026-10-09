@@ -23,6 +23,22 @@ jobs:
         run: python -m pip install --disable-pip-version-check "e2b==2.53.1" "cubesandbox==0.7.0" "openai-agents==0.23.1"
       - name: Verify SDK public surface without contacting Cube
         run: python poc/opencode_sandbox/verify_cube_e2b.py
+      - name: Verify Cube host preflight safely reports readiness or blockers
+        run: |
+          python - <<'PY'
+          import json, subprocess, sys
+          result = subprocess.run(
+              [sys.executable, "poc/opencode_sandbox/verify_cube_host_readiness.py"],
+              capture_output=True, text=True, timeout=20
+          )
+          print(result.stdout.strip())
+          assert result.returncode in (0, 2), result.stderr
+          report = json.loads(result.stdout.strip())
+          assert report["outcome"] in ("PASS_HOST_PREFLIGHT_ONLY", "BLOCKED")
+          assert report["cube_microvm_created"] is False
+          assert report["cube_e2b_live"] == "NOT_RUN"
+          assert report["mutated_host"] is False
+          PY
       - name: Verify unconfigured Cube live tests fail closed
         run: |
           python - <<'PY'
