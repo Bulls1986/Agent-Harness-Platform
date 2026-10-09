@@ -141,14 +141,40 @@ async def exercise():
                         raise AssertionError("Cancellation fixture Create failed")
                     cancelled_id=created.json()["id"]
                 cancelled=await client.post(f"/v1/responses/{cancelled_id}/cancel")
-                if cancelled.status_code!=200 or cancelled.json()["status"]!="cancelled":
-                    raise AssertionError("Cancellation never became terminal")
-                repeat=await client.post(f"/v1/responses/{cancelled_id}/cancel")
-                if repeat.json()["status"]!="cancelled":
-                    raise AssertionError("Cancellation was not idempotent")
+                expected_native=("UNKNOWN" if os.environ.get("POC_C15_INJECT_CANCEL_SIGNAL_LOSS")=="1"
+                                 else "ACKNOWLEDGED")
+                if (cancelled.status_code!=202 or cancelled.json()["status"]!="cancelling"
+                        or cancelled.json()["native_cancel"]!=expected_native):
+                    raise AssertionError("Cancellation request prematurely finalized or lost ACK classification")
                 snapshot=(await client.get(f"/v1/responses/{cancelled_id}")).json()
-                if snapshot["status"]!="cancelled":
+                if (snapshot["status"]!="in_progress" or
+                    snapshot["harness"]["state"]!="CANCELLING"):
+                    raise AssertionError("Cancel ACK was incorrectly upgraded to TERMINATED")
+                # Verify true Native status via official describe, never
+                # equate SDK cancel ACK or provider timeout to execution stop.
+                final=None
+                for _ in range(65):
+                    check=await client.post(f"/v1/responses/{cancelled_id}/reconcile-cancel")
+                    if check.status_code==200:
+                        final=check.json()
+                        break
+                    if check.status_code not in (202,409):
+                        raise AssertionError("Unsafe Native reconciliation "+str(check.status_code))
+                    await asyncio.sleep(.15)
+                if not final or not final["confirmed"] or final["status"]!="cancelled":
+                    raise AssertionError("Native termination confirmation missing: "+repr(final))
+                repeat=await client.post(f"/v1/responses/{cancelled_id}/cancel")
+                if repeat.status_code!=200 or repeat.json()["status"]!="cancelled":
+                    raise AssertionError("Cancellation was not idempotent")
+                cancelled_snapshot=await client.get(f"/v1/responses/{cancelled_id}")
+                if cancelled_snapshot.json()["status"]!="cancelled":
                     raise AssertionError("Native completion wrongly overrode platform cancellation")
+                history=(await client.get(f"/v1/responses/{cancelled_id}/events")).text
+                for kind in ("cancellation.requested","cancellation.confirmed","run.terminal"):
+                    if "event: "+kind not in history:
+                        raise AssertionError("Missing durable cancellation Typed Event "+kind)
+                if history.count("event: cancellation.requested")!=1:
+                    raise AssertionError("Duplicate cancellation request facts")
 
             if fake and not ack_fault and os.environ.get("POC_C15_TEST_STREAM_CREATE")=="1":
                 async with client.stream("POST","/v1/responses",json={

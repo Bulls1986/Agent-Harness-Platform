@@ -130,7 +130,7 @@ class LiveFacts:
         with psycopg.connect(self.dsn,row_factory=dict_row) as db:
             r=db.execute("SELECT state FROM poc_runs WHERE run_id=%s FOR UPDATE",
                          (req["run"],)).fetchone()
-            if r["state"]=="CANCELLED":return False
+            if r["state"] in ("CANCELLING","CANCELLED"):return False
             if r["state"]!="RUNNING":raise ValueError("Terminal/invalid Run")
             rows=db.execute("""SELECT event_type,payload FROM poc_events
                 WHERE run_id=%s AND event_type IN ('response.output_text.delta',
@@ -153,7 +153,7 @@ class LiveFacts:
         with psycopg.connect(self.dsn,row_factory=dict_row) as db:
             r=db.execute("SELECT state FROM poc_runs WHERE run_id=%s FOR UPDATE",
                          (req["run"],)).fetchone()
-            if r["state"]=="CANCELLED":return "CANCELLED"
+            if r["state"] in ("CANCELLING","CANCELLED"):return r["state"]
             if r["state"]==state:return state
             if r["state"]!="RUNNING":raise ValueError("Unexpected terminal transition")
             if state=="COMPLETED":
@@ -167,18 +167,80 @@ class LiveFacts:
             self.event(db,req["run"],"run.terminal",{"state":state})
             return state
 
-    def cancel(self,run):
+    def request_cancel(self,run):
+        """Record intent only; ACK from Temporal is not proof of termination."""
         with psycopg.connect(self.dsn,row_factory=dict_row) as db:
-            row=db.execute("""SELECT r.state,b.attempt_id,b.execution_id
-                FROM poc_c15_runs b JOIN poc_runs r ON r.run_id=b.run_id
+            row=db.execute("""SELECT r.state,b.attempt_id,b.execution_id,
+                e.side_effect_class FROM poc_c15_runs b
+                JOIN poc_runs r ON r.run_id=b.run_id
+                JOIN poc_executions e ON e.execution_id=b.execution_id
                 WHERE b.run_id=%s FOR UPDATE OF r""",(run,)).fetchone()
             if not row:raise KeyError(run)
             if row["state"] in TERMINAL:return row["state"]
-            db.execute("UPDATE poc_attempts SET state='CANCELLED' WHERE attempt_id=%s AND state='RUNNING'",(row["attempt_id"],))
-            db.execute("UPDATE poc_executions SET state='CANCELLED' WHERE execution_id=%s AND state='RUNNING'",(row["execution_id"],))
-            db.execute("UPDATE poc_runs SET state='CANCELLED',terminal_at=now() WHERE run_id=%s",(run,))
-            self.event(db,run,"run.terminal",{"state":"CANCELLED"})
-            return "CANCELLED"
+            if row["side_effect_class"]!="PURE":
+                # The bounded model stream cannot safely certify a Tool effect.
+                raise ValueError("Non-PURE cancellation requires receipt reconciliation")
+            if row["state"]=="CANCELLING":return "CANCELLING"
+            if row["state"]!="RUNNING":raise ValueError("Run not cancelable")
+            # Lock serializes Worker append/verify/terminal races. Attempt and
+            # Execution are NOT finalized until Native termination is proved.
+            db.execute("UPDATE poc_runs SET state='CANCELLING' WHERE run_id=%s",(run,))
+            self.event(db,run,"cancellation.requested",
+                       {"attempt_id":row["attempt_id"],
+                        "execution_id":row["execution_id"]})
+            return "CANCELLING"
+
+    def note_cancel_ack(self,run):
+        """Native accepted a cancel request. Does NOT terminalize anything."""
+        with psycopg.connect(self.dsn,row_factory=dict_row) as db:
+            r=db.execute("SELECT state FROM poc_runs WHERE run_id=%s FOR UPDATE",
+                         (run,)).fetchone()
+            if not r:raise KeyError(run)
+            if r["state"]!="CANCELLING":return False
+            exists=db.execute("""SELECT 1 FROM poc_events
+                       WHERE run_id=%s AND event_type='cancellation.acknowledged'
+                       LIMIT 1""",(run,)).fetchone()
+            if exists:return False
+            self.event(db,run,"cancellation.acknowledged",{"provider":"temporal"})
+            return True
+
+    def finish_cancel(self,run,native_status):
+        """Only caller with verified official Native describe may finalize.
+
+        C15 permits only PURE side effect. For real Tool effects, keep
+        UNKNOWN/Reconciliation and do not use this narrow path.
+        """
+        if native_status not in ("CANCELED","TERMINATED","COMPLETED",
+                                 "FAILED","TIMED_OUT"):
+            raise ValueError("Native termination not confirmed")
+        final="FAILED" if native_status in ("FAILED","TIMED_OUT") else "CANCELLED"
+        with psycopg.connect(self.dsn,row_factory=dict_row) as db:
+            row=db.execute("""SELECT r.state,b.attempt_id,b.execution_id,
+                e.side_effect_class,e.state AS execution_state,
+                a.state AS attempt_state FROM poc_c15_runs b
+                JOIN poc_runs r ON r.run_id=b.run_id
+                JOIN poc_executions e ON e.execution_id=b.execution_id
+                JOIN poc_attempts a ON a.attempt_id=b.attempt_id
+                WHERE b.run_id=%s FOR UPDATE OF r""",(run,)).fetchone()
+            if not row:raise KeyError(run)
+            if row["state"] in TERMINAL:return row["state"]
+            if row["state"]!="CANCELLING" or row["side_effect_class"]!="PURE":
+                raise ValueError("Cannot finalize unsafe cancellation")
+            if row["attempt_state"]=="UNKNOWN" or row["execution_state"]=="UNKNOWN":
+                raise ValueError("Unknown effect must reconcile before cancellation")
+            # SUCCEEDED is immutable historical evidence; never rewrite it.
+            if row["attempt_state"]=="RUNNING":
+                db.execute("UPDATE poc_attempts SET state=%s WHERE attempt_id=%s",
+                           (final,row["attempt_id"]))
+            if row["execution_state"]=="RUNNING":
+                db.execute("UPDATE poc_executions SET state=%s WHERE execution_id=%s",
+                           (final,row["execution_id"]))
+            db.execute("UPDATE poc_runs SET state=%s,terminal_at=now() WHERE run_id=%s",
+                       (final,run))
+            self.event(db,run,"cancellation.confirmed",
+                       {"native_status":native_status,"state":final})
+            self.event(db,run,"run.terminal",{"state":final})
+            return final
 
     def snapshot(self,run,after=0,limit=10000):
         with psycopg.connect(self.dsn,row_factory=dict_row) as db:

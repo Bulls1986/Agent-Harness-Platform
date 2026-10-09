@@ -8,7 +8,7 @@ import asyncio
 import json
 import os
 from fastapi import FastAPI, HTTPException, Header, Query
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field
 from temporalio.client import Client
 from live_g3_facts import LiveFacts,QUEUE
@@ -117,19 +117,72 @@ async def reconcile_start(run_id:str):
 
 @app.post("/v1/responses/{run_id}/cancel")
 async def cancel_response(run_id:str):
+    """Persist intent before Native RPC. ACK != terminated; never lie."""
+    s=store()
+    try:
+        row,_=await asyncio.to_thread(s.snapshot,run_id)
+        state=await asyncio.to_thread(s.request_cancel,run_id)
+    except KeyError:
+        raise HTTPException(404,detail="Run not found")
+    except ValueError as exc:
+        raise HTTPException(409,detail="Cancellation requires reconciliation") from exc
+    if state!="CANCELLING":
+        return {"id":run_id,"status":state.lower(),"already_terminal":True}
+    acknowledgement="UNKNOWN"
+    try:
+        if os.environ.get("POC_C15_INJECT_CANCEL_SIGNAL_LOSS")=="1":
+            # Deterministic failure injection, before Native signal dispatch.
+            raise ConnectionError("Injected Native cancel signal uncertainty")
+        client=await Client.connect(os.environ.get("POC_C_TEMPORAL_ADDRESS","127.0.0.1:17234"))
+        await client.get_workflow_handle(row["native_workflow_id"]).cancel()
+        # Even an accepted SDK cancel() must NOT finalize Harness Run.
+        await asyncio.to_thread(s.note_cancel_ack,run_id)
+        acknowledgement="ACKNOWLEDGED"
+    except Exception:
+        # Native might be unreachable or may have accepted an RPC before an
+        # ACK was lost. Never terminalize or duplicate side effects here.
+        pass
+    return JSONResponse(status_code=202,content={
+        "id":run_id,"status":"cancelling",
+        "native_cancel":acknowledgement,"confirmation_required":True})
+
+@app.post("/v1/responses/{run_id}/reconcile-cancel")
+async def reconcile_cancel(run_id:str):
+    """Read-only official Temporal describe of the frozen Native workflow."""
     s=store()
     try:
         row,_=await asyncio.to_thread(s.snapshot,run_id)
     except KeyError:
         raise HTTPException(404,detail="Run not found")
-    state=await asyncio.to_thread(s.cancel,run_id)
-    if state=="CANCELLED":
-        try:
-            client=await Client.connect(os.environ.get("POC_C_TEMPORAL_ADDRESS","127.0.0.1:17234"))
-            await client.get_workflow_handle(row["native_workflow_id"]).cancel()
-        except Exception:
-            pass
-    return {"id":run_id,"status":state.lower()}
+    if row["state"] in TERMINAL:
+        return {"id":run_id,"status":row["state"].lower(),
+                "already_terminal":True}
+    if row["state"]!="CANCELLING":
+        raise HTTPException(409,detail="No pending cancellation")
+    try:
+        client=await Client.connect(os.environ.get("POC_C_TEMPORAL_ADDRESS","127.0.0.1:17234"))
+        info=await client.get_workflow_handle(row["native_workflow_id"]).describe()
+        if info.id!=row["native_workflow_id"]:
+            raise ValueError("Frozen Native Workflow ID mismatch")
+    except Exception:
+        raise HTTPException(409,detail={"id":run_id,"status":"cancelling",
+                                        "native_termination":"UNKNOWN"})
+    native_status=info.status.name
+    if native_status=="RUNNING":
+        return JSONResponse(status_code=202,content={
+            "id":run_id,"status":"cancelling","native_termination":"RUNNING"})
+    if native_status not in ("CANCELED","TERMINATED","COMPLETED",
+                             "FAILED","TIMED_OUT"):
+        # CONTINUED_AS_NEW requires following native reference under the
+        # platform frozen binding policy; not proven by this POC.
+        raise HTTPException(409,detail={"id":run_id,"status":"cancelling",
+                                        "native_termination":"UNKNOWN"})
+    try:
+        final=await asyncio.to_thread(s.finish_cancel,run_id,native_status)
+    except ValueError as exc:
+        raise HTTPException(409,detail="Cancellation cannot safely finalize") from exc
+    return {"id":run_id,"status":final.lower(),
+            "native_termination":native_status,"confirmed":True}
 
 def start_seq(run,after,last_id):
     seq=after or 0

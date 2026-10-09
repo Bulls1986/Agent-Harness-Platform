@@ -762,8 +762,9 @@ MAF SkillsProvider
 ### P0 实证验收（必须成功与故障注入）
 
 1. **G3 / 同一真实 Run 协议**：自托管 Responses-compatible Create/GET、真实 Token SSE、Plan/Tool/Verify/Artifact/Approval/UNKNOWN 持久 Typed Event 在同一 Run 对齐，HTTP/API/Worker 重启、Last-Event-ID 重放、游标隔离、Cancel→CANCELLING/UNKNOWN/终态的完整边界均需正反例；不支持的官方语义明确 UNSUPPORTED，不伪装完全兼容。
-   - **2026-10-09 增量（G3 仍 PARTIAL）：** [统一 Typed Event Feed](../poc/temporal/ARCH025_G3_EVENT_FEED_FINDINGS.md) 已扩展 C15 Token/C11 Artifact/C16 UNKNOWN/Receipt 的只读 Run SSE 投影及 provider 私有字段隔离；仍是**不同 POC Run** 的读取兼容，不是单 Run 业务闭环；独立本地 PostgreSQL 5/5 PASS、[Linux CI #37848460468](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37848460468) 5/5 Job SUCCESS（对应 5 项新测试均实际执行）。另发现原 C15 Cancel 请求直接标记 `CANCELLED` 且忽略下游取消失败，违反已有 CANCELLING→终止确认/对账契约，必须单独负例闭合。
+   - **2026-10-09 增量（G3 仍 PARTIAL）：** [统一 Typed Event Feed](../poc/temporal/ARCH025_G3_EVENT_FEED_FINDINGS.md) 已扩展 C15 Token/C11 Artifact/C16 UNKNOWN/Receipt 的只读 Run SSE 投影及 provider 私有字段隔离；仍是**不同 POC Run** 的读取兼容，不是单 Run 业务闭环；独立本地 PostgreSQL 5/5 PASS、[Linux CI #37848460468](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/37848460468) 5/5 Job SUCCESS（对应 5 项新测试均实际执行）。当时发现 C15 Cancel ACK 即终态的契约缺口；已由下方 2026-10-09 的限定 `PURE` 取消专项补证处理，非幂等业务取消仍未通过完整准入。
 2. **G2/G6 / Native Start & RecoveryPoint**：验证 Server 接受但平台 ACK 丢失、确定未启动、Timeout 导致是否启动未知等窗口；冻结 Native Binding，持久 Opaque RecoveryPoint，使用官方接口反查；未查明时拒绝盲 Start。真实 Worker 故障后按 Run/Step/Attempt/Execution 恢复到最深安全点，覆盖 WAITING_APPROVAL、UNKNOWN、Same Attempt Resume 能力限制、新 Attempt 与 terminal never reopen。
+   - **2026-10-09 取消契约增量（仍 G3/G6 PARTIAL）：** [C15 PURE Cancel Native 确认](../poc/temporal/ARCH025_CANCEL_CONFIRMATION_FINDINGS.md) 将早期错误的即时 CANCELLED 改为 CANCELLING→官方 Native describe 确认→平台终态；本地独立 PG 合约 7/7 PASS、真实 OSS Temporal/Worker 正常取消 ACK 与取消信号 UNKNOWN 两条 E2E PASS；对外部非幂等 Tool 未宣称通过，完整 Run/Tool 恢复门禁仍开放。
 3. **G6 / 企业非幂等工具闭环**：在可获授权的已治理企业 Tool/MCP 真实 Receipt 接口上验证单次外部效果、崩溃后只读对账、Receipt 缺失/血缘不符/effect_count>1 均安全 fail-closed 或人工介入；Reconciliation RESOLVED 不直接将历史 UNKNOWN 或 Run 标成功，必须经过独立业务 Verifier/Decision 最终裁决。无真实企业接口时保留 GAP，不以受控 POC Tool 冒充企业验收。
 
 ### P1 真替换和生产成熟度

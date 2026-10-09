@@ -27,6 +27,9 @@ PORTABLE_FIELDS = {
                           "reconciliation_state"),
     "execution.reconciled": ("execution_id", "attempt_id", "status",
                              "receipt_ref"),
+    "cancellation.requested": ("attempt_id", "execution_id"),
+    "cancellation.acknowledged": ("provider",),
+    "cancellation.confirmed": ("native_status", "state"),
     "run.terminal": ("state", "status"),
 }
 TERMINAL = {"COMPLETED", "FAILED", "CANCELLED", "ABORTED"}
