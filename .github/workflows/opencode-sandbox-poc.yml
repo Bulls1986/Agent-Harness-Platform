@@ -29,3 +29,7 @@ jobs:
         run: python poc/opencode_sandbox/verify_agents_native_docker.py
       - name: Verify SDK FunctionTools against unified Sandbox lease
         run: python poc/opencode_sandbox/verify_agents_sdk_tool_bridge.py
+      - name: Pull pinned OpenCode 2 Sandbox image
+        run: docker pull ghcr.io/anomalyco/opencode@sha256:9500f3474188a4b89e165c65fada370dbde5e038cc3b751ed5dcbd27d7620315
+      - name: Verify real OpenCode 2 to Agents SDK same Sandbox handoff
+        run: python poc/opencode_sandbox/verify_opencode2_sdk_handoff.py

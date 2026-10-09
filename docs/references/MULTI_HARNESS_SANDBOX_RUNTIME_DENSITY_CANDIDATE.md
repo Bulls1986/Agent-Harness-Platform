@@ -98,7 +98,7 @@ OpenAI Agents SDK 0.23.1 的官方 `DockerSandboxClient` + `SandboxSession`
 | S1 | OpenCode 2 真实容器 Server/Session、文件/命令/Git/PTY/插件完整边界 | PARTIAL：Server + Session |
 | S2 | OpenCode 2 SDK Host 单进程多 Session；跨项目并发文件/命令不串扰 | NOT PROVEN |
 | S3 | OpenAI Agents SDK 真实 Native SandboxSession 和平台 Tool Bridge | PASS（局部无模型） |
-| S4 | 同一**物理 Sandbox** 中 OpenCode 2 → OpenAI SDK → 同一 Workspace 的可核验接力 | NOT PROVEN |
+| S4 | 同一**物理 Sandbox** 中 OpenCode 2 ↔ OpenAI SDK → 同一 Workspace 的可核验接力 | PASS（有限：公开 FS/Shell API + SDK FunctionTool、无模型；未验 Agent Loop/Git/LSP） |
 | S5 | 两个不同 Isolation Scope 跨容器拒绝读写/宿主机逃逸检查 | PARTIAL：Docker 基线 |
 | S6 | OpenCode + SDK + 后续 MAF 的 CubeSandbox/E2B 兼容 conformance | NOT RUN |
 | S7 | 一致负载下 Topology A/B 的 RSS/CPU/P95/进程数/Sandbox 数和回收情况 | NOT RUN |
