@@ -144,6 +144,73 @@ class LiveG3PG(unittest.TestCase):
         self.assertEqual(state["state"],"CANCELLING")
         self.assertNotIn("run.terminal",[event["event_type"] for event in events])
 
+    def test_artifact_same_run_frozen_lineage_and_proof_required(self):
+        from hashlib import sha256
+        run=self.store.prepare("real PG bounded Artifact contract","poc-model",
+                               save_artifact=True)
+        self.store.require(run)
+        with self.assertRaises(ValueError):
+            self.store.require(run|{"save_artifact":False})
+        text="C15 persisted source"
+        digest=sha256(text.encode()).hexdigest()
+        self.store.append(run,"response.output_text.delta",{"delta":text})
+        self.store.append(run,"response.output_text.done",{"sha256":digest,"chars":len(text)})
+        with self.assertRaises(ValueError):
+            self.store.verify(run,digest,len(text)) # no actual S3 proof yet
+        ref="s3://poc-c11-artifacts/fixture-only-"+run["run"]
+        artifact=self.store.record_artifact(run,digest,len(text.encode()),ref)
+        self.assertEqual(artifact,self.store.record_artifact(run,digest,len(text.encode()),ref))
+        with self.assertRaises(ValueError):
+            self.store.record_artifact(run,digest,len(text.encode()),ref+"-different")
+        with self.assertRaises(ValueError):
+            self.store.mark_artifact_verified(run,artifact,digest,ref+"-forged",len(text))
+        self.assertTrue(self.store.mark_artifact_verified(run,artifact,digest,ref,len(text)))
+        self.assertTrue(self.store.mark_artifact_verified(run,artifact,digest,ref,len(text)))
+        self.assertTrue(self.store.verify(run,digest,len(text)))
+        self.assertEqual(self.store.terminal(run,"COMPLETED"),"COMPLETED")
+        state,events=self.store.snapshot(run["run"])
+        self.assertEqual(state["state"],"COMPLETED")
+        self.assertEqual([e["event_type"] for e in events].count("artifact.created"),1)
+        self.assertEqual([e["event_type"] for e in events].count("artifact.verified"),1)
+
+    def test_nonpure_s3_artifact_cancel_fails_closed_without_false_terminal(self):
+        run=self.store.prepare("bounded cancel artifact guard","poc-model",save_artifact=True)
+        with psycopg.connect(self.store.dsn) as db:
+            kind=db.execute("SELECT side_effect_class FROM poc_executions "
+                            "WHERE execution_id=%s",(run["execution"],)).fetchone()[0]
+        self.assertEqual(kind,"IDEMPOTENT")  # S3 PUT is an external effect
+        with self.assertRaises(ValueError):
+            self.store.request_cancel(run["run"])
+        state,events=self.store.snapshot(run["run"])
+        self.assertEqual(state["state"],"RUNNING")
+        self.assertNotIn("cancellation.requested",[e["event_type"] for e in events])
+        self.assertNotIn("run.terminal",[e["event_type"] for e in events])
+
+    def test_s3_after_dispatch_unknown_is_immutable_pending_not_false_failed(self):
+        run=self.store.prepare("S3 write ACK missing PG negative","poc-model",
+                               save_artifact=True)
+        self.assertEqual(self.store.mark_artifact_unknown(run),"PENDING")
+        self.assertEqual(self.store.mark_artifact_unknown(run),"PENDING")
+        self.assertEqual(self.store.terminal(run,"FAILED"),"RUNNING")
+        self.assertFalse(self.store.append(run,"response.output_text.delta",{"delta":"late"}))
+        with self.assertRaises(ValueError):
+            self.store.request_cancel(run["run"])  # Non-PURE, fail-closed
+        state,events=self.store.snapshot(run["run"])
+        self.assertEqual(state["state"],"RUNNING")
+        self.assertEqual(state["execution_state"],"UNKNOWN")
+        self.assertEqual(state["reconciliation_state"],"PENDING")
+        kinds=[e["event_type"] for e in events]
+        self.assertEqual(kinds.count("execution.unknown"),1)
+        self.assertNotIn("run.terminal",kinds)
+        with psycopg.connect(self.store.dsn) as pg:
+            states=pg.execute("SELECT a.state,e.state FROM poc_attempts a "
+                "JOIN poc_executions e ON e.attempt_id=a.attempt_id "
+                "WHERE e.execution_id=%s",(run["execution"],)).fetchone()
+            self.assertEqual(states,("UNKNOWN","UNKNOWN"))
+            with self.assertRaises(psycopg.Error):
+                pg.execute("UPDATE poc_executions SET state='RUNNING' "
+                           "WHERE execution_id=%s",(run["execution"],))
+
     def test_token_verification_must_match_actual_persisted_events(self):
         from hashlib import sha256
         run=self.fixture()

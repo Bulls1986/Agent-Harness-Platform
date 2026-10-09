@@ -37,7 +37,7 @@ class LiveFacts:
             VALUES(%s,%s,%s,%s,%s::jsonb)""",
                    (uid("event"),run,row["seq"],kind,json.dumps(payload)))
 
-    def prepare(self,prompt,model):
+    def prepare(self,prompt,model,save_artifact=False):
         if not isinstance(prompt,str) or not 1<=len(prompt)<=500 or not prompt.strip():
             raise ValueError("Bounded nonblank prompt required")
         if not isinstance(model,str) or not model or len(model)>100:
@@ -48,6 +48,7 @@ class LiveFacts:
         ids["frozen_workflow_version"]=VERSION
         ids["model"]=model
         ids["prompt"]=prompt
+        ids["save_artifact"]=bool(save_artifact)
         with psycopg.connect(self.dsn,row_factory=dict_row) as db:
             db.execute("INSERT INTO poc_conversations(conversation_id) VALUES(%s)",
                        (ids["conversation"],))
@@ -64,14 +65,17 @@ class LiveFacts:
                        (ids["step"],ids["plan"]))
             db.execute("INSERT INTO poc_attempts(attempt_id,step_id,ordinal,state) VALUES(%s,%s,1,'RUNNING')",
                        (ids["attempt"],ids["step"]))
-            db.execute("INSERT INTO poc_executions(execution_id,attempt_id,side_effect_class,state) VALUES(%s,%s,'PURE','RUNNING')",
-                       (ids["execution"],ids["attempt"]))
+            db.execute("""INSERT INTO poc_executions
+                (execution_id,attempt_id,side_effect_class,state)
+                VALUES(%s,%s,%s,'RUNNING')""",
+                (ids["execution"],ids["attempt"],
+                 "IDEMPOTENT" if ids["save_artifact"] else "PURE"))
             db.execute("""INSERT INTO poc_c15_runs(run_id,native_workflow_id,model,
                 frozen_workflow_version,prompt,step_id,attempt_id,execution_id)
                 VALUES(%s,%s,%s,%s,%s,%s,%s,%s)""",
                        tuple(ids[x] for x in ("run","native_workflow_id","model","frozen_workflow_version",
                                               "prompt","step","attempt","execution")))
-            self.event(db,ids["run"],"run.started",{"step_id":ids["step"],"attempt_id":ids["attempt"],"execution_id":ids["execution"]})
+            self.event(db,ids["run"],"run.started",{"step_id":ids["step"],"attempt_id":ids["attempt"],"execution_id":ids["execution"],"save_artifact":ids["save_artifact"]})
             self.event(db,ids["run"],"plan.created",{"step_id":ids["step"],"version":1})
 
             db.execute("""INSERT INTO poc_recovery_points(recovery_point_id,run_id,step_id,
@@ -91,6 +95,13 @@ class LiveFacts:
         if any(row[k]!=req[k2] for k,k2 in
                (("step_id","step"),("attempt_id","attempt"),("execution_id","execution"))):
             raise ValueError("Frozen G3 Step/Attempt/Execution mismatch")
+        with psycopg.connect(self.dsn,row_factory=dict_row) as db:
+            frozen=db.execute("""SELECT payload FROM poc_events
+                WHERE run_id=%s AND seq=1 AND event_type='run.started'""",
+                (req["run"],)).fetchone()
+        if not frozen or bool(frozen["payload"].get("save_artifact",False))!=bool(
+                req.get("save_artifact",False)):
+            raise ValueError("Frozen G3 Artifact request mismatch")
         if active and row["state"]!="RUNNING":
             raise ValueError("G3 Run not active")
         return row
@@ -121,10 +132,117 @@ class LiveFacts:
             self.require(req,active=False)
             if state["state"]!="RUNNING":
                 return False
+            execution=db.execute("SELECT state FROM poc_executions WHERE execution_id=%s",
+                                 (req["execution"],)).fetchone()
+            if not execution or execution["state"]!="RUNNING":
+                return False
             allowed={"activity.started","response.output_text.delta","response.output_text.done"}
             if kind not in allowed:raise ValueError("Unknown G3 event")
             self.event(db,req["run"],kind,data)
             return True
+
+    def model_text_for_artifact(self,req,digest,count):
+        """Only Data Plane receives source text; Native History sees digest."""
+        self.require(req)
+        if not req.get("save_artifact"):
+            raise ValueError("Artifact not frozen for this Run")
+        with psycopg.connect(self.dsn,row_factory=dict_row) as db:
+            events=db.execute("""SELECT event_type,payload FROM poc_events
+                WHERE run_id=%s AND event_type IN
+                ('response.output_text.delta','response.output_text.done')
+                ORDER BY seq""",(req["run"],)).fetchall()
+        text="".join(e["payload"]["delta"] for e in events
+                     if e["event_type"]=="response.output_text.delta")
+        done=[e for e in events if e["event_type"]=="response.output_text.done"]
+        if (len(done)!=1 or len(text)!=count or
+            done[0]["payload"].get("sha256")!=digest or
+            sha256(text.encode()).hexdigest()!=digest):
+            raise ValueError("Persisted model text/digest mismatch")
+        return text
+
+    def record_artifact(self,req,digest,size,ref):
+        """Post verified OSS reference once with frozen Run lineage."""
+        if not req.get("save_artifact") or not ref.startswith("s3://") or size<=0:
+            raise ValueError("Invalid artifact binding")
+        with psycopg.connect(self.dsn,row_factory=dict_row) as db:
+            state=db.execute("SELECT state FROM poc_runs WHERE run_id=%s FOR UPDATE",
+                             (req["run"],)).fetchone()
+            self.require(req,active=False)
+            if state["state"]!="RUNNING":return None
+            existing=db.execute("""SELECT payload FROM poc_events
+                WHERE run_id=%s AND event_type='artifact.created'""",
+                (req["run"],)).fetchall()
+            if existing:
+                row=existing[0]["payload"]
+                if len(existing)!=1 or any((row.get(k)!=v) for k,v in
+                    (("sha256",digest),("size_bytes",size),("storage_ref",ref),
+                     ("step_id",req["step"]),("attempt_id",req["attempt"]),
+                     ("execution_id",req["execution"]))):
+                    raise ValueError("Artifact already frozen with different lineage")
+                return row["artifact_id"]
+            artifact=uid("artifact")
+            self.event(db,req["run"],"artifact.created",{
+                "artifact_id":artifact,"step_id":req["step"],
+                "attempt_id":req["attempt"],"execution_id":req["execution"],
+                "sha256":digest,"size_bytes":size,"storage_ref":ref})
+            return artifact
+
+    def mark_artifact_verified(self,req,artifact,digest,ref,size):
+        """Independent S3 read/digest proof remains a Harness event fact."""
+        with psycopg.connect(self.dsn,row_factory=dict_row) as db:
+            state=db.execute("SELECT state FROM poc_runs WHERE run_id=%s FOR UPDATE",
+                             (req["run"],)).fetchone()
+            self.require(req,active=False)
+            if state["state"]!="RUNNING":return False
+            row=db.execute("""SELECT payload FROM poc_events
+                WHERE run_id=%s AND event_type='artifact.created'""",
+                (req["run"],)).fetchone()
+            if (not row or row["payload"]["artifact_id"]!=artifact or
+                    row["payload"]["sha256"]!=digest or
+                    row["payload"]["storage_ref"]!=ref or
+                    row["payload"]["size_bytes"]!=size or
+                    row["payload"]["execution_id"]!=req["execution"]):
+                raise ValueError("Artifact verification lineage/digest/ref mismatch")
+            verified=db.execute("""SELECT payload FROM poc_events
+                WHERE run_id=%s AND event_type='artifact.verified'""",
+                (req["run"],)).fetchone()
+            if verified:
+                if verified["payload"]["artifact_id"]!=artifact:
+                    raise ValueError("Conflicting Artifact verified event")
+                return True
+            self.event(db,req["run"],"artifact.verified",
+                       {"artifact_id":artifact,"sha256":digest,
+                        "execution_id":req["execution"],"verified":True})
+            return True
+
+    def mark_artifact_unknown(self,req,reason="S3_WRITE_OUTCOME_UNKNOWN"):
+        """Side effect may exist outside PG after dispatch: no blind retry."""
+        with psycopg.connect(self.dsn,row_factory=dict_row) as db:
+            state=db.execute("SELECT state FROM poc_runs WHERE run_id=%s FOR UPDATE",
+                             (req["run"],)).fetchone()
+            self.require(req,active=False)
+            if not state or state["state"]!="RUNNING":
+                raise ValueError("Cannot reconcile inactive Run")
+            row=db.execute("""SELECT e.side_effect_class,e.state FROM poc_executions e
+                WHERE e.execution_id=%s AND e.attempt_id=%s""",
+                (req["execution"],req["attempt"])).fetchone()
+            if not row or row["side_effect_class"]!="IDEMPOTENT":
+                raise ValueError("Only idempotent external Artifact write can quarantine here")
+            if row["state"]=="UNKNOWN":
+                return "PENDING"  # already fenced by immutable history
+            if row["state"]!="RUNNING":
+                raise ValueError("Artifact effect already finalized")
+            db.execute("""UPDATE poc_executions SET state='UNKNOWN',failure_type=%s
+                WHERE execution_id=%s""",(reason,req["execution"]))
+            db.execute("""UPDATE poc_attempts SET state='UNKNOWN',failure_type=%s
+                WHERE attempt_id=%s""",(reason,req["attempt"]))
+            db.execute("""INSERT INTO poc_reconciliations
+                (execution_id,run_id,state,failure_type)
+                VALUES(%s,%s,'PENDING',%s)""",(req["execution"],req["run"],reason))
+            self.event(db,req["run"],"execution.unknown",{
+                "execution_id":req["execution"],"attempt_id":req["attempt"],
+                "failure_type":reason,"reconciliation_state":"PENDING"})
+            return "PENDING"
 
     def verify(self,req,digest,count):
         with psycopg.connect(self.dsn,row_factory=dict_row) as db:
@@ -141,6 +259,18 @@ class LiveFacts:
                     sha256(text.encode()).hexdigest()==digest and
                     done[0]["payload"]["sha256"]==digest)
             if not passed:raise ValueError("Independent token/PG digest validation failed")
+            if req.get("save_artifact",False):
+                obj=db.execute("""SELECT payload FROM poc_events
+                    WHERE run_id=%s AND event_type='artifact.created'""",
+                    (req["run"],)).fetchone()
+                verified=db.execute("""SELECT payload FROM poc_events
+                    WHERE run_id=%s AND event_type='artifact.verified'""",
+                    (req["run"],)).fetchone()
+                if not obj or not verified or (
+                    obj["payload"]["sha256"]!=digest or
+                    verified["payload"]["sha256"]!=digest or
+                    verified["payload"]["artifact_id"]!=obj["payload"]["artifact_id"]):
+                    raise ValueError("Same-Run S3 Artifact independent proof missing")
             db.execute("UPDATE poc_executions SET state='SUCCEEDED' WHERE execution_id=%s",(req["execution"],))
             db.execute("UPDATE poc_attempts SET state='SUCCEEDED' WHERE attempt_id=%s",(req["attempt"],))
             db.execute("INSERT INTO poc_verifications(verification_id,execution_id,passed,evidence_ref) VALUES(%s,%s,TRUE,%s)",
@@ -156,6 +286,12 @@ class LiveFacts:
             if r["state"] in ("CANCELLING","CANCELLED"):return r["state"]
             if r["state"]==state:return state
             if r["state"]!="RUNNING":raise ValueError("Unexpected terminal transition")
+            old_execution=db.execute("SELECT state FROM poc_executions WHERE execution_id=%s",
+                                     (req["execution"],)).fetchone()
+            if old_execution["state"]=="UNKNOWN":
+                # The platform has evidence of an uncertain external effect.
+                # A failed Native Workflow is not a safe Run terminalization.
+                return "RUNNING"
             if state=="COMPLETED":
                 row=db.execute("SELECT state FROM poc_attempts WHERE attempt_id=%s",
                                (req["attempt"],)).fetchone()
@@ -245,8 +381,11 @@ class LiveFacts:
     def snapshot(self,run,after=0,limit=10000):
         with psycopg.connect(self.dsn,row_factory=dict_row) as db:
             row=db.execute("""SELECT r.run_id,r.state,b.model,b.native_workflow_id,
-                b.step_id,b.attempt_id,b.execution_id,b.start_state
+                b.step_id,b.attempt_id,b.execution_id,b.start_state,
+                e.state AS execution_state,rec.state AS reconciliation_state
                 FROM poc_runs r JOIN poc_c15_runs b ON b.run_id=r.run_id
+                JOIN poc_executions e ON e.execution_id=b.execution_id
+                LEFT JOIN poc_reconciliations rec ON rec.execution_id=b.execution_id
                 WHERE r.run_id=%s""",(run,)).fetchone()
             if not row:raise KeyError(run)
             ev=db.execute("""SELECT seq,event_id,event_type,payload,created_at FROM poc_events

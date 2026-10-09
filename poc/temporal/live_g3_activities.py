@@ -61,11 +61,69 @@ async def stream_model(req:dict):
         await asyncio.to_thread(store.terminal,req,"FAILED")
         raise
 
+@activity.defn(name="c15_write_s3_artifact")
+async def write_s3_artifact(req:dict):
+    """Save same-Run persisted Token bytes to S3, not Temporal History."""
+    store=LiveFacts(os.environ["POC_C_PLATFORM_DSN"])
+    dispatched=False
+    try:
+        from c11_object_store import S3PayloadStore
+        text=await asyncio.to_thread(store.model_text_for_artifact,req,
+                                     req["digest"],req["count"])
+        blob=text.encode()
+        key=f"runs/{req['run']}/{req['execution']}/response-{req['digest']}.txt"
+        provider=S3PayloadStore()
+        dispatched=True
+        ref=await asyncio.to_thread(provider.put,key,blob)
+        if os.environ.get("POC_C15_INJECT_S3_WRITE_UNKNOWN")=="1":
+            # Injection AFTER physical PUT, BEFORE PG artifact.created ACK.
+            raise RuntimeError("Injected S3 write acknowledgement loss")
+        artifact=await asyncio.to_thread(store.record_artifact,req,req["digest"],
+                                         len(blob),ref)
+        if not artifact:return {"cancelled":True}
+        return {"cancelled":False,"artifact_id":artifact,
+                "sha256":req["digest"],"size_bytes":len(blob),"storage_ref":ref}
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        if dispatched:
+            # The S3 object may exist even if POST returned an error. Quarantine
+            # immutable Attempt/Execution UNKNOWN, never blind PUT/retry.
+            await asyncio.to_thread(store.mark_artifact_unknown,req)
+        else:
+            await asyncio.to_thread(store.terminal,req,"FAILED")
+        raise
+
+@activity.defn(name="c15_verify_s3_artifact")
+async def verify_s3_artifact(req:dict):
+    """Separate Activity reads the real S3 object and checks SHA-256."""
+    store=LiveFacts(os.environ["POC_C_PLATFORM_DSN"])
+    try:
+        from c11_object_store import S3PayloadStore
+        blob=await asyncio.to_thread(S3PayloadStore().read,req["storage_ref"])
+        if len(blob)!=req["size_bytes"] or sha256(blob).hexdigest()!=req["sha256"]:
+            raise ValueError("Independent S3 Artifact digest mismatch")
+        passed=await asyncio.to_thread(store.mark_artifact_verified,req,
+                                       req["artifact_id"],req["sha256"],
+                                       req["storage_ref"],req["size_bytes"])
+        return {"passed":passed}
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        await asyncio.to_thread(store.terminal,req,"FAILED")
+        raise
+
 @activity.defn(name="c15_verify_tokens")
 async def verify_tokens(req:dict):
     store=LiveFacts(os.environ["POC_C_PLATFORM_DSN"])
-    passed=await asyncio.to_thread(store.verify,req,req["digest"],req["count"])
-    return {"passed":passed}
+    try:
+        passed=await asyncio.to_thread(store.verify,req,req["digest"],req["count"])
+        return {"passed":passed}
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        await asyncio.to_thread(store.terminal,req,"FAILED")
+        raise
 
 @activity.defn(name="c15_finish")
 async def finish(req:dict):

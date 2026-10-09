@@ -13,6 +13,20 @@ class LiveStreamWorkflow:
             retry_policy=RetryPolicy(maximum_attempts=1))
         if produced["cancelled"]:
             return {"state":"CANCELLED"}
+        if request.get("save_artifact",False):
+            artifact=await workflow.execute_activity(
+                "c15_write_s3_artifact",
+                request|{"digest":produced["digest"],"count":produced["count"]},
+                start_to_close_timeout=timedelta(seconds=55),
+                retry_policy=RetryPolicy(maximum_attempts=1))
+            if artifact["cancelled"]:
+                return {"state":"CANCELLED"}
+            proof=await workflow.execute_activity(
+                "c15_verify_s3_artifact",request|artifact,
+                start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=RetryPolicy(maximum_attempts=1))
+            if not proof["passed"]:
+                return {"state":"CANCELLED"}
         verified=await workflow.execute_activity(
             "c15_verify_tokens",request|{"digest":produced["digest"],"count":produced["count"]},
             start_to_close_timeout=timedelta(seconds=15),

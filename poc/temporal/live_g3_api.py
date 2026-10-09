@@ -26,6 +26,7 @@ class Create(BaseModel):
     model:str=Field(min_length=1,max_length=100)
     input:str=Field(min_length=1,max_length=500)
     stream:bool=False
+    save_artifact:bool=False  # POC-only optional S3 output; no default side effect
 
 def store():
     key=os.environ.get("POC_C_PLATFORM_DSN","")
@@ -44,7 +45,9 @@ async def create(body:Create):
         raise HTTPException(422,detail="Model not configured for this self-host POC")
     s=store()
     try:
-        run=await asyncio.to_thread(s.prepare,body.input,body.model)
+        if body.save_artifact and not os.environ.get('POC_C11_S3_ENDPOINT'):
+            raise HTTPException(503,detail='S3 Artifact Provider not configured')
+        run=await asyncio.to_thread(s.prepare,body.input,body.model,body.save_artifact)
     except ValueError as exc:
         raise HTTPException(422,detail="Invalid bounded input") from exc
     # G2 pending: persisted immutable Workflow ID before start, but ACK loss
@@ -90,6 +93,9 @@ def get_response(run_id:str):
                        "step_id":row["step_id"],"attempt_id":row["attempt_id"],
                        "execution_id":row["execution_id"],
                        "start_state":row["start_state"],
+                       "execution_state":row["execution_state"],
+                       "reconciliation_state":row["reconciliation_state"],
+                       "attention_required":row["execution_state"]=="UNKNOWN",
                        "last_event_sequence":events[-1]["seq"] if events else 0}}
 
 
@@ -221,7 +227,8 @@ async def _typed_events(run_id,after,last_event_id,*,c15_only):
                 yield ("id: "+value["id"]+"\n"+"event: "+value["type"]+"\n"+
                        "data: "+json.dumps(value,separators=(",",":"),ensure_ascii=False)+"\n\n")
                 seq=value["sequence"]
-            if snapshot["state"] in TERMINAL and not rows:
+            if (snapshot["state"] in TERMINAL or
+                    snapshot.get("attention_required")) and not rows:
                 break
             await asyncio.sleep(.1)
     return StreamingResponse(tail(),media_type="text/event-stream",

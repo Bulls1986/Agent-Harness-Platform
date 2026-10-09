@@ -21,6 +21,7 @@ PORTABLE_FIELDS = {
     "response.output_text.done": ("sha256", "chars"),
     "artifact.created": ("artifact_id", "step_id", "attempt_id",
                          "execution_id", "storage_ref", "sha256", "size_bytes"),
+    "artifact.verified": ("artifact_id", "execution_id", "sha256", "verified"),
     "verification.passed": ("execution_id", "artifact_id", "evidence_id",
                              "sha256", "passed"),
     "execution.unknown": ("execution_id", "attempt_id", "failure_type",
@@ -73,7 +74,11 @@ class TemporalEventFeed:
             pg.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
             run = pg.execute(
                 """SELECT r.run_id,r.state,r.runtime_type,r.turn_id,
-                          t.conversation_id
+                          t.conversation_id,
+                          EXISTS(SELECT 1 FROM poc_reconciliations rec
+                            WHERE rec.run_id=r.run_id AND
+                            rec.state IN ('PENDING','HUMAN_REQUIRED'))
+                          AS attention_required
                    FROM poc_runs r JOIN poc_turns t ON t.turn_id=r.turn_id
                    WHERE r.run_id=%s""", (run_id,)).fetchone()
             if not run or run["runtime_type"] != "temporal":

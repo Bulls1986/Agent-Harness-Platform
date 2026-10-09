@@ -36,6 +36,10 @@ async def ready(client,proc):
 
 async def exercise():
     fake=os.environ.get("POC_C15_FAKE_MODEL")=="1"
+    artifact_requested=os.environ.get("POC_C15_TEST_ARTIFACT")=="1"
+    artifact_unknown=artifact_requested and os.environ.get("POC_C15_INJECT_S3_WRITE_UNKNOWN")=="1"
+    if artifact_requested and not os.environ.get("POC_C11_S3_ENDPOINT"):
+        raise ValueError("Actual S3 endpoint required for same-Run Artifact")
     required=("POC_C_PLATFORM_DSN","POC_C_LITELLM_MODEL")
     if not all(os.environ.get(k) for k in required):raise ValueError("G3 env missing")
     if not fake and not all(os.environ.get(k) for k in
@@ -61,7 +65,7 @@ async def exercise():
             c=await client.post("/v1/responses",
                                 json={"model":model,
                                       "input":"用一句中文简单解释为什么事件流需要持久化，再补一句关于任务恢复。不要使用 Markdown。",
-                                      "stream":False})
+                                      "stream":False,"save_artifact":artifact_requested})
             ack_fault=os.environ.get("POC_C15_INJECT_START_ACK_LOSS")=="1"
             if ack_fault:
                 if c.status_code!=503 or c.json().get("detail",{}).get("kind")!="START_ACK_UNKNOWN":
@@ -85,19 +89,62 @@ async def exercise():
             state=(await client.get(f"/v1/responses/{run}")).json()
             kinds=[e["type"] for e in events]
             failed=fake and os.environ.get("POC_C15_FAIL_AFTER_TOKEN")=="1"
-            expected_tail=(["run.terminal"] if failed else
+            expected_tail=(["response.output_text.done","execution.unknown"]
+                           if artifact_unknown else
+                           ["run.terminal"] if failed else
+                           ["response.output_text.done","artifact.created",
+                            "artifact.verified","verification.passed","run.terminal"]
+                           if artifact_requested else
                            ["response.output_text.done","verification.passed","run.terminal"])
-            if (state["status"]!=("failed" if failed else "completed") or
+            expected_status=("in_progress" if artifact_unknown else
+                             "failed" if failed else "completed")
+            if (state["status"]!=expected_status or
                 kinds[:3]!=["run.started","plan.created","activity.started"] or
                 kinds[-len(expected_tail):]!=expected_tail or
                 kinds.count("response.output_text.delta")<2 or
                 (failed and "verification.passed" in kinds)):
                 raise AssertionError("G3 lifecycle status="+state["status"]+" types="+",".join(kinds))
+            if artifact_unknown:
+                attention=state["harness"]
+                if (attention["execution_state"]!="UNKNOWN" or
+                    attention["reconciliation_state"]!="PENDING" or
+                    not attention["attention_required"] or "run.terminal" in kinds or
+                    "artifact.created" in kinds or "verification.passed" in kinds):
+                    raise AssertionError("S3 uncertain effect incorrectly resolved as terminal/success")
+                if events[-1]["data"].get("reconciliation_state")!="PENDING":
+                    raise AssertionError("Missing durable UNKNOWN reconciliation fact")
             text="".join(e["data"]["delta"] for e in events
                          if e["type"]=="response.output_text.delta")
             output=state["output"][0]["content"][0]["text"]
             if not text or text!=output:
                 raise AssertionError("HTTP GET output differs from persisted SSE tokens")
+            if artifact_requested:
+                from hashlib import sha256
+                from c11_object_store import S3PayloadStore
+                created=[e for e in events if e["type"]=="artifact.created"]
+                proved=[e for e in events if e["type"]=="artifact.verified"]
+                if artifact_unknown:
+                    if created or proved:
+                        raise AssertionError("Ambiguous S3 dispatch produced false artifact proof")
+                    execution_id=state["harness"]["execution_id"]
+                    key=f"runs/{run}/{execution_id}/response-{sha256(text.encode()).hexdigest()}.txt"
+                    expected_ref="s3://"+os.environ.get("POC_C11_S3_BUCKET","poc-c11-artifacts")+"/"+key
+                    actual=await asyncio.to_thread(S3PayloadStore().read,expected_ref)
+                    if actual!=text.encode():
+                        raise AssertionError("Injected physical S3 effect not actually committed")
+                else:
+                    if len(created)!=1 or len(proved)!=1:
+                        raise AssertionError("Same-Run S3 Artifact or proof event missing")
+                    meta=created[0]["data"]
+                    if created[0]["run_id"]!=run or proved[0]["run_id"]!=run:
+                        raise AssertionError("Artifact belongs to another Run")
+                    if meta["artifact_id"]!=proved[0]["data"]["artifact_id"]:
+                        raise AssertionError("Artifact independent verification ID mismatch")
+                    actual=await asyncio.to_thread(S3PayloadStore().read,meta["storage_ref"])
+                    if (actual!=text.encode() or
+                            sha256(actual).hexdigest()!=meta["sha256"] or
+                            len(actual)!=meta["size_bytes"]):
+                        raise AssertionError("Physical S3 object inconsistent with persisted Token SSE")
 
         # Verify no generated text was inserted into Temporal's native History;
         # model prompt/step IDs may appear there as frozen inputs, but output
@@ -202,6 +249,8 @@ async def exercise():
             "provider_raw_text_in_native_history":False,
             "native_history_output_leak_checked":True,
             "all_harness_tool_approval_artifact_types_proven":False,
+            "same_run_actual_s3_artifact_verified":artifact_requested and not artifact_unknown,
+            "s3_physical_effect_unknown_and_reconciliation_pending":artifact_unknown,
             "cancel_test_proven":fake and os.environ.get("POC_C15_TEST_CANCEL")=="1",
             "ack_loss_reconciliation_proven":os.environ.get("POC_C15_INJECT_START_ACK_LOSS")=="1",
             "cancel_fixture_proven":fake and os.environ.get("POC_C15_TEST_CANCEL")=="1",
