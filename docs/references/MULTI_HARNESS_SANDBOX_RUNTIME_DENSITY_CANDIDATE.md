@@ -112,6 +112,36 @@ OpenAI Agents SDK 0.23.1 的官方 `DockerSandboxClient` + `SandboxSession`
 | S7 | 一致负载下 Topology A/B 的 RSS/CPU/P95/进程数/Sandbox 数和回收情况 | NOT RUN |
 | S8 | Worker/Sandbox 崩溃后任务级 RecoveryPoint/Workspace/Receipt 安全边界 | NOT RUN |
 
+### 2026-10-09：OpenCode 2 Session→Sandbox 路由反向实测
+
+**已测且通过预期反例：** 真实 OpenCode 2.0.24 容器承载
+2 个逻辑 Session（不同 Location）；另起两个不同 Isolation Scope
+的 Docker 隔离容器模拟被分配的 Sandbox。通过 OpenCode 2 原生
+`POST /api/shell`（显式 Location/cwd）执行文件写入，实际文件
+落在**共享 OpenCode Host**，没有落在模拟的外部 Sandbox 中。
+单一 Server 多 Session + Platform Session→Sandbox ID 记录，
+**不自动赋予 OpenCode Tool 远程隔离能力**。
+
+| 路径 | 官方公开扩展面 | 是否已证实完整重定向 |
+|---|---|---|
+| LLM Tool | V2 `ctx.tool.transform` 可替换工具注册；执行回调有 Session context | 未验完整 OpenCode 实例 |
+| Host Shell | V2 `ctx.shell.hook('create.before')` 可改参数，但不意味着可以替换 OS 执行器 | **未证实；原生 Shell 反例已实测** |
+| 原生 `/api/shell`、Session Shell | 独立 Shell API | **原生执行路径不能按 Session ID 自动转 E2B** |
+| 原生 `/api/pty` | 独立 PTY API | 未验，不能靠覆盖 Bash 宣称隔离 |
+| 原生 `/api/fs`、Git、LSP、Formatter、插件 | 包含非 LLM Tool 入口 | 未验 |
+
+已增加严格的 `SessionSandboxRouter` POC 骨架：使用现有
+`SandboxProvider` 显式转发、错误 Session 或 Binding fail-closed。
+其新的正向控制测试**尚未完成复测**，不记为 PASS；这也不是 OpenCode
+原生 API 的透明远程执行实现。反向测试脚本及其原始实测在
+`poc/opencode_sandbox/verify_opencode2_shared_host_negative.py`。
+
+**架构影响**：`Session → Sandbox` 平台 Binding **成立**，
+但 OpenCode 2 共享 Host 跨 Scope 的生产 Topology B **仍为 NO-GO
+（证据不足）**。先保证可验证的 Harness-in-Sandbox 隔离，
+再以所有执行入口都不能逃回共享 Host 为门禁评估 Topology B。
+不是 Cube/E2B API 是否兼容的证据，后者仍需独立真实 Cube 测试。
+
 所有实测都应冻结 Harness SDK 版本、镜像 digest、场景、隔离策略、样本数量；
 零模型探针不得宣称完整 Agent 工作流。未过门禁的设计只能保持候选。
 
