@@ -5,6 +5,28 @@
 > 不以“所有 OpenCode 原生执行入口已隔离”作为前置条件**；完整隔离与审计仍是
 > 生产门禁，不能因阶段降级而从正式架构契约中删除。
 
+## 2026-10-09 傍晚：技术选型收敛候选（尚非 Accepted ADR）
+
+**结论：默认轻量 Agent 执行适配器优先 Pydantic AI Harness，统一替换能力来自平台 AgentRuntime SPI，而不是 Pydantic AI 自动执行其他 Agent SDK。**
+
+### 推荐分层
+
+- AgentRuntime SPI：平台自有。Pydantic AI Harness 是新通用专业 Agent 的默认适配器；OpenAI Agents SDK、OpenCode 2、MAF 分别有独立适配器。模型 Provider 切换与 Agent SDK 切换是不同维度。
+- Process/Durable SPI：平台负责 Run/Step/Attempt、Approval、RecoveryPoint、Typed Event、Receipt 和结果。Temporal 保持可选 Durability Backend；不把它误当 Agent SDK，不因 Pydantic 有 Agent Loop 就直接淘汰。若仅需任务级恢复，允许先比较 PG + Worker/Scheduler 的简化实现，但必须证明 Worker 崩溃接管及非幂等副作用对账后再选。
+- SandboxProvider SPI：CubeSandbox 自托管 E2B-compatible API / Cube SDK 薄适配。只有需要文件/Shell 执行的 Agent 分配 Sandbox；多个 Session 共享 Worker，按 IsolationScope 绑定/复用 Sandbox Lease，并由平台掌握 WorkspaceRef。
+- MAF 不再优先担任所有 Agent 的唯一底层 Harness；已有 POC-A 验证不作废。Temporal POC-C 也不作废，它和 Pydantic 是互补层；若采用 Pydantic TemporalDurability，不再给同一个 Agent Run 叠另一套 Durable 执行引擎。
+- OpenCode 2 仍是独立 Coding Runtime。共享 Host 的原生 Shell/FS/PTY/Git/LSP 路径不能只靠 SessionID 自动转发到 Cube；生产必须关闭 Host 绕过入口或选择 Harness-in-Sandbox 拓扑。
+- Pydantic AI Harness 官方仍为 0.x，可能发生接口变更；需要冻结版本、隔离适配并维护升级验证。
+
+**新增本机原生协议反例：** Cube v0.7.2 对 E2B SDK 2.53.1 的创建请求返回 HTTP 405（E2B 使用 POST /v2/sandboxes；当前 Cube 的该路由仅支持 GET）。OpenAI Agents SDK 原生 E2BSandboxClient 同样因内部使用 E2B SDK 返回 405。Pydantic Harness 原生 E2BSandboxBackend 依赖相同协议，需要单独验证受支持的版本或通过 SandboxProvider 薄适配。已创建真实 Cube sandbox-code 实例验证其缺失 opencode/node/npm/bun 等，OpenCode 2 必须另建 OCI Template。此发现增强了自有 SPI 的必要性，但不代表 Pydantic 原生 E2B 已 GO。\n\n### 候选晋级门禁
+
+1. 使用同一真实 Cube Sandbox ID 对 Pydantic AI、OpenAI Agents SDK 原生 E2B Client 及 OpenCode 2 实际工具接力进行实测；记录 Native / Adapter / Untested。
+2. AgentRuntime SPI 分别运行 Pydantic、OpenAI SDK、OpenCode 2，保持统一任务事实、Sandbox Lease、Typed Events 与 Tool Receipt。
+3. 证明单 Worker 多 Session、多 Scope 独立 Sandbox、无工具需求不申请 Sandbox，并验证取消/超时/复连。
+4. 对跨 Worker 恢复、HITL 审批及非幂等副作用 UNKNOWN 对账做等价 POC，再比较 Temporal、MAF Durable、简化 PG Worker 的实现与维护成本。
+
+**本轮已有事实：** Cube 原生 SDK 对真实 MicroVM/命令/文件/同 ID 复连通过；OpenAI SDK 公开 FunctionTool 桥对同一真实 Cube 文件通过。官方 e2b SDK、OpenAI 原生 E2BSandboxClient、OpenCode 2 和 Pydantic Coder 的 Cube 真机未全部验收。只调整候选优先级，不提前替换 Accepted Contract。
+
 ## 1. 需求基线（不是选某一个框架的理由）
 
 1. 面向 PDLC、企业门户等不同场景；业务入口可通过 Jev 一类的快速决策模型

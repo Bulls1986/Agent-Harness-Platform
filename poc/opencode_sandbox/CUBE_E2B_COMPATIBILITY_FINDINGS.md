@@ -15,6 +15,14 @@
 > 注入 Fake E2B 实例完成 2 Session/2 ID、错租约拒绝、绑定重建后继续读。
 > **OFFLINE MOCK PASS ≠ CUBE LIVE PASS ≠ OpenCode Native Tool 全接管。**
 
+## 2026-10-09 17:xx：OpenAI Native E2B / OpenCode 2 真机门禁（失败证据）
+
+- Cube API 3000、TemplateCenter 8090、CubeEgress 9091、CubeMaster、Cubelet、CubeProxy 均检查为 healthy；同一 Cube Template 元数据与本机副本 READY。真实 Cube 原生 SDK 创建可正常运行。
+- 官方 **e2b==2.53.1** 的 `Sandbox.create(template=...)` 在 Cube v0.7.2 实际调用得到 `SandboxException(status_code=405)`。检查该版本安装包的公开调用流程，`SandboxApi._create_sandbox` 调用 `post_v2_sandboxes.asyncio_detailed`，对应 `POST /v2/sandboxes`；而当前 Cube 原生 SDK 0.7.0 创建走 `POST /sandboxes`，Cube OpenAPI 的 `/v2/sandboxes` 只暴露 GET。属于**E2B SDK 版本与 Cube 控制面协议不兼容**，不是 KVM/MicroVM 故障。不能把 Cube Native 成功计入 CUBE-1 官方 E2B SDK PASS。待验证官方明确支持的 E2B SDK 版本或经平台 SandboxProvider 的薄适配，不采用 SDK 私有猴子补丁。
+- **openai-agents==0.23.1** 原生 `E2BSandboxClient.create` 单独在真实 Cube API 调用，堆栈穿过 SDK `agents.extensions.sandbox.e2b` 和 `e2b.sandbox_async.sandbox_api`，同样在创建时得到 `e2b.exceptions.SandboxException: 405`，**CUBE-3 Native FAIL（组合版本）**。先前基于 Cube 原生 SDK 的公开 `FunctionTool` 桥接仍 PASS，不可与原生 E2BSandboxClient 混淆。
+- **OpenCode 2 真机前置：** 在同一个已 READY 的 `sandbox-code` 模板中创建真实 Cube Sandbox `c82bb1411f404c24a7a86703f5ff182b`，读取发行版为 Debian 12 x86_64，`command -v` 检查表明 `opencode/node/npm/bun/curl/wget/git/tar` 均不存在；Sandbox 已删除。此模板**不能直接执行 OpenCode 2**，必须先构建包含 OpenCode 2 和 Cube envd/probe 的 OCI Template，随后再测 V2 HTTP Session、FS、Shell 与同 Cube 的 OpenAI Bridge 接力。不能把“Template 缺二进制”当作 OpenCode 2 Agent 兼容性失败。
+- 结论：本轮 OpenAI FunctionTool→Cube Native 已有功能性 PASS；官方 OpenAI E2B Native 当前版本为**明确协议 FAIL**；OpenCode 2→Cube 为 **BLOCKED（待 OpenCode OCI Template）**；Pydantic Harness 的原生 E2B Backend 因也依赖 E2B SDK，需要针对版本组合专门复验，不能直接沿用此前 Mock PASS。
+
 ## 2026-10-09 下午：真实 Cube MicroVM 验证增量（取代下面早间环境结论）
 
 **当前状态：Cube 原生 SDK 的真实 MicroVM/命令/文件/复连与 OpenAI SDK FunctionTool 桥 PASS；官方 E2B SDK Native 和生产选型仍 NOT GO。**
