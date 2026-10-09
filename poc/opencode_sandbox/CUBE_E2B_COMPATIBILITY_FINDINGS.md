@@ -15,6 +15,22 @@
 > 注入 Fake E2B 实例完成 2 Session/2 ID、错租约拒绝、绑定重建后继续读。
 > **OFFLINE MOCK PASS ≠ CUBE LIVE PASS ≠ OpenCode Native Tool 全接管。**
 
+## 2026-10-09 下午：真实 Cube MicroVM 验证增量（取代下面早间环境结论）
+
+**当前状态：Cube 原生 SDK 的真实 MicroVM/命令/文件/复连与 OpenAI SDK FunctionTool 桥 PASS；官方 E2B SDK Native 和生产选型仍 NOT GO。**
+
+- 复用了单独的 WSL2 Ubuntu / CubeSandbox v0.7.2 环境。`/data/cubelet` 是 16 GiB XFS (`/dev/loop2`)，背后文件 `/root/ahp-cube-demo/cubelet-demo-16g.xfs`；嵌套 KVM 正常。未停止或清理原有 Docker Desktop 13 个运行容器。这个容量仅足够最小 Demo，**不代表满足官方建议的 50+ GiB 生产磁盘需求**。
+- Cube Control Plane 的 `cube-api`、`cubemaster`、`cubelet`、`cube-proxy`、`cube-templatecenter` 可运行；`GET http://127.0.0.1:3000/health` 返回 HTTP 200（首次无 Sandbox 时返回 `{"status":"ok","sandboxes":0}`），Ubuntu 内 MySQL/Redis/MinIO 运行健康。WSL 临时进程结束会使发行版退出并停止服务；务必使用同一个存活的 WSL 环境验证，不以服务曾经启动推断当前仍存活。
+- 官方 `sandbox-code:latest` OCI 镜像成功构建为模板 `tpl-5e50f4d999c04bdc80b07609`；首次构建 Job `7f2a790a-f1b3-4cf2-9e03-909e2729e812` 为 READY，镜像 Digest `sha256:467494c38f3c335e42d590e23d5cbb00dc15c2627c9da4f7e7f3bd9f4ec18c5e`。曾遭遇重启时 TemplateCenter `127.0.0.1:8090` 尚未就绪，Artifact 代理返回 502，CubeMaster 拒绝创建（`130400: template has no ready replica`）；一次重同步在 CubeEgress `9091` 尚未就绪时因 `PortBindingFailed / context deadline exceeded` 失败。**在 3000/8090/9091 健康后**，再次通过官方 `tpl redo` 恢复该模板，Job `c8e125ae-4a87-42d9-84f9-e1f5edca3fa2` 为 READY。故要改进服务启动顺序与模板副本健康检查。
+- 官方 `cubesandbox==0.7.0` 原生 SDK **真实调用** `Sandbox.create`，得到 Sandbox ID `a258e4a2feb34e5c821e385740bdcce2`；`commands.run` 返回 `cube-native-ok`，`files.write/read` 返回 `cube-files-ok`，最后 `kill` 完成。独立第二次 Sandbox 验证同 ID 的 `Sandbox.connect(sandbox_id)` 可由新的客户端句柄继续读取、写入现有文件，并已删除 Sandbox。此复连是**运行中重连**，不是 pause/resume 或灾难恢复。
+- `openai-agents==0.23.1` 通过官方公开 `@function_tool` 与 `FunctionTool.on_invoke_tool` 回调，实际读取同一 Cube Sandbox 文件，再由 Sandbox Shell 修改并由 FunctionTool 读取更新后的内容，PASS；无模型/无 Agent Loop，**不等于 SDK 原生 E2BSandboxClient**。
+- Ubuntu 独立 Python venv 已安装 `e2b==2.53.1`、`openai-agents==0.23.1` 和 `cubesandbox==0.7.0`。官方 **e2b** Python SDK 的 `Sandbox.create`/命令/文件/销毁以及 OpenAI 原生 E2BSandboxClient 的 Cube 兼容性**尚未实测**，不能将 Cube 原生 SDK 成功等同于 E2B SDK 完全兼容。
+- 可复验的最小功能性夹具：`poc/opencode_sandbox/verify_cube_native_live.py`，不带参数只执行配置预检；需要真实 Cube 时显式 `--live`、`CUBE_NATIVE_LIVE_CONFIRM=1`，可选 `--openai-function-tool`，测试中只建一个 Sandbox 并在退出时清理。测试环境还需可信 CA 和 CubeProxy 访问配置。
+- **脚本复跑状态：** 独立分段执行的上述 Native 与 FunctionTool 真实调用 PASS；新增脚本的首轮串行复跑遇到 WSL API 已退出（ConnectionError），随后同进程启动+固定等待 45 秒的复跑在 CubeEgress 9091 未就绪时被预检挡下。因此新增脚本的整套 Live 回归本轮**未获得 PASS**，已在脚本内增加 3000/8090/9091 就绪门禁；这是需要继续解决的启动编排问题，而不是已执行的原生 SDK 功能调用失败。
+
+**门禁：Cube MicroVM Native Control/Data Plane（单实例）PASS；同 Sandbox ID 新连接 PASS；OpenAI FunctionTool 实验 PASS。CUBE-1 官方 E2B SDK、CUBE-2/3 原生多 Harness、CUBE-4/5 生命周期与恢复、CUBE-6 安全隔离、CUBE-7 密度仍未满足，生产 NOT GO。**
+
+---
 ## 目标不是让各 Harness 自建 Sandbox
 
 `Agent Runtime SPI → SandboxProvider SPI → CubeSandbox E2B-compatible API`。
@@ -26,14 +42,14 @@ OpenCode 2、OpenAI Agents SDK、MAF 应共享 Sandbox 的模板、Lease、
 
 | 能力面 | 官方公开资料 / 兼容性判断 | 本项目状态 |
 |---|---|---|
-| E2B Control：创建/删除 Sandbox | CubeAPI E2B-compatible；设 `E2B_API_URL` 与 Cube Template | **待真实 Cube** |
-| E2B Data：`commands.run`、`files.read/write` | CubeProxy/envd 提供 E2B-style Data Plane；需代理 DNS、TLS/证书、envd 端口 | **待真实 Cube** |
+| E2B Control：创建/删除 Sandbox | CubeAPI E2B-compatible；设 `E2B_API_URL` 与 Cube Template | **Cube 原生 SDK 创建/销毁 PASS；官方 E2B SDK 未测** |
+| E2B Data：`commands.run`、`files.read/write` | CubeProxy/envd 提供 E2B-style Data Plane；需代理 DNS、TLS/证书、envd 端口 | **Cube 原生 SDK 真机 PASS；官方 E2B SDK 未测** |
 | `opencode 2` 在 Cube 模板中运行 | 必须自建含 OpenCode 2 的 OCI 模板；同时满足 Cube envd/Probe，不可把 E2B Cloud 模板 ID 原样复用 | **待真实 Cube** |
 | OpenAI Agents SDK 原生 `E2BSandboxClient` | Cube 官方有集成示例，但其指南明确提到 root/streaming/SSL 等运行时兼容补丁；不能等同于零补丁 PASS | **未证明零补丁兼容** |
 | MAF Tools + E2B | 可评估透过平台工具/Executor Adapter 交给 SandboxProvider，不能推断 MAF 自带原生 E2B | **待真实 Cube** |
 | `Volume` 持久卷 | Cube REST `/volumes` E2B compatible；**官方 E2B Python Volume 客户端不可直接使用**，需 `cubesandbox` SDK 或 REST | **已识别 SDK 兼容缺口** |
-| 暂停/恢复、Session 连接、HTTP 端口 | Cube 有对应示例；具体 E2B SDK 版本、域名、证书、代理行为需实测 | **待真实 Cube** |
-| 跨 Harness 同 Sandbox/Workspace 接力 | Docker 下 OpenCode 2 ↔ OpenAI SDK 限定 PASS，**不是 Cube PASS** | **待真实 Cube** |
+| 暂停/恢复、Session 连接、HTTP 端口 | Cube 有对应示例；具体 E2B SDK 版本、域名、证书、代理行为需实测 | **原生 SDK 运行中 reconnect PASS；pause/resume 未测** |
+| 跨 Harness 同 Sandbox/Workspace 接力 | Docker 下 OpenCode 2 ↔ OpenAI SDK 限定 PASS；Cube 真机 FunctionTool ↔ Native Shell 有限定证据 | **Cube + OpenAI FunctionTool Bridge PASS（无模型）；OpenCode 2/Cube 和原生 E2B 未测** |
 
 ### 适配策略
 
@@ -51,7 +67,7 @@ OpenCode 2、OpenAI Agents SDK、MAF 应共享 Sandbox 的模板、Lease、
 5. 只有同一 Cube Template、同一 Workspace 内容、同一风险级别、
    相同执行操作的 A/B 数据才比较 E2B Cloud 与 Cube 的延迟/资源。
 
-## 当前环境 Blocker（2026-10-09 重新核验）
+## 历史环境 Blocker（2026-10-09 上午：以下断言由上方下午结果更新）
 
 - **修正早先 KVM 误判：** 未指定 `--device` 时普通 Docker 容器内没有
   `/dev/kvm`，不能据此推断宿主不支持 KVM。Docker Desktop 后端的
@@ -141,8 +157,7 @@ python poc/opencode_sandbox/verify_cube_e2b.py --live --native-sdk
   CubeProxy/envd，不能只验证 3000/TCP 可连就认为命令/文件可用。
 - 官方示例本地外部访问常需 `*.cube.app` DNS/受信任的 CA 或
   dev sidecar，不能通过关闭证书校验掩盖问题。
-- 由于本机没有可访问的 Cube MicroVM，此专项状态仍为
-  **OFFLINE SDK PRECHECK PASS / CUBE LIVE BLOCKED**。
+- **旧状态，下午已更新：** 本机已经运行真实 Cube MicroVM，并通过原生 SDK 的命令、文件、复连；官方 e2b SDK 和原生 E2BSandboxClient 合约仍未通过。
 
 ### 依据（需要随 Cube 发布变化复核）
 

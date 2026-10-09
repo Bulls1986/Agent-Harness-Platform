@@ -3,12 +3,11 @@
 > **当前首要门禁：CubeSandbox 提供 E2B 兼容接口。**
 > [Cube E2B 兼容性与实测记录](CUBE_E2B_COMPATIBILITY_FINDINGS.md)，
 > [离线/真实 Cube 合约测试](verify_cube_e2b.py)。
-> 当前环境缺 Cube MicroVM/Template/Endpoint，真实 Cube 未通过；
-> Docker 与 OpenCode 2 的 PASS 仅作为对照证据。
-> **主机自检已修正：** WSL2 的 KVM 创建 VM ioctl 实际可用，
-> 先前基于未透传设备的普通容器得出的缺 KVM 结论不准确。
-> 当前真正阻塞项为 XFS/实际磁盘空间/共享机器的 RAM 预算以及
-> 尚未部署的 Cube Control/Data Plane。见
+> **2026-10-09 下午真实 Cube 增量：** 通过 16 GiB XFS 最小 WSL2 POC，成功部署
+> CubeSandbox v0.7.2、构建官方模板、启动真实 MicroVM 并验证 Shell、文件操作、
+> 同一 Sandbox ID 复连、OpenAI Agents SDK FunctionTool 桥。测试 Sandbox 已删除。
+> **官方 E2B SDK Native、OpenAI E2BSandboxClient、OpenCode 2 同 Sandbox 接力和
+> 生产隔离仍未通过门禁**。不能因 Cube 原生 SDK 的通过而提前标记全面兼容。见
 > [Cube E2B 环境报告](CUBE_E2B_COMPATIBILITY_FINDINGS.md)
 > 和只读 [Host Readiness](verify_cube_host_readiness.py)。
 
