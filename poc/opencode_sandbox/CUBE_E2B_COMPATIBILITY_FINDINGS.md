@@ -51,15 +51,49 @@ OpenCode 2、OpenAI Agents SDK、MAF 应共享 Sandbox 的模板、Lease、
 5. 只有同一 Cube Template、同一 Workspace 内容、同一风险级别、
    相同执行操作的 A/B 数据才比较 E2B Cloud 与 Cube 的延迟/资源。
 
-## 当前环境 Blocker（已实测）
+## 当前环境 Blocker（2026-10-09 重新核验）
 
-- 本机 Docker Desktop / WSL2，容器内 `/dev/kvm` 不存在；没有 Cube
-  Control Plane 服务、Template、E2B URL 或凭据配置。
+- **修正早先 KVM 误判：** 未指定 `--device` 时普通 Docker 容器内没有
+  `/dev/kvm`，不能据此推断宿主不支持 KVM。Docker Desktop 后端的
+  WSL2 中该设备**存在且可以传入容器**；独立 Ubuntu 24.04 WSL2
+  `/dev/kvm` 可打开，`KVM_GET_API_VERSION = 12`，
+  `KVM_CREATE_VM` 成功，且 `kvm_intel nested=Y`。
+  **这证明 KVM 基础 API 可用，不等于 Cube MicroVM 已启动。**
+- 独立 Ubuntu WSL2 具备 root、systemd、8 CPU、11 GiB 可见 RAM、
+  cgroup v2 CPU 控制器；内核支持 XFS，但目前没有安装 `xfsprogs`，
+  `/data/cubelet` 所在路径仍是 ext4，**不能通过官方安装器的 XFS
+  前置检查**。
+- WSL 根分区显示 951 GiB 虚拟可用，但不能将此视为物理可用磁盘容量：
+  已通过 WSL 注册信息确认 Ubuntu 的虚拟磁盘存储于 **E:**；
+  `verify_cube_host_readiness.py --backing-path /mnt/e` 真正读到
+  约 **43.1 GiB** 物理空闲、存储路径 `ext4`，返回
+  `BLOCKED`；`KVM_CREATE_VM`、11 GiB RAM 和 cgroup CPU 均 PASS。
+  E: 低于最低 50 GiB 门槛。**不以超配稀疏回环镜像伪造容量**，
+  避免影响已有 POC/用户数据。
+- 当前有 13 个运行中的 MAF/Temporal/PG 等 Docker 容器。官方
+  `dev-env` QEMU 开发虚机默认占 8 GiB RAM；此时 WSL 总内存 11 GiB，
+  不宜并行启动，以免现有环境被 OOM 中断。
+- 没有 Cube Control Plane、Template、E2B URL 或凭据配置。
 - `127.0.0.1:3000`、`13000`、`11443`、`49983` 未监听。
-- Cube 官方 KVM 部署要求 Linux + KVM；无 KVM 的 Linux 云主机也可采用
-  PVM 内核路线，但不意味着本机 Docker Desktop 直接可替代。
-- **不能在这个主机上以 Docker Server 冒充 Cube / E2B，或把官方 Demo
-  描述成我们已跑通。**
+- 官方允许 WSL2 + Nested KVM 用 `dev-env` QEMU VM 创建实际 Cube
+  MicroVM；PVM 是供缺 KVM 的独立 Linux 云主机使用，**本机已有
+  KVM，无需修改或重启 Windows/WSL 的内核**。
+- 已只读下载官方 `online-install.sh` 并检查其 XFS/cgroup
+  前置条件；尚未执行安装、未创建卷/虚机、未改 Docker 配置。
+- **不能以普通 Docker Server 冒充 Cube / E2B，或把 KVM ioctl
+  成功描述成 MicroVM、Sandbox/E2B 实测成功。**
+
+复核入口（WSL Ubuntu 内执行）：
+
+```bash
+python3 poc/opencode_sandbox/verify_cube_host_readiness.py --backing-path /mnt/e
+```
+
+具备真正空闲的 8 GiB / 50+ GiB Linux 环境及 XFS 后，按官方
+[WSL2 Dev Environment](https://docs.cubesandbox.com/guide/dev-environment)
+或[裸机安装](https://docs.cubesandbox.com/guide/bare-metal-deploy)部署；
+然后先执行 `verify_cube_e2b.py --live --native-sdk`，
+再跑 Pydantic `verify_cube_live.py --live`。所有结果仍须单独记录。
 
 ## 可复现的正式门禁
 
