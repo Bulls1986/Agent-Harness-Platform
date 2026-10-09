@@ -694,7 +694,7 @@ OpenCode 2 / MAF；目前全部为候选，尚无完美零适配技术栈。
 
 ## ARCH-TODO-027 OpenCode 2 Cube 专用 OCI Template / Session 真实绑定
 
-**状态：POC / BLOCKED BY TEMPLATE（P0；未接受）**
+**状态：真实 Cube Harness-in-Cube 核心功能 POC LIVE PASS / 未 Accepted（P0；平台 Scope/Lease、统一 Runtime SPI、生产隔离待验收）**
 
 **方向：** OpenCode 2 Coding 优先验证 Harness-in-Cube（Topology A）。共享 Host 原生 Shell/FS/PTY/Git/LSP/Plugin 不因 SessionID 映射自动重定向到 Sandbox（已有 Docker 反向证据），生产 Topology B 仍 NO-GO。
 
@@ -714,6 +714,10 @@ OpenCode 2 / MAF；目前全部为候选，尚无完美零适配技术栈。
 **2026-10-09 进一步 OCI Builder 验证：** 已完成独立 WSL Docker 组合镜像 `ahp-opencode2-cube:poc`，实际构建结果 `Successfully built 825b61c967d0`，`opencode v2.0.24`。此项使 **OCI Build/ABI Gate PASS**；本地 OCI registry pull 遇连接重置，Cube `tpl create-from-image` / Template READY / 真实 V2 Server Session **仍待验证**，027 保持 OPEN。参见 [模板 README](../poc/opencode_sandbox/opencode2_cube_template/README.md)。
 
 **2026-10-09 22:50 根因和复测收口：** [完整 RCA](../poc/opencode_sandbox/opencode2_cube_template/INCIDENT_20261009.md) 已定位旧 Job `ec70a828...` RUNNING 40% 残留原因：WSL/systemd 停止 CubeTemplateCenter 的构建 Context，原生 exporter 返回 `context canceled`，TemplateCenter 向 CubeMaster 的 FAILED 回调也取消，Master 保留过期 RUNNING。启用持续 WSL 保活后用**同一镜像**新 Job `4be59892...` 实测 OCI Pull/EXT4 RootFS **READY** / 节点分发 1/1 全通过；后续 `CREATING_TEMPLATE` 的 Cubelet/Shim 等待事件 10s 超时，Job 最终 **FAILED**。因此“40% 构建卡死”原因 CLOSED，但新的 Guest Boot/Ready Event Gate **OPEN**；Template READY/OpenCode V2 Session 仍 NO-GO，027 不关闭。缺省运行生产容器、磁盘备份不属于本平台职责，第三方 Cube Callback 对账需作为依赖门禁而不是平台自建基础设施。
+
+**2026-10-10 真实 Cube 复验增量：** [最新 V2 复验记录](../poc/opencode_sandbox/opencode2_cube_template/VERIFICATION_20261010.md)。同一镜像的 Guest Agent 冷启动间歇通过但原 Jupyter Code Interpreter Kernel Startup 迟滞，Cubelet 49999 健康探针超时 `PortBindingFailed`；改为 Coding 专用 **envd(49983) + 轻量 health(49999)** 后模板 `tpl-aacac99e38bf46e68ecd2f1f` 真实 **READY**。同一个 MicroVM 内 OpenCode 2.0.24 `2 V2 Session + FS read + Shell write`、Cube Native SDK connect/read、Pydantic Agent 公共 Tool 与 OpenAI SDK FunctionTool 读取 V2 Shell 写入文件、Kill **LIVE LIMITED PASS**，0 模型调用；不再归类为 `BLOCKED BY TEMPLATE`。仍须确认 Git 工作流、Sandbox Scope/Lease/并行隔离、真实 LLM/平台 Typed Event/Cancel/Receipt 等门禁，**027 保持开放，不视为生产验收**。
+
+**2026-10-10 最终 Git-enabled 验收：** [严格 Cube 真机复验报告](../poc/opencode_sandbox/opencode2_cube_template/VERIFICATION_20261010.md)：Git Debian 12 / 2.39.5 已在 Cube 专用 OCI Guest 内置，镜像 Digest `sha256:9e4bde62fad22f2b22a2bd858ec865e403caccead740d113afc8c9a9e89e284f`；Template `tpl-363306ce3b21432cb1ae6536`、Job `c835c0cd-9cf6-4628-9e8e-c4730a3873c0` **READY**。同 1 个真实 Cube MicroVM 内 Git `init/add/commit/log`、OpenCode V2 2 Session、V2 FS/Shell 文件接力、Pydantic Agent 公共 Tool、OpenAI FunctionTool、Cube 同 ID reconnect + Kill **全 PASS**（零托管模型）。**027 功能 POC 门禁可判定 PASS；依照接受标准，真实跨 Scope 授权租约/多 Worker 密度/所有 Host 原生执行入口系统性隔离/平台统一 Runtime 事件、生产安全仍未验收，故 ARCH-TODO-027 保持 OPEN/非 Accepted。** 后续避免重复测试已通过的简单命令/模板，优先推动 025 与 026，再形成完整准入。
 
 ## ARCH-TODO-028 Process/Durable 默认实现与任务级恢复对比
 

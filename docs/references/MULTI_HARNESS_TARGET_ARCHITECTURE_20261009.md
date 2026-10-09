@@ -44,11 +44,13 @@ flowchart TB
 
 **箭头说明：** SDK 的“切换”发生在 AgentRuntime SPI 的 Adapter 选择层，不是 Pydantic 内部切换 SDK。Tool 执行携带受信任 Run/Session/Scope/Lease；Sandbox 状态不拥有任务终态。Model Provider/LiteLLM Gateway 是另一个可替换维度，不等同于 AgentRuntime。
 
+> **2026-10-10 真机拓扑验证更新：** [OpenCode 2 Harness-in-Cube Cube READY & V2 SDK 接力实测](../../poc/opencode_sandbox/opencode2_cube_template/VERIFICATION_20261010.md) 已完成真实单 Cube MicroVM 内的两个 OpenCode V2 Session、FS、Shell 与 Pydantic/OpenAI 公开 Tool Bridge，故 Topology A 的**功能 POC 可行性已由真机证明**；原下文 `2026-10-09 证据快照` 是历史截面。Git、全平台 AgentRuntime SPI/Typed Events、租约恢复/生产隔离仍未 Accepted；Topology B Host 原生执行不因此获得准入。
+
 ## 3. 两种执行拓扑不能混为一谈
 
 | 拓扑 | 适用对象 | 当前结论 |
 |---|---|---|
-| **A：Harness-in-Sandbox** | OpenCode 2 这类原生 FS/Shell/Git/LSP/插件众多的 Coding Harness | **优先实施候选**：每个*活动的*执行隔离实例内运行 Harness，不等于每历史 Session 一个进程；需专用 Cube OCI Template 和真机验证 |
+| **A：Harness-in-Sandbox** | OpenCode 2 这类原生 FS/Shell/Git/LSP/插件众多的 Coding Harness | **2026-10-10 功能 POC 真机 PASS**：Git-enabled Cube Template READY、2 OpenCode V2 Session/FS/Shell/Git、跨 Pydantic/OpenAI Tool 同一 Sandbox；每个*活动*隔离实例按需运行 Harness，不代表每历史 Session 一进程；生产授权隔离仍候选 |
 | **B：Shared Harness Host + Remote Sandbox Tools** | 所有执行入口可经公开 SPI 安全重定向的 Runtime（特别是 Pydantic 的 Run-scoped Tools） | Pydantic POSIX 工具路由已局部通过；**OpenCode 2 Host 原生 Shell 已有负例，不具生产隔离准入**，不能仅映射 Session ID 就称完全接入 |
 
 ## 4. 持久化绑定与资源逻辑

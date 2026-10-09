@@ -15,6 +15,18 @@ COPY --from=opencode /usr/lib/libgcc_s.so.1 /opt/opencode-musl/
 RUN printf '#!/bin/sh\nLD_LIBRARY_PATH=/opt/opencode-musl exec /usr/local/bin/opencode-musl "$@"\n' > /usr/local/bin/opencode \
     && chmod 755 /usr/local/bin/opencode \
     && /usr/local/bin/opencode --version
-# Base image supplies Cube envd on 49983 and code interpreter/probe on 49999.
-# OpenCode V2 server is started on demand via Cube SDK, not at image boot.
+# Coding-only guest: Cube envd stays on 49983, lightweight probe on 49999.
+# Do not spawn a Jupyter server/kernel before the template readiness gate.
+# OpenCode V2 Server on 4096 is started via leased Cube SDK Shell later.
+COPY start-cube-opencode.sh /opt/ahp/start-cube-opencode.sh
+COPY health_probe.py /opt/ahp/health_probe.py
+RUN chmod 755 /opt/ahp/start-cube-opencode.sh \
+    && python3 -m py_compile /opt/ahp/health_probe.py
+# Coding template must carry a real Git CLI for repository operations.
+# Bookworm package version is recorded by the build; no global host changes.
+RUN apt-get update -qq -o Acquire::Retries=1 -o Acquire::http::Timeout=20 \
+    && apt-get install -y -qq --no-install-recommends git \
+    && git --version \
+    && rm -rf /var/lib/apt/lists/*
+CMD ["/opt/ahp/start-cube-opencode.sh"]
 EXPOSE 49983 49999 4096

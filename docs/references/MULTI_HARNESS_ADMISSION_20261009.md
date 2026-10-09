@@ -1,9 +1,22 @@
 # 多 Harness / CubeSandbox 阶段性准入报告
 
-> 日期：2026-10-09；性质：**POC 分层准入记录，不是生产 ADR**。
+> 日期：2026-10-09 初稿，2026-10-10 追加真实 OpenCode/Git 验收；性质：**POC 分层准入记录，不是生产 ADR**。
 > 当前架构以 [目标架构候选](MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md) 为权威；
 > 未完成事项仅登记 [架构 Backlog ARCH-TODO-024～028](../ARCHITECTURE_BACKLOG.md)。
 > [验证入口](../../poc/README.md) 提供可重复的最小测试。
+
+> **2026-10-10 Git 功能补验最终确认：** [Git-enabled Cube 实测记录](../../poc/opencode_sandbox/opencode2_cube_template/VERIFICATION_20261010.md) 已新增 Git OCI Template `tpl-363306ce3b21432cb1ae6536`，Job `c835c0cd-9cf6-4628-9e8e-c4730a3873c0` **READY**，20/20 Layer、225.8 MiB、1/1 分发；同一次真实 Cube MicroVM 测试 `git init/add/commit/log`、OpenCode V2 2 Session/FS/Shell、Pydantic/OpenAI 公共 Tool 跨 SDK 接力、同 ID reconnect、Kill **全部 LIVE PASS**。至此 **ARCH-TODO-027 的最小真实功能链路准入 GO（仅集成 POC）**，仍缺平台自身的 Scope/Lease/Fencing/Recovery、全 Host 执行路径系统性隔离、安全治理、真实模型执行等生产门禁。当前原生 E2B SDK HTTP405 / Data Plane ConnectError **没有因此被解决**；生产 **NO-GO**。本条覆盖下文较早的“Git 待验”历史记录。
+
+## 2026-10-10 Cube OpenCode 2 真机突破（以本节为最新结论）
+
+- **ARCH-TODO-027 Harness-in-Cube 功能 POC 达到 LIMITED GO**：Cube v0.7.2 在 KVM WSL2 使用组合 OCI Template `tpl-aacac99e38bf46e68ecd2f1f`，正式 Job `75309ed6-bfa0-420b-b0cc-19adafc937ff` 全链路 **READY**，RootFS Artifact/节点分发全 PASS；Sandbox.create 真机创建约 4.31 秒。
+- **真实 OpenCode 2.0.24 V2**：1 个 MicroVM 中 2 个互异 Session、FS 读取、Shell 创建文件、Cube Native SDK 重新连接读取及 Sandbox.kill 全部 **LIVE PASS**；同一 VM 的 **Pydantic AI Agent 公共 Tool + OpenAI Agents SDK FunctionTool** 从 OpenCode V2 Shell 写入的文件成功接力，**LIVE LIMITED PASS**，FunctionModel/公开 Tool、零托管模型调用。
+- **VM 启动失效因素定位**：早期基于官方 `sandbox-code` 自带的 Jupyter Code Interpreter 完整启动链重型且波动大。失败镜像第二次已证实 Guest Agent Ready/容器创建通过，但 Jupyter 在 HTTP 201 创建默认内核后无法及时完成 Startup，Cubelet 30 秒端口探针报 `PortBindingFailed`。同样参数的官方 base control Template `tpl-ae9b7349dfbf48ff92e79d6c` 已 READY。Coding 专用 Guest 的最小修复是 **保留 envd 49983 + 按 envd 活跃状态返回 200 的轻量 49999 Probe**，OpenCode Server 4096 在 Cube Lease 激活后按需启动；不启动不需要的 Jupyter，Docker 测试 1 秒内探针 READY，Cube 实测 READY。
+- 当前 READY 版本原生 Git 尚缺失，另一个含 Git 2.39.5 的新 OCI 镜像已在独立 WSL Docker Build **PASS**，完成 Template READY + `git init/add/commit/log` 真机验收前不标 Git PASS。CLI/API 多框架真实 Tool Bridge 完成不等于平台 AgentRuntime SPI/Typed Events/Cancel/Receipt/Worker Failover 已通过。
+- **生产准入仍 NO-GO**，`e2b 2.53.1` 的 405 与 `e2b 2.40.0` Data Plane `ConnectError` 不受这个 Cube Native Adapter 成功证据覆盖。Host 上的 OpenCode 原生 Shell/FS 也不会随 SessionID 自动进入 Sandbox，Host 拓扑仍 NO-GO。
+
+[真实模板、受控对照、V2 Session/FS/Shell 与跨 SDK 接力原始证据](../../poc/opencode_sandbox/opencode2_cube_template/VERIFICATION_20261010.md)；
+[可重复脚本](../../poc/opencode_sandbox/verify_cube_opencode2_v2_live.py)。
 
 ## 分层裁定
 
@@ -12,7 +25,8 @@
 | **A. 进入集成 POC / 可开始实现适配器** | **GO（限定）** | Cube 原生 SDK MicroVM/Shell/文件/同 ID reconnect 真机通过；Pydantic AI 公开 Agent Tool Loop（2 Run/6 Tool）→同一 Cube Sandbox→OpenAI FunctionTool 真机接力通过；Session Scope/Lease Fail Closed 离线通过 |
 | **B. 采用 Pydantic 作为通用 Agent Runtime 默认候选** | **CONDITIONAL GO（仅技术候选）** | 20 个并发 Run、Run-scoped Workspace、Linux 真实 Coder Tool，以及 Pydantic 基础 Agent 公共 Tool Adapter→Cube 真机通过；Harness 内置 E2BSandbox/Coder → Cube 原生路径、SDK 0.x 升级仍待验证 |
 | **C. 官方 E2B SDK / OpenAI 原生 E2B Client 即插即用 Cube** | **NO-GO（当前版本组合）** | `e2b==2.53.1` / `openai-agents==0.23.1` 原生 E2B Client 对 Cube v0.7.2 的 Sandbox.create 均返回 **405**，不等于 Pydantic/OpenAI FunctionTool 不能通过 Cube Native Provider 接入 |
-| **D. OpenCode 2 原生 SDK Host Session 自动挂 Cube** | **NO-GO（当前拓扑）** | Docker 负例证明原生 Shell 留在共享 Host；Cube `sandbox-code` 模板缺 opencode/node/bun；优先做 Harness-in-Sandbox OCI Template |
+| **D. OpenCode 2 原生 SDK Host Session 自动挂 Cube** | **NO-GO（当前拓扑）** | Docker 负例证明原生 Shell 留在共享 Host；已有 Harness-in-Cube 真机 PASS 不能证明共享 Host 的 FS/Shell/Git/PTY/LSP/Plugin 自动重定向 |
+| **D2. OpenCode 2 Harness-in-Cube 专用执行拓扑** | **GO（集成 POC 限定）** | 2026-10-10 Git-enabled 真实 Cube Template READY、OpenCode V2 2 Session/FS/Shell/Git、Pydantic/OpenAI 公共 Tool 同 Sandbox 接力 PASS；生产隔离/平台 SPI 尚待收口 |
 | **E. 进入生产 Accepted ADR / 上线** | **NO-GO** | 多 Runtime Agent Loop + 严格租约绑定、跨 Worker/HITL/非幂等 Receipt、Cube 生命周期、隔离与资源门禁没有整体通过 |
 
 **解释：** A 的 GO 允许针对平台自有 Runtime SPI / SandboxProvider SPI 开始**有边界的集成开发和 Demo**，并不是把 Pydantic、OpenAI Native E2B、OpenCode 原生 Host 三条路径都升级 PASS；E 明确没有准入。

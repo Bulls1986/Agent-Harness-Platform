@@ -1,5 +1,9 @@
 # OpenCode 2 Harness-in-Cube OCI 模板（待实测验收）
 
+> **2026-10-10 最终 Git-enabled POC：** [详细严格真实验收](VERIFICATION_20261010.md) 使用 Cube Template `tpl-363306ce3b21432cb1ae6536`：**READY**、20/20 OCI Layer、Git 2.39.5 已预装；一个真实 MicroVM 中 Git init/add/commit/log、两个 OpenCode V2 Session、FS/Shell、Pydantic/OpenAI 公共 Tool 接力、Reconnect/Kill 均 **LIVE PASS**。**集成开发 LIMITED GO、生产 NO-GO**；下文非最终状态段落仅保留历史演化证据。
+
+> **2026-10-10 最新准入：** Harness-in-Cube Guest 真实 Template `tpl-aacac99e38bf46e68ecd2f1f` **READY**，2 个 OpenCode V2 Session/FS/Shell + Pydantic/OpenAI Tool 同 VM 接力/Native Connect/Kill **LIVE LIMITED PASS**。为避免 Jupyter 内核启动的 30 秒 PortBindingFailed，已使用 Coding 专用 `envd 49983 + lightweight probe 49999`，V2 Server 按 Lease 生命周期另起 4096。下一门禁是内置 Git 的新 OCI Template 和 `git init/add/commit/log`，不涉及 E2B 官方 SDK/生产隔离。此前 2026-10-09 的 NOT VERIFIED 描述是**历史状态**。完整真实证据：[2026-10-10 验证](VERIFICATION_20261010.md)。
+
 > 状态：**Docker OCI Build + `opencode --version` PASS / Cube Template NOT VERIFIED**。
 > 本目录是 ARCH-TODO-027 的执行候选，与官方 Cube “Bash Tool Plugin” 属于**不同拓扑**。
 > 2026-10-09 WSL Docker 真实构建输出 `Successfully built 825b61c967d0` / `opencode v2.0.24`，

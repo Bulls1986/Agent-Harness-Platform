@@ -32,6 +32,11 @@ python -B poc/opencode_sandbox/verify_cube_native_live.py --live --openai-functi
 # Pydantic AI 真实 Agent Tool Loop（2 Run + 6 Tools）与 OpenAI FunctionTool
 # 复用同一个 Cube 原生 Sandbox；不验证内置 E2BSandbox/Coder
 python -B poc/pydantic_harness/verify_cube_native_agent.py --live
+# OpenCode 2 Harness-in-Cube READY Template：真实 2 V2 Sessions + FS/Shell +
+# 同一 Cube MicroVM 的 Pydantic AI / OpenAI FunctionTool 接力（0 远程模型）
+python -B poc/opencode_sandbox/verify_cube_opencode2_v2_live.py --live --template tpl-aacac99e38bf46e68ecd2f1f
+# 仅内置真实 Git 的专用模板才能运行严格的 Git Gate：
+python -B poc/opencode_sandbox/verify_cube_opencode2_v2_live.py --live --require-git --template tpl-363306ce3b21432cb1ae6536
 ```
 
 该路径使用 **cubesandbox 官方原生 SDK**：真实 MicroVM / Shell / Files / 重连 / OpenAI FunctionTool；不使用 E2B Python SDK，也不运行完整模型 Agent Loop。
@@ -54,7 +59,7 @@ python -B poc/pydantic_harness/verify_cube_live.py --live
 ## 四、OpenCode 2 与其他专项
 
 - [OpenCode 2 / OpenAI 对照](opencode_sandbox/README.md)：Docker V2 Server/Session/FS/Shell 双向接力 PASS；共享 Host 原生 Shell 不能按 Session ID 自动转到外部 Sandbox（负例）。
-- [OpenCode 2 Harness-in-Cube OCI 模板](opencode_sandbox/opencode2_cube_template/README.md)：组合 Guest 镜像 build 和 `opencode v2.0.24` 实测 PASS；尚未 Registry Push / Cube Template READY / MicroVM V2 Session。
+- [OpenCode 2 Harness-in-Cube OCI 模板](opencode_sandbox/opencode2_cube_template/README.md)：**真实 Cube Template READY、V2 2 Session/FS/Shell 与 Pydantic/OpenAI 同 Sandbox Tool 接力 LIVE LIMITED PASS**（2026-10-10）；Git 工具链与生产隔离继续验证。
 - [Pydantic](pydantic_harness/README.md)：FunctionModel 与 POSIX 本地 Workspace；SDK Mock Ref Reconnect。
 - [MAF](maf/) / [Temporal](temporal/)：已有 POC-A/C 验证不迁移、不删除。
 - 真正的 OpenCode 2 **Cube** 验证需专用 OCI Template；默认 sandbox-code 镜像没有 OpenCode/Node/Bun。

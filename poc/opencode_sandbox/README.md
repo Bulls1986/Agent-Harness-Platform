@@ -1,5 +1,7 @@
 # OpenCode + E2B-compatible Sandbox / Shared Runtime POC
 
+> **2026-10-10 最新实测：** OpenCode 2.0.24 **Harness-in-Cube 专用 Guest 已实现真机 Template READY 和完整 Coding 功能 POC PASS**。Template `tpl-363306ce3b21432cb1ae6536`（envd 49983 + 轻量健康探针 49999 + Git 2.39.5），同一真实 Cube MicroVM 已通过 Git init/add/commit/log、OpenCode V2 2 个 Session、FS/Shell、Pydantic AI Agent 公共 Tool、OpenAI FunctionTool、Native Connect/Kill，零真实模型调用。详见 [Git-enabled 完整真实验收](opencode2_cube_template/VERIFICATION_20261010.md) 和 [可复验入口](verify_cube_opencode2_v2_live.py)。此前“OpenCode 还未在 Cube 测试”的描述是历史状态；官方 E2B SDK Native API 405/ConnectError、共享 Host 执行旁路和生产租约恢复 **仍 NO-GO**。
+
 > **当前首要门禁：CubeSandbox 提供 E2B 兼容接口。**
 > [Cube E2B 兼容性与实测记录](CUBE_E2B_COMPATIBILITY_FINDINGS.md)，
 > [离线/真实 Cube 合约测试](verify_cube_e2b.py)。
