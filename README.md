@@ -4,7 +4,15 @@
 
 核心目标是将 **Control Plane（控制平面）** 与 **Data Plane（执行平面）** 解耦，通过稳定协议和可插拔组件承载 Plan、Execute、Verify、Replan、Sandbox、Artifact、Approval、Durable Execution 与多模型/多 Runtime。
 
-## 文档
+## 从这里开始（统一入口）
+
+1. [文档导航：现行候选 / Accepted Contract / 历史 POC](docs/README.md)
+2. [阶段性准入结论：集成 POC GO、生产 NO-GO](docs/references/MULTI_HARNESS_ADMISSION_20261009.md)
+3. [多 Harness 当前目标架构](docs/references/MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md)
+4. [POC 验证脚本导航](poc/README.md)
+5. [架构待办：唯一主清单](docs/ARCHITECTURE_BACKLOG.md)
+
+## 历史研究与专题证据（保留原路径）
 
 - [企业级 Agent Harness Platform 架构设计 V1.0](docs/ARCHITECTURE.md)
 - [Agent Harness Platform 架构 POC 说明书 V1.0](docs/POC.md)
@@ -30,7 +38,7 @@
 
 ## 首轮 POC
 
-首轮验证三条路线，当前 POC 优先级为：
+2026-09-29 首轮验证过三条路线；以下仅为**当时的历史优先级，不是 2026-10-09 最新选型或准入结果**：
 
 1. Microsoft Agent Framework（MAF）
 2. Temporal + 可替换 Agent Runtime

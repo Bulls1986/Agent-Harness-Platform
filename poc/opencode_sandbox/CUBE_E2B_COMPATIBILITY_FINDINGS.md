@@ -3,6 +3,8 @@
 > 日期：2026-10-09。状态：**主线 POC / NOT GO**。优先级高于共享 OpenCode
 > SDK Host 密度测试。此文件记录候选能力，不替代 Accepted Architecture Contract。
 
+> **最新准入裁定（2026-10-09）：** [分级准入报告](../../docs/references/MULTI_HARNESS_ADMISSION_20261009.md)。本文按时间逆序保存原始证据；下面“Cube 未验证 / 未部署”的早期表述是历史状态，不是本轮最终结论。官方 E2B Python 2.53.1 原生创建 405、Cube 原生 SDK 真机已通过，这两项独立记录不得互相覆盖。
+
 > **Session 绑定门禁补充**：每个需隔离执行的 OpenCode 2 Session
 > 必须由平台映射到经 Policy 授权的 Cube Sandbox Lease；
 > 绑定映射与 E2B SDK 创建/连接分属两层。前者单元测试 PASS，
@@ -14,6 +16,10 @@
 > 使用公开 `E2B Sandbox.connect(sandbox_id)`/commands/files 调用形状；
 > 注入 Fake E2B 实例完成 2 Session/2 ID、错租约拒绝、绑定重建后继续读。
 > **OFFLINE MOCK PASS ≠ CUBE LIVE PASS ≠ OpenCode Native Tool 全接管。**
+
+## 2026-10-09 晚间：Pydantic Agent Tool Loop → Cube Native → OpenAI Tool 真机接力
+
+新增 `poc/pydantic_harness/verify_cube_native_agent.py --live`：在真实 Cube v0.7.2 上使用 Pydantic AI Agent + `FunctionModel`（无托管模型调用），**一个 Agent 实例、两个 Run、六次实际公共 Tool 调用、同一个 Cube MicroVM**，写/读/Shell 复用同一 Workspace；OpenAI Agents SDK `FunctionTool` 随后读取文件，**LIVE LIMITED PASS**。Cube Native Provider API 通过公开工具 Adapter 调用，未 monkey patch SDK。**Pydantic AI Harness 内置 E2BSandbox/Coder、OpenAI 原生 E2BSandboxClient、OpenCode 2 Cube 及跨 Scope 生产隔离仍未通过**，不能替代下方 E2B Native HTTP 405 负例。
 
 ## 2026-10-09 17:xx：OpenAI Native E2B / OpenCode 2 真机门禁（失败证据）
 

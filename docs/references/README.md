@@ -4,6 +4,8 @@
 
 > 这些文件是 **讨论记录 / 设计参考**，不是最终架构规范。正式决策以 `docs/ARCHITECTURE.md`、`docs/POC.md` 和后续 ADR 为准。
 
+> **最新入口（候选状态）：** [文档导航](../README.md) → [目标架构](MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md) → [准入结论](MULTI_HARNESS_ADMISSION_20261009.md)。下列其余条目是历史背景、正式 Contract 或专项 POC 证据，读者必须看每份文件的 Status 与日期。
+
 ## 分类
 
 1. [OpenAI Agent / Harness 能力梳理](OPENAI_AGENT_STACK.md)
@@ -40,6 +42,7 @@
 32. [多 Harness 共享 Sandbox 与 Runtime 密度（2026-10-09 POC 候选，未 Accepted）](MULTI_HARNESS_SANDBOX_RUNTIME_DENSITY_CANDIDATE.md)
 33. [多 Harness 技术选型增量评估（Pydantic AI Harness / OpenAI Agents SDK / Temporal / CubeSandbox）](MULTI_HARNESS_TECH_SELECTION_20261009.md)
 34. [多 Harness 目标架构候选与 Cube 实测快照（2026-10-09，未 Accepted）](MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md)
+35. [多 Harness 集成 POC 与生产分级准入（2026-10-09）](MULTI_HARNESS_ADMISSION_20261009.md)
 
 ## 使用原则
 

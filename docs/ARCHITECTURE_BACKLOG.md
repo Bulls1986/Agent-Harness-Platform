@@ -669,6 +669,8 @@ OpenCode 2 / MAF；目前全部为候选，尚无完美零适配技术栈。
 
 ---
 
+**2026-10-09 新增有限真实 SDK 证据：** 已运行 1 个 Pydantic AI 基础 Agent 对真实 Cube Native Sandbox 的两个 Run、6 个 `@agent.tool` 读写/Shell 调用；OpenAI SDK `@function_tool` 成功读取同一个 Workspace。属于跨 Runtime 公共 **Tool Adapter 真机 PASS**，不等于已实现平台完整 AgentRuntime SPI、Pydantic Harness 内置 Coder/E2BSandbox 或真实 LLM 模型；本 TODO 保持 POC，不关闭。
+
 ## ARCH-TODO-026 Cube E2B 兼容矩阵与真实多 SDK 接力
 
 **状态：POC / ACTIVE BLOCKER（P0；未接受）**

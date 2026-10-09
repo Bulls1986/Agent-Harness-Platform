@@ -3,6 +3,10 @@
 > 2026-10-09，候选专项。当前仅有**无模型、无网络**的本机基线。
 > 不是 Pydantic Harness 的生产选型或 Cube 真机 GO。
 
+> **2026-10-09 最新复核：** 前述“仅有本机离线基线 / Cube Endpoint 缺失”是早期记录，不再准确。Cube v0.7.2 已通过**原生 Cube SDK** 真机 Shell/Files/Connect；官方 E2B 2.53.1 与 OpenAI 原生 E2BSandboxClient 创建 405 FAIL。新增 [真实 Pydantic Agent Tool Loop → Cube Native → OpenAI FunctionTool](verify_cube_native_agent.py) 有 opt-in 实测脚本，结果按 [准入报告](../../docs/references/MULTI_HARNESS_ADMISSION_20261009.md) 单独登记。Pydantic 原生 E2BSandbox Backend 未因此标记 PASS。
+
+> **新增真实 Tool Loop PASS：** [verify_cube_native_agent.py](verify_cube_native_agent.py) 在 Cube v0.7.2 上通过 1 个 Pydantic AI Agent 对同一真实 Cube MicroVM 执行 2 Run / 6 个工具调用（write/read/shell），之后 OpenAI SDK FunctionTool 读取相同文件 PASS。该脚本使用**基础 Pydantic Agent 的公共 Tool Adapter + Cube Native SDK**，未使用 Pydantic AI Harness 自带的 E2BSandbox/Coder Backend，也没有真实 LLM 调用或生产级持久 Scope 绑定。详见 [准入报告](../../docs/references/MULTI_HARNESS_ADMISSION_20261009.md)。
+
 ## 验证目标
 
 选择 Pydantic AI Harness 是为了缩减全新专业 Agent 的胶水代码，
@@ -21,7 +25,7 @@ RecoveryPoint、Approval、SandboxProvider SPI 的归属。
 | 不使用执行工具时惰性连接 | 通过 SDK `AsyncSandbox.create/connect` 反向监控，创建/连接调用为 0，PASS |
 | 已有 Session SandboxRef 的 E2B 重连 | **PASS（SDK mock）**：同一 Ref 5 个并发调用只 connect 一次；两个不同 Ref 对应两个 SDK 句柄，缺失 Ref 不自动创建（非 Cube 真机） |
 | 同一 Agent 并发 Run 的真实工具调用 | **PASS（Linux CI）**：两个独立 `LocalWorkspaceBackend`，共享 1 个 Agent，两个并发 Run 各执行 write_file/read_file/shell，最终文件分别为 alpha/beta，没有串写；不是 Cube 隔离证明 |
-| Cube E2B 真实复用 | `verify_cube_live.py --live` 测试脚本已提供，缺少 Cube Endpoint/Template，仍为 **BLOCKED** |
+| Cube E2B 真实复用（Native E2B Backend） | `verify_cube_live.py --live` 需先解决 e2b 2.53.1 / Cube v0.7.2 创建 HTTP 405；原生 E2B 兼容 **BLOCKED**，不是缺少 Cube 实例 |
 | Jev / TypeSafeModel | Python API 可导入；无 TypeSafe 凭据、未完成决策质量验证 |
 | Windows 本地执行 `LocalWorkspace` | **NOT SUPPORTED（本机实测）**：`LocalWorkspaceBackend` 因需要 POSIX 进程组超时/终止语义抛 `NotImplementedError`；可使用 Linux 或远程 E2B/Cube |
 | E2B 文件/Shell / Cube / Temporal | **未实测**，不可从以上结果推断 |
@@ -36,6 +40,7 @@ python poc/pydantic_harness/verify_offline_density.py
 python poc/pydantic_harness/verify_e2b_ref_reconnect.py      # E2B 公共 SDK 边界模拟
 python poc/pydantic_harness/verify_local_tool_routing_posix.py  # Linux / POSIX
 python poc/pydantic_harness/verify_cube_live.py                 # 离线，不创建 Cube
+python poc/pydantic_harness/verify_cube_native_agent.py         # 离线预检；--live 才创建 Cube
 ```
 
 代码运行在一个普通 Python 进程中，通过 FunctionModel 伪模型回答。

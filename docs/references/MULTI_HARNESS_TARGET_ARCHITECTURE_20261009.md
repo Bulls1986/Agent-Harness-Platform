@@ -6,6 +6,8 @@
 > [现有技术比较](MULTI_HARNESS_TECH_SELECTION_20261009.md)；
 > [Cube 实测细节](../../poc/opencode_sandbox/CUBE_E2B_COMPATIBILITY_FINDINGS.md)。
 
+> **最新状态入口：** [分层准入报告](MULTI_HARNESS_ADMISSION_20261009.md)；准入开发/POC ≠ 生产 Accepted ADR。若后续增加真实接入证据，先更新该报告和对应专项 Findings，再决定是否更改目标架构候选。
+
 ## 1. 本轮选择与边界
 
 - **Pydantic AI Harness 优先成为通用专业 Agent 的默认 Runtime Adapter 候选**；不是平台 Kernel，也不是其他 Agent SDK 的宿主。选择依据为同 Agent 实例 20 并发 Run、Run-scoped Workspace/Tool 路由、可选 Sandbox 的已有局部 POC。
@@ -78,6 +80,7 @@ Logical Run / Session (persisted, many)
 | OpenCode 2.0.24 在 Docker Sandbox 的 V2 Session/FS/Shell，与 OpenAI Tool 接力 | **DOCKER LIMITED PASS** | 零模型；非 Cube |
 | OpenCode 2 在 Cube MicroVM 中实际运行 | **BLOCKED** | 当前 `sandbox-code` 模板中没有 opencode/node/npm/bun，需专用 OCI 模板；共享 Host Shell 有执行在 Host 的反向证据 |
 | Pydantic AI Harness 0.54.0 单 Agent 20 并发 Run、Run-scoped LocalWorkspace 工具 | **OFFLINE + Linux CI PASS** | E2B WorkspaceRef 重连仅 Mock；在真实 Cube 上未测试 |
+| Pydantic AI Agent Tool Loop → Cube 原生 SDK → OpenAI FunctionTool 接力 | **LIVE LIMITED PASS** | 1 个 Pydantic Agent 实例、2 Run/6 Tool 调用、1 Cube MicroVM、OpenAI Tool 同 Workspace 读取 PASS；FunctionModel 零远程模型调用，非 Pydantic Harness 内置 E2B/Coder，非原生 E2B |
 | AgentRuntime SPI 跨 Pydantic/OpenAI/OpenCode 的真实协议与取消/恢复替换 | **NOT TESTED** | 仍是候选架构，不代表已经支持透明切换 |
 | Cube Volume、pause/resume、跨 Worker 非幂等 Receipt、隔离/10～1000 密度 | **NOT TESTED** | 不是本轮最小 MicroVM POC 所证明的能力 |
 
