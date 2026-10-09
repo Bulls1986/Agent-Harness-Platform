@@ -20,6 +20,7 @@ RecoveryPoint、Approval、SandboxProvider SPI 的归属。
 | 每 Run 明确 WorkspaceRef | 同一个 Coding Agent，两个不同 `WorkspaceRef(provider='e2b', ...)`，离线 Run PASS |
 | 不使用执行工具时惰性连接 | 通过 SDK `AsyncSandbox.create/connect` 反向监控，创建/连接调用为 0，PASS |
 | 同一 Agent 并发 Run 的真实工具调用 | Linux-only：两个独立 `LocalWorkspaceBackend`，真实 write_file/read_file/shell 工具三段链；新增 CI Gate，初次结果待确认 |
+| Cube E2B 真实复用 | `verify_cube_live.py --live` 测试脚本已提供，缺少 Cube Endpoint/Template，仍为 **BLOCKED** |
 | Jev / TypeSafeModel | Python API 可导入；无 TypeSafe 凭据、未完成决策质量验证 |
 | Windows 本地执行 `LocalWorkspace` | **NOT SUPPORTED（本机实测）**：`LocalWorkspaceBackend` 因需要 POSIX 进程组超时/终止语义抛 `NotImplementedError`；可使用 Linux 或远程 E2B/Cube |
 | E2B 文件/Shell / Cube / Temporal | **未实测**，不可从以上结果推断 |
@@ -28,6 +29,7 @@ RecoveryPoint、Approval、SandboxProvider SPI 的归属。
 python -m pip install "pydantic-ai-harness[e2b]==0.54.0" "pydantic-ai-slim[typesafe]==2.54.0"
 python poc/pydantic_harness/verify_offline_density.py
 python poc/pydantic_harness/verify_local_tool_routing_posix.py  # Linux / POSIX
+python poc/pydantic_harness/verify_cube_live.py                 # 离线，不创建 Cube
 ```
 
 代码运行在一个普通 Python 进程中，通过 FunctionModel 伪模型回答。
@@ -48,6 +50,13 @@ E2B Endpoint、Template、数据面、Sandbox 生命周期：
 4. 记录公开 API Adapter 数量、创建/重连/释放调用、进程/RSS 和恢复行为；
    不能只比较 API 方法名。
 5. 没有可访问 Cube 时一律 `BLOCKED`，不把本机 Docker 的 PASS 换成 Cube PASS。
+
+针对第 2 项，已提供 `verify_cube_live.py --live`。它使用已有 Cube
+配置及官方 E2B `AsyncSandbox.create` 创建**一台** Sandbox，通过
+`WorkspaceRef` 连续运行两轮 Coder `write_file/read_file/shell`，
+并断言 Coder 不再次创建 Sandbox；仅在显式配置
+`CUBE_E2B_LIVE_CONFIRM=1` 时产生远程资源。没有可用 Cube 集群时，
+脚本只执行 preflight / 返回 BLOCKED。
 
 架构候选：[多 Harness 技术选型评估](../../docs/references/MULTI_HARNESS_TECH_SELECTION_20261009.md)；
 真实 Cube 合约入口：[`verify_cube_e2b.py`](../opencode_sandbox/verify_cube_e2b.py)。
