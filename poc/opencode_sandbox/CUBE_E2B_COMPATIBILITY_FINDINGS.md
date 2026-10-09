@@ -5,6 +5,56 @@
 
 > **最新准入裁定（2026-10-09）：** [分级准入报告](../../docs/references/MULTI_HARNESS_ADMISSION_20261009.md)。本文按时间逆序保存原始证据；下面“Cube 未验证 / 未部署”的早期表述是历史状态，不是本轮最终结论。官方 E2B Python 2.53.1 原生创建 405、Cube 原生 SDK 真机已通过，这两项独立记录不得互相覆盖。
 
+## 2026-10-09 22:50：OpenCode 2 Cube Template 的 40% / 10 秒启动超时 RCA
+
+**本轮已完成真正的根因验证**，见 [独立事件 RCA 与稳定环境复测](opencode2_cube_template/INCIDENT_20261009.md)。首次 Job `ec70a828...` 在系统关闭时 CubeTemplateCenter 输出 `native export layer 11 ...: context canceled`，向 CubeMaster 发送 `FAILED` 的请求同样被取消，导致状态被保留为 `RUNNING/BUILDING_EXT4/40%`；`CAP_MKNOD/xattrs` 是通用错误 Hint 而非实测权限根因。持续 WSL 保活时同一个 OCI 镜像的新 Job `4be59892...` 通过 EXT4 RootFS Artifact READY / 1/1 分发 / 85% 创建阶段，证明镜像 layer 能正常导出。然而其 Cubelet/containerd-shim 在 VM 启动事件等待 10 秒后 `Receive event timeout after 10000ms`，最终 **FAILED / CREATING_TEMPLATE**；VMM 有 `Booting VM` / kernel & vCPU 启动记录，Guest Ready 链路原因仍未知。**Template READY 与 V2 Session 尚无通过证据，ARCH-TODO-027 仍 OPEN**。
+
+**OpenCode OCI Registry Push 最新证据：** 已改用国内镜像站取得官方 Registry v2 容器，独立 WSL Docker 运行本机 `127.0.0.1:5000` 私有 POC Registry，`docker push localhost:5000/ahp-opencode2-cube:2.0.24` 返回 Digest `sha256:825b61c967d09e94e9fb42fdc192796952a03842ec6fc3e9dff88f0d9e70679c`，**REGISTRY PUSH PASS**。但 CubeMaster 是否从 HTTP Registry 拉取成功、Template 是否 READY 仍需真机结果，不得提前升级 027 准入。
+
+## 2026-10-09 最新增量：E2B 2.40.0 真实 Control Plane 创建已通过，Data Plane 仍 FAIL
+
+在新独立 WSL Python venv `/root/ahp-cube-demo/e2b-compat-v240` 安装官方 `e2b==2.40.0`，保留原环境 `e2b==2.53.1` 不变。调用新 `poc/opencode_sandbox/verify_cube_e2b_basic.py --live`：通过本地合成、满足 SDK 格式的测试 Key，**先等待 Cube API 3000 / TemplateCenter 8090 / CubeEgress 9091 全部返回 HTTP 200**，实测日志：
+
+```text
+CUBE_HEALTH_PENDING [3000, 8090, 9091] elapsed 0
+CUBE_HEALTH_PENDING [9091] elapsed 20
+ALL_CUBE_DEPENDENCIES_HEALTHY
+{"failed_stage":"files","failed_type":"ConnectError","model_calls":0,
+ "outcome":"FAIL","scope":"live_cube_official_e2b","sdk_version":"2.40.0"}
+```
+
+这说明 `Sandbox.create` **实际返回了非 Debug 的 Sandbox 句柄并通过测试检查**，因此可将 `e2b==2.40.0` 的 Cube Control Plane **创建阶段标记为 LIVE LIMITED PASS**。下一项 `sb.files.write(...)` 经 E2B 自己的 envd Data Plane **失败 `ConnectError`**，`commands.run` 未运行；还不能宣布 E2B SDK 整体兼容。这与之前 `e2b==2.53.1` 的 `POST /v2/sandboxes` HTTP405 是**不同的失败阶段**。
+
+后续需查 E2B 2.40 `envd_api_url` 的 `E2B_DOMAIN` 默认 `e2b.app` 与 Cube 预期 `*.cube.app`、Wildcard DNS/CoreDNS、CubeProxy 域名 TLS 和本地 CA。直接在 WSL `getent ahostsv4 49983-example.cube.app` 无结果（域名示例不是实际 Sandbox 的真实路由，不可推断所有域名故障），说明至少需要专门的 Data Plane 解析和连通性检查。**不修改全机 DNS、不开 TLS 验证、也不修改 E2B SDK 私有实现来伪造 PASS**。
+
+### OpenCode 2 OCI 镜像 Build Gate 真实结果
+
+第二次 ABI 改造后独立 WSL Docker **SUCCESS**：`docker build ... -t ahp-opencode2-cube:poc`，日志 `opencode v2.0.24`、`Successfully built 825b61c967d0`；组合镜像包含 Cube Guest envd/probe 和 OpenCode 所需私有 musl Loader/库。**OCI Build/ABI Gate PASS**，但真实 Cube Template Registration、READY、MicroVM 内 OpenCode V2 Server/Session/FS/Git **未验收**。
+
+尝试获取独立小型 OCI Registry 镜像 `registry:2` 以进行本地 Registry Push 时，WSL Docker 到 Docker Hub `registry-1.docker.io:443` 连接被对端重置；本机 Windows Docker Desktop 也没有缓存该镜像，所以尚未建立可靠可取回的 OCI Registry。当前 `create-from-image` 不能仅靠 WSL Docker 的本地 image ID 保证 CubeMaster 可获取。**不是 OpenCode Runtime 被证伪，仅是镜像供应链/Registry 准入未完成**。
+
+## 2026-10-09 晚间：官方 E2B Python SDK 旧接口矩阵（本次新增证据）
+
+本轮在**隔离的 WSL2 Python venv**，而非覆盖工作环境原有 `e2b==2.53.1` 的前提下，下载/安装并检查以下真实官方 PyPI 轮子。Cube v0.7.2 仍是本机 MicroVM Backend；后端启用 auth_enabled=false。
+
+| SDK | 创建接口/配置观察 | 本次真实尝试结论 |
+|---|---|---|
+| `e2b==1.0.5` | SDK 生成客户端含 `POST /sandboxes`，但公开 `Sandbox.create` **不存在** | 安装 PASS；当前 `Sandbox.create` 平台调用形状 **INCOMPATIBLE**（AttributeError），不是 Cube API 失败 |
+| `e2b==2.0.0` | SDK 含 `POST /sandboxes` 和 `Sandbox.create`，但 `ConnectionConfig` **不读取 `E2B_API_URL`**；未设置 `debug` 时默认访问云端 API | 第一次受 Cloud TLS 证书限制（未请求 Cube），`debug=True` 得到固定 **`debug_sandbox_id`**，Files 连接拒绝；**是假句柄，不是实际 MicroVM PASS** |
+| `e2b==2.40.0` | `POST /sandboxes` + `Sandbox.create`，`ConnectionConfig` 确认读取 `E2B_API_URL` | 使用随意占位串时客户端在发包前拒绝：`AuthenticationException` 要求 `e2b_`+hex 格式；随后按格式传入本地**合成测试值**的一次重试，冷启动期间 3000/8090/9091 未同时健康，返回 `BLOCKED_CUBE_SERVICE`，未进入 SDK 创建。**LIVE 兼容结果仍 NOT VERIFIED** |
+| `e2b==2.53.1` | 实测调用 `POST /v2/sandboxes` | Cube v0.7.2 实际响应 HTTP 405；同一组合下 OpenAI `E2BSandboxClient` 也创建失败，**LIVE FAIL** |
+
+**准入结论：** 现有真实证明仍为 `cubesandbox==0.7.0` **Cube Native SDK** 及公开 Pydantic/OpenAI Tool Adapter 在 Cube v0.7.2 上成功；并未证明任何上述官方 E2B Python SDK 完成真实 Create/Files/Commands/Kill。下一次要在**同一 WSL 持续进程中**等待三个控制/代理健康服务后用 `e2b==2.40.0` 运行新脚本 `verify_cube_e2b_basic.py --live`（本地合成但格式合法的测试 Key，禁止泄露真实凭据）。不得把接口签名/Debug 假句柄/健康预检 PASS 提升为 CUBE-1。
+
+## 2026-10-09 晚间：OpenCode 2 专用 Cube OCI 模板进展
+
+- 已通过宿主机 **Docker Desktop 现成** `ghcr.io/anomalyco/opencode:2.0.24`（image ID `sha256:9500f3474188a4b89e165c65fada370dbde5e038cc3b751ed5dcbd27d7620315`）`docker save`，成功导入**独立 WSL Ubuntu Docker daemon**。源宿主机 13 个运行容器未停用、未清理。归档暂存于 `E:/workspace/opensource/cube-poc-cache/`，不作为仓库源码。
+- WSL Docker 独立拉取 `cube-sandbox-int.tencentcloudcr.com/cube-sandbox/sandbox-code:latest`，Digest `sha256:743d264fad8c9dc9a49f07e931166d24d025363360ae770ca4b70e3f19540944`。OpenCode 2.0.24 OCI 中实际二进制 `/usr/local/bin/opencode`（204023344 bytes），源镜像 Alpine 3.24.2。默认 Cube guest 是 Debian/glibc。
+- 新增候选 `poc/opencode_sandbox/opencode2_cube_template/Dockerfile` / README：基于 Cube 官方 guest 保留 envd/probe 49983/49999，添加 OpenCode binary，准备 4096 V2 服务端口；镜像 build 时执行 `opencode --version` 的 ABI 安全门禁。
+- 初次构建报 ARG 范围错误，已修正；随后实测 COPY 成功但 guest 中 `opencode --version` 返回 `/bin/sh: ... not found` (127)。`ldd` 明确源二进制依赖 Alpine musl 动态加载器 `/lib/ld-musl-x86_64.so.1`、`libstdc++.so.6`、`libgcc_s.so.1`。已使用**独立库路径与 OpenCode 专用 wrapper**修正 ABI，避免污染 Cube Debian envd 的运行库；随后 WSL Docker **真实 build PASS**：`RUN /usr/local/bin/opencode --version` 输出 `opencode v2.0.24`，成功构建本地 OCI image `ahp-opencode2-cube:poc`（image ID 前缀 `825b61c967d0`）。**这是 Build/ABI Smoke PASS，不是 Cube Template READY、OpenCode V2 Session PASS**。
+- Cube 官方 `examples/opencode-plugin-sandbox` 已通过其 GitHub 仓库源文件独立审查：该方案仅经 `tool.execute.before` 重定向 `bash`，**每次 Bash 调用新建一个 MicroVM**，而 `read/write/edit` 仍访问 Host，文件在两边不一致；并存在不稳定 Session 键、锁超时无锁继续、TTY/host tool 绕过限制。因此可作为 `bash` 有限隔离参考，**不满足 Session 持续挂同一 Sandbox 和编辑/执行共享 Workspace 的核心门禁**。OpenCode 2 主方案仍为 **Harness-in-Cube**，直到其所有 Host 执行路径能安全远程路由。
+- 下一门禁：组合 OCI 的 build/version PASS，可信 registry 可取回 OCI digest，Cube `tpl create-from-image` + Template READY，真实 MicroVM 内认证 V2 Server、多 Session FS/Shell/Git 与同 Sandbox 的 Pydantic/OpenAI 接力。缺任一真实证据都保持 `ARCH-TODO-027 OPEN`。
+
 > **Session 绑定门禁补充**：每个需隔离执行的 OpenCode 2 Session
 > 必须由平台映射到经 Policy 授权的 Cube Sandbox Lease；
 > 绑定映射与 E2B SDK 创建/连接分属两层。前者单元测试 PASS，

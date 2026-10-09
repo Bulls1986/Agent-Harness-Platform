@@ -11,6 +11,9 @@
 > [Cube E2B 环境报告](CUBE_E2B_COMPATIBILITY_FINDINGS.md)
 > 和只读 [Host Readiness](verify_cube_host_readiness.py)。
 
+> **2026-10-09 晚间新进展：** 已实际分析 e2b 官方 Python SDK 1.0.5 / 2.0.0 / 2.40.0 / 2.53.1，旧 API 与新版 405 路由差异有真实源码/SDK 运行证据。2.40.0 是唯一目前同时有 `POST /sandboxes`、`Sandbox.create` 和 `E2B_API_URL` 的已检查候选，但**尚未实际跑通 Cube Sandbox**。新增 [最小可复验 E2B Native Test](verify_cube_e2b_basic.py)。
+> OpenCode 2.0.24 OCI 已导入独立 WSL Docker，Cube 基础镜像也已拉取，[Harness-in-Cube 组合模板](opencode2_cube_template/README.md) 正验证 Alpine/musl 与 Cube Debian/EnvD ABI；尚未构建出 READY 模板，真正 V2 Session 未通过。Cube 官方仅拦截 Bash/每次新 VM 的插件不满足同 Session 持久 Workspace 核心契约。
+
 > **Session → Cube E2B 执行适配（新增离线 POC）**：
 > [`cube_e2b_session_adapter.py`](cube_e2b_session_adapter.py) 通过受信
 > `session_id/run_id/isolation_scope/lease_generation` 解析已分配的

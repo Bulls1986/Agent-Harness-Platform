@@ -42,14 +42,19 @@ python -B poc/pydantic_harness/verify_cube_native_agent.py --live
 # 配置 E2B_API_URL 指向可信 Cube，E2B_API_KEY 使用本地可信配置；
 # 同时配置 CUBE_TEMPLATE_ID 和 CUBE_E2B_LIVE_CONFIRM=1
 python -B poc/opencode_sandbox/verify_cube_e2b.py --live --native-sdk
+# 最小单 Sandbox 官方 E2B Python SDK conformance（不依赖 OpenAI SDK）
+python -B poc/opencode_sandbox/verify_cube_e2b_basic.py --live
 python -B poc/pydantic_harness/verify_cube_live.py --live
 ```
 
 当前 Cube v0.7.2 + e2b 2.53.1 的创建接口为 **HTTP 405**，OpenAI E2BSandboxClient 同受影响；Pydantic 的原生 E2BSandbox 同样**不能推断已兼容**，应先修复版本组合或经平台 Cube Native Adapter 用公开执行接口。完整记录见 [兼容专项](opencode_sandbox/CUBE_E2B_COMPATIBILITY_FINDINGS.md)。
 
+> **2026-10-09 晚间实测：** E2B 2.40.0 可在真实 Cube 健康控制面完成 Sandbox.create 并返回非 Debug 句柄，接着 `files.write` 经 Data Plane 发生 `ConnectError`；尚未验收 Commands/Kill/Native OpenAI，因此正式 E2B conformance 仍 FAIL。e2b 2.53.1 创建直接 HTTP 405。建议下一步检查 `E2B_DOMAIN` / `*.cube.app` Wildcard DNS、Proxy/证书；不得停用 TLS 证书校验。
+
 ## 四、OpenCode 2 与其他专项
 
 - [OpenCode 2 / OpenAI 对照](opencode_sandbox/README.md)：Docker V2 Server/Session/FS/Shell 双向接力 PASS；共享 Host 原生 Shell 不能按 Session ID 自动转到外部 Sandbox（负例）。
+- [OpenCode 2 Harness-in-Cube OCI 模板](opencode_sandbox/opencode2_cube_template/README.md)：组合 Guest 镜像 build 和 `opencode v2.0.24` 实测 PASS；尚未 Registry Push / Cube Template READY / MicroVM V2 Session。
 - [Pydantic](pydantic_harness/README.md)：FunctionModel 与 POSIX 本地 Workspace；SDK Mock Ref Reconnect。
 - [MAF](maf/) / [Temporal](temporal/)：已有 POC-A/C 验证不迁移、不删除。
 - 真正的 OpenCode 2 **Cube** 验证需专用 OCI Template；默认 sandbox-code 镜像没有 OpenCode/Node/Bun。

@@ -688,6 +688,10 @@ OpenCode 2 / MAF；目前全部为候选，尚无完美零适配技术栈。
 
 ---
 
+**2026-10-09 晚间兼容矩阵增量：** 已检查官方 SDK 1.0.5 / 2.0.0 / 2.40.0 对 `POST /sandboxes` 与连接配置的公开行为：1.0.5 无 `Sandbox.create`，2.0.0 的 debug 返回 synthetic `debug_sandbox_id`，2.40.0 支持 `E2B_API_URL` 但真实连接仍受到 Cube 冷启动健康门禁阻塞，**026 不可关闭**。具体原始证据在 [Cube专项](../poc/opencode_sandbox/CUBE_E2B_COMPATIBILITY_FINDINGS.md)。
+
+**2026-10-09 进一步真机验证：** `e2b==2.40.0` 在 3000/8090/9091 均健康时官方 `Sandbox.create` 已返回非 Debug 的真实 Cube Sandbox 句柄；`files.write` 阶段 `ConnectError`，未触发 `commands.run`。026 的 Control Plane 局部 PASS、Data Plane **BLOCKED/FAIL**，应重点查 E2B `*.cube.app` 域名解析、TLS/CA、CubeProxy，而不能提前关闭 CUBE-1。详见最新 [Findings](../poc/opencode_sandbox/CUBE_E2B_COMPATIBILITY_FINDINGS.md)。
+
 ## ARCH-TODO-027 OpenCode 2 Cube 专用 OCI Template / Session 真实绑定
 
 **状态：POC / BLOCKED BY TEMPLATE（P0；未接受）**
@@ -704,6 +708,12 @@ OpenCode 2 / MAF；目前全部为候选，尚无完美零适配技术栈。
 **已有证据：** Docker 内 OpenCode 2.0.24 ↔ OpenAI FunctionTool 有限 PASS；Cube 默认 sandbox-code 镜像没有 opencode/node/npm/bun，尚未测试 OpenCode 真机链路。
 
 ---
+
+**2026-10-09 晚间 OpenCode 模板增量：** 真实 OpenCode 2.0.24 OCI 二进制与 Cube sandbox-code 基础镜像已在独立 WSL Docker 获得。原生 OpenCode (Alpine/musl) 直接拷入 Cube guest (Debian/glibc) 的 build-time Version Smoke 返回 127，正在用独立 musl Loader/Private Libraries 保持 Cube envd ABI；尚无 OCI Template READY/真实 V2 Session。Cube 官方 Bash-only 插件是 *每 Bash 调用新 VM / Host 编辑与 Guest 文件不共享* 的有限隔离实现，不能代替该 TODO，**027 继续 OPEN**。更多见 [OCI 模板专项](../poc/opencode_sandbox/opencode2_cube_template/README.md)。
+
+**2026-10-09 进一步 OCI Builder 验证：** 已完成独立 WSL Docker 组合镜像 `ahp-opencode2-cube:poc`，实际构建结果 `Successfully built 825b61c967d0`，`opencode v2.0.24`。此项使 **OCI Build/ABI Gate PASS**；本地 OCI registry pull 遇连接重置，Cube `tpl create-from-image` / Template READY / 真实 V2 Server Session **仍待验证**，027 保持 OPEN。参见 [模板 README](../poc/opencode_sandbox/opencode2_cube_template/README.md)。
+
+**2026-10-09 22:50 根因和复测收口：** [完整 RCA](../poc/opencode_sandbox/opencode2_cube_template/INCIDENT_20261009.md) 已定位旧 Job `ec70a828...` RUNNING 40% 残留原因：WSL/systemd 停止 CubeTemplateCenter 的构建 Context，原生 exporter 返回 `context canceled`，TemplateCenter 向 CubeMaster 的 FAILED 回调也取消，Master 保留过期 RUNNING。启用持续 WSL 保活后用**同一镜像**新 Job `4be59892...` 实测 OCI Pull/EXT4 RootFS **READY** / 节点分发 1/1 全通过；后续 `CREATING_TEMPLATE` 的 Cubelet/Shim 等待事件 10s 超时，Job 最终 **FAILED**。因此“40% 构建卡死”原因 CLOSED，但新的 Guest Boot/Ready Event Gate **OPEN**；Template READY/OpenCode V2 Session 仍 NO-GO，027 不关闭。缺省运行生产容器、磁盘备份不属于本平台职责，第三方 Cube Callback 对账需作为依赖门禁而不是平台自建基础设施。
 
 ## ARCH-TODO-028 Process/Durable 默认实现与任务级恢复对比
 
