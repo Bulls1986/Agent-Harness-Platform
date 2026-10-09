@@ -21,6 +21,7 @@
 - [POC-C / C11 隔离 Sandbox + S3 Artifact/Evidence 引用与 Tombstone](poc/temporal/C11_SANDBOX_ARTIFACT_FINDINGS.md)
 - [POC-C / C13 原生 OpenTelemetry 与 Harness Correlation/部署依赖](poc/temporal/C13_OTEL_FINDINGS.md)
 - [POC-C / C14 MAF 与 Temporal 全 Gate/场景比较与条件选型](poc/temporal/C14_COMPARATIVE_DECISION.md)
+- [OpenCode + E2B/CubeSandbox + 共享 Runtime 专项 POC（在研）](poc/opencode_sandbox/README.md)
 - [POC-C / C15 真实模型→平台 API/Typed Token SSE 与 Native Start RecoveryPoint](poc/temporal/C15_REAL_G3_PROTOCOL_FINDINGS.md)
 - [POC-C / C16 非幂等外部 Tool Receipt 查询与 UNKNOWN 对账](poc/temporal/C16_RECEIPT_RECOVERY_FINDINGS.md)
 - [POC-C / C00–C16 阶段评估收口（CONDITIONAL / Production NO-GO）](docs/POC_C_EVALUATION_CLOSEOUT.md)
