@@ -520,6 +520,8 @@ Harness 仍负责具体 Execution 的 Capability / Policy / Approval / Credentia
 
 **状态：DEFERRED**
 
+**范围澄清（2026-10-10）：** 此处延期的是深度递归子 Agent、A2A/动态 Multi-Agent Topology，**不是**第一期必须支持的跨 Agent 顺序串联。基础串联基于 Harness Recipe/Plan/Step 与 ARCH-TODO-025 Runtime SPI 的集成验收，不能因为本条 DEFERRED 而取消。
+
 当前不优先围绕 Multi-Agent 设计平台。
 
 后续需要讨论：
@@ -585,6 +587,16 @@ Harness 仍负责具体 Execution 的 Capability / Policy / Approval / Credentia
 
 **状态：TODO**
 
+**2026-10-09 增量 POC：** 已开始验证同一个 SandboxProvider
+在 OpenCode 与 OpenAI Agents SDK 等不同 Harness 之间的适配。
+见 [OpenCode / OpenAI Agents SDK 统一 Sandbox 专项](../poc/opencode_sandbox/README.md)。
+目前 Docker 统一 Provider 的任务 Scope 隔离和 SDK Native/FunctionTool
+局部实测通过，但 Cube/E2B 真机、OpenCode 全工具隔离、真实
+跨 Harness 同物理 Sandbox 接力、容量压测都未验，**本待办保持 TODO，
+不得将专项局部 PASS 升级为跨 Harness Provider Contract 全面通过**。
+
+**状态更新：** 上句是早于 Cube 真机运行的历史 POC 记录；2026-10-09 已有 Cube 原生 SDK 真机 PASS，官方 E2B 2.53.1 与 OpenAI Native Client 405 FAIL。后续以 ARCH-TODO-026 与目标架构候选快照为准；020 合约套件依然 TODO。
+
 需要建立平台级 Contract Suite，而不是只靠接口签名保证可替换性。
 
 至少覆盖：
@@ -599,6 +611,158 @@ Harness 仍负责具体 Execution 的 Capability / Policy / Approval / Credentia
 - Environment Provider
 
 目标：替换实现后，上层 Workflow 与领域模型无需修改。
+
+**2026-10-09 当前真实验证修订：** Cube v0.7.2 已在独立 WSL2 + 16 GiB XFS 中用其原生 SDK 创建 MicroVM，完成 Shell/文件/运行中按 ID 重新连接，且 OpenAI Agents SDK FunctionTool 接同一真实 Sandbox 有局部 PASS；不可再称为“没有 Cube 真机”。但官方 E2B SDK 2.53.1 及 OpenAI 原生 E2BSandboxClient 真实创建均因 HTTP 405 失败，OpenCode 2 在 Cube 仍缺专用 OCI 模板，完整 Runtime-SPI 跨 Harness 接力尚未通过。下列 ARCH-TODO-025～028 分拆剩余 Gate，**020 保持 TODO，024 保持 POC CANDIDATE，均未正式 CLOSED**。
+
+## ARCH-TODO-024 Multi-Harness Sandbox & Shared Runtime Density
+
+**状态：POC / ARCHITECTURE CANDIDATE（未接受）**
+
+**触发：** PDLC 与 AI 企业门户的专业 Agent 将运行于 OpenCode 2、
+OpenAI Agents SDK、MAF 等不同 Harness。高密度要求逻辑 Session 不与
+Runtime Worker/Sandbox 一一绑定；Sandbox 由 Execution Capability
+按需申请，且跨 Harness 可共享**平台 SandboxProvider 契约**。
+
+**本轮候选文档：** [多 Harness 共享 Sandbox 与 Runtime 密度](references/MULTI_HARNESS_SANDBOX_RUNTIME_DENSITY_CANDIDATE.md)。
+
+**核心未决：** OpenCode 2 SDK Host 的多 Session/CWD/LSP/PTY/插件文件隔离能否
+通过公开扩展点建立；Harness-in-Sandbox 与 Shared Host 两拓扑的真实
+资源优势；OpenCode 2 和 OpenAI Agents SDK 使用同一个实际 Sandbox
+完成 Workspace 接力；CubeSandbox 全链 conformance 和安全恢复。
+
+**收口要求：** 对照同等隔离/负载完成安全、资源和任务级恢复验收后，
+再决定生产主拓扑、更新 Accepted ADR。当前不改变 P0/P1 已接受约束，
+不得因为 OpenCode 2 新 API 就修改平台领域模型。
+
+**2026-10-09 顺序修正：** 将 CubeSandbox 提供 E2B 兼容接口作为当前首要
+门禁；[Cube E2B 兼容性与环境阻塞记录](../poc/opencode_sandbox/CUBE_E2B_COMPATIBILITY_FINDINGS.md)。
+只有 Cube 原生端到端 conformance 通过，才继续讨论共享 Host 的资源优化。
+
+**OpenCode 2 反向实测：** 共享 Host 两 Session + 两个外部隔离 Sandbox，
+OpenCode 原生 Shell 仍在 Host 执行。已记录于
+[架构候选](references/MULTI_HARNESS_SANDBOX_RUNTIME_DENSITY_CANDIDATE.md)。
+因此不采纳“仅 Session ID→Sandbox ID 配置即可实现透明工具隔离”
+这一假设；Topology B 保持未通过，待公开扩展点完整覆盖。
+
+**2026-10-09 阶段性验收/选型增量：** 用户明确当前系统本就未完成隔离，
+故先记录每种技术实际达到的能力，Session→Sandbox 功能性验证
+不再被全部宿主机执行入口安全重定向阻断；生产隔离要求保持不变。
+引入 [多专业 Agent 技术选型评估](references/MULTI_HARNESS_TECH_SELECTION_20261009.md)，
+重点对照 **Pydantic AI Harness + Temporal + Cube(E2B)**、
+**OpenAI Agents SDK + Temporal + Cube(E2B)** 与已投入的
+OpenCode 2 / MAF；目前全部为候选，尚无完美零适配技术栈。
+
+---
+
+## ARCH-TODO-025 AgentRuntime SPI / Pydantic 默认 Adapter 与跨 SDK 可替换性
+
+**状态：POC / ARCHITECTURE CANDIDATE（P1；未接受）**
+
+**方向：** Pydantic AI Harness 是新通用 Agent 的默认 Runtime Adapter 候选；OpenAI Agents SDK、OpenCode 2 和 MAF 分别作为独立适配器。SDK 切换由**平台 AgentRuntime SPI** 实现，不由 Pydantic 原生托管其他 SDK；模型 Provider 切换另行治理。关联 [目标架构候选](references/MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md)。
+
+**业务优先级 P0（2026-10-10）：** 单一 Run 下以 Recipe/Step 顺序调度至少两个异构 AgentRuntime；使用授权 WorkspaceRef 和受控 Artifact/Evidence 交接，失败阻断后继 Step，支持重试/重规划、审批暂停与任务级恢复。现有真实 Tool 接力不等于 Kernel 端到端串联完成。PDLC 是用例而非固定流程。
+**2026-10-10 版本冻结门禁：** [已验证 SDK/Runtime/OCI Digest/Template 快照](references/VERIFIED_STACK_BASELINE_20261010.md) 已单独存为机器可读基线，包含 E2B 2.40.0 限定 PASS / 2.53.1 HTTP405 负例及自动防漂移验证；后续集成必须依 [Accepted Registry & Versioning Contract](references/REGISTRY_AND_VERSIONING.md) **在 Run 创建时**记录确切 Runtime/Adapter/SDK/Environment/Digest，重试/恢复沿用冻结绑定。POC 快照不等于数据库层已实现此持久化。
+
+
+**待办与完成标准：**
+
+- 定义最小 RuntimeExecutionContext（Run/Session/Scope/Lease/WorkspaceRef/Capability），以及 Event Translator 的 Typed Events/Token SSE/Tool Receipt/Cancel 公开适配契约；不添加新的重复领域状态机。
+- 使用 Pydantic、OpenAI SDK、OpenCode 2 **三个真实 Runtime** 对同一平台 Run Contract 进行受控执行/选择/失败/取消；无支持能力必须明确标记 unsupported。
+- 验证无 Shell/文件需求时不申请 Sandbox；同一 Worker 多 Pydantic Run/Session；升级测试冻结 SDK 0.x 版本。
+- 凡仅 Mock、FunctionTool 直调、无模型 Agent Loop 的局部结果只标 LIMITED PASS，不代替完整 SDK/Session Gate。
+
+**未关闭原因：** Pydantic 20 并发与 Run-scoped LocalWorkspace 仅离线/Linux CI；跨三 Runtime SPI 未完成。
+
+---
+
+**2026-10-09 新增有限真实 SDK 证据：** 已运行 1 个 Pydantic AI 基础 Agent 对真实 Cube Native Sandbox 的两个 Run、6 个 `@agent.tool` 读写/Shell 调用；OpenAI SDK `@function_tool` 成功读取同一个 Workspace。属于跨 Runtime 公共 **Tool Adapter 真机 PASS**，不等于已实现平台完整 AgentRuntime SPI、Pydantic Harness 内置 Coder/E2BSandbox 或真实 LLM 模型；本 TODO 保持 POC，不关闭。
+
+**2026-10-10 AgentRuntime SPI 新增代码：** [实现与证据](../poc/runtime_spi/README.md)，平台自有 `ExecutionContext / SandboxGrant / RunRequest / AgentRuntimeDispatcher`，在单一合同上提供 Run Started/Completed/Failed/Cancelled/Unsupported、缓冲 `response.output_text.delta` / SSE 编码、租约 Fencing/Owner/Scope/Capabilities Fail Closed。独立离线 Mock 覆盖 6 类无授权拒绝与 Cancel UNKNOWN；在真实安装的 `pydantic-ai-slim==2.54.0`、`openai-agents==0.23.1` 上分别实际调用了公共 `Agent.run` 与 `Runner.run`，通过本地确定性 Model 完成相同 Run 合同（**SDK RUN LIMITED PASS，0 托管模型调用**）；OpenCode 2 `session.prepare` SPI 目前仅在离线 Fake Session Factory 下 PASS，`model.run` 明确 UNSUPPORTED。**真正 Token SSE、外部 Receipt/ACK/DB、取消真实工具副作用、OpenCode 模型 Agent Loop/真实 Cube Lease SPI/Worker 接管尚未通过，025 保持 OPEN**。
+
+## ARCH-TODO-026 Cube E2B 兼容矩阵与真实多 SDK 接力
+
+**状态：POC / E2B 2.40.0 + OpenAI Native LIVE LIMITED PASS；最新 E2B 2.53.1 仍协议不兼容（P0；未接受）**
+
+**方向：** CubeSandbox 由平台 SandboxProvider SPI 统一使用；先修复或隔离官方 E2B 兼容缺口，不能把 Cube Native SDK PASS 冒充原生 E2B SDK PASS。参考 [Cube 实测](../poc/opencode_sandbox/CUBE_E2B_COMPATIBILITY_FINDINGS.md)。
+
+**待办与完成标准：**
+
+- 对 Cube v0.7.2 × E2B Python SDK 2.53.1 / 官方支持的版本，实际验证 POST Sandbox.create、Connect、files、commands、kill；记录 HTTP 路径/返回码及 Native/Adapter 版本矩阵。
+- 确认 E2B 2.53.1 使用 POST /v2/sandboxes 时当前 Cube 返回 405 的根因，选择**官方兼容版本或公开 Cube SDK/REST 薄 Adapter**，不得侵入式 SDK monkey patch；不支持的能力明确标 Unsupported。
+- OpenAI 原生 E2BSandboxClient 与 Pydantic E2BSandbox + WorkspaceRef 分别通过同一真实 Cube Sandbox ID 连接、写入/读取/命令/销毁；至少两个 SDK/Tool Adapter 互相接力。
+- 恢复 Cube 在 WSL 重启时的 Control/API/TemplateCenter/CubeEgress 健康检查、模板副本 READY 及可复验脚本；验收日志保留到仓库，不把启动超时当作协议不兼容。
+
+**已有证据：** Cube 原生 SDK MicroVM/Shell/Files/reconnect PASS；E2B 2.53.1 与 OpenAI 原生 E2B Client 创建 **FAIL（405）**。
+
+---
+
+**2026-10-09 晚间兼容矩阵增量：** 已检查官方 SDK 1.0.5 / 2.0.0 / 2.40.0 对 `POST /sandboxes` 与连接配置的公开行为：1.0.5 无 `Sandbox.create`，2.0.0 的 debug 返回 synthetic `debug_sandbox_id`，2.40.0 支持 `E2B_API_URL` 但真实连接仍受到 Cube 冷启动健康门禁阻塞，**026 不可关闭**。具体原始证据在 [Cube专项](../poc/opencode_sandbox/CUBE_E2B_COMPATIBILITY_FINDINGS.md)。
+
+**2026-10-09 进一步真机验证：** `e2b==2.40.0` 在 3000/8090/9091 均健康时官方 `Sandbox.create` 已返回非 Debug 的真实 Cube Sandbox 句柄；`files.write` 阶段 `ConnectError`，未触发 `commands.run`。026 的 Control Plane 局部 PASS、Data Plane **BLOCKED/FAIL**，应重点查 E2B `*.cube.app` 域名解析、TLS/CA、CubeProxy，而不能提前关闭 CUBE-1。详见最新 [Findings](../poc/opencode_sandbox/CUBE_E2B_COMPATIBILITY_FINDINGS.md)。
+
+**2026-10-10 ARCH-TODO-026 原生 E2B/Cube 真机突破：** [官方 SDK / 独立 DNS 真实验收](../poc/opencode_sandbox/E2B_PRIVATE_DNS_VERIFICATION_20261010.md)。`e2b==2.40.0` 本身已能对 Cube v0.7.2 进行真实 `POST /sandboxes`，此前 `files.write ConnectError` 是 **WSL 默认 DNS 不走 Cube 已配置的 `~cube.app` 路由 + 官方 SDK `E2B_DOMAIN` 默认 `e2b.app`** 的客户端环境问题。使用独立 Linux mount namespace 的 resolver bind 和 `E2B_DOMAIN=cube.app`、本地可信 CA，不修改全局 DNS/TLS/SDK 私有字段，真实 `create → files.write/read → commands.run → kill` **PASS**；额外两真实 Sandbox 文件隔离和官方 `openai-agents==0.23.1` 的原生 `E2BSandboxClient.create/exec/aclose` **PASS**（零模型调用，`sdk_private_patches=false`）。**CUBE-1/CUBE-3 最小版本锁定的真机门禁已通过；`e2b==2.53.1` 对 `POST /v2/sandboxes` 仍 405，Pydantic 内置 E2BSandbox/跨 SDK 同一 Sandbox ID Native Connect、生产 Scope/Lease/恢复仍开放，因此 026 仍 OPEN，不是生产 Accepted**。此段优先于下方 2026-10-09 的 Data Plane ConnectError 历史结果。
+
+## ARCH-TODO-027 OpenCode 2 Cube 专用 OCI Template / Session 真实绑定
+
+**状态：真实 Cube Harness-in-Cube 核心功能 POC LIVE PASS / 未 Accepted（P0；平台 Scope/Lease、统一 Runtime SPI、生产隔离待验收）**
+
+**方向：** OpenCode 2 Coding 优先验证 Harness-in-Cube（Topology A）。共享 Host 原生 Shell/FS/PTY/Git/LSP/Plugin 不因 SessionID 映射自动重定向到 Sandbox（已有 Docker 反向证据），生产 Topology B 仍 NO-GO。
+
+**待办与完成标准：**
+
+- 构建含 OpenCode 2.0.24（锁镜像 Digest/版本）、必需工具链、Cube envd/Probe 和必要服务端口的 OCI 模板；在自建 Cube 真机启动并认证 OpenCode 2 V2 Server。
+- 在同一 Cube MicroVM 使用 OpenCode V2 创建不少于 2 个 Session；执行原生 FS/ Shell 和至少一项 Git 工作流，验证文件只出现在绑定 Cube Workspace；与 OpenAI/Pydantic Tool Adapter 在**同一 Sandbox ID** 顺序接力。
+- 记录 Host 宿主机侧绕过路径（FS/Shell/PTY/Git/LSP/Plugin/Skill）；无法透明安全重定向的共享 Host 能力应禁用或明确 unsupported，不因单一 Shell 成功宣布全隔离。
+- 多 Session 不要求多 Harness 进程；按活动执行/Isolation Scope 测试 Worker 数、Sandbox 数、回收及独立租约拒绝。
+
+**已有证据：** Docker 内 OpenCode 2.0.24 ↔ OpenAI FunctionTool 有限 PASS；Cube 默认 sandbox-code 镜像没有 opencode/node/npm/bun，尚未测试 OpenCode 真机链路。
+
+---
+
+**2026-10-09 晚间 OpenCode 模板增量：** 真实 OpenCode 2.0.24 OCI 二进制与 Cube sandbox-code 基础镜像已在独立 WSL Docker 获得。原生 OpenCode (Alpine/musl) 直接拷入 Cube guest (Debian/glibc) 的 build-time Version Smoke 返回 127，正在用独立 musl Loader/Private Libraries 保持 Cube envd ABI；尚无 OCI Template READY/真实 V2 Session。Cube 官方 Bash-only 插件是 *每 Bash 调用新 VM / Host 编辑与 Guest 文件不共享* 的有限隔离实现，不能代替该 TODO，**027 继续 OPEN**。更多见 [OCI 模板专项](../poc/opencode_sandbox/opencode2_cube_template/README.md)。
+
+**2026-10-09 进一步 OCI Builder 验证：** 已完成独立 WSL Docker 组合镜像 `ahp-opencode2-cube:poc`，实际构建结果 `Successfully built 825b61c967d0`，`opencode v2.0.24`。此项使 **OCI Build/ABI Gate PASS**；本地 OCI registry pull 遇连接重置，Cube `tpl create-from-image` / Template READY / 真实 V2 Server Session **仍待验证**，027 保持 OPEN。参见 [模板 README](../poc/opencode_sandbox/opencode2_cube_template/README.md)。
+
+**2026-10-09 22:50 根因和复测收口：** [完整 RCA](../poc/opencode_sandbox/opencode2_cube_template/INCIDENT_20261009.md) 已定位旧 Job `ec70a828...` RUNNING 40% 残留原因：WSL/systemd 停止 CubeTemplateCenter 的构建 Context，原生 exporter 返回 `context canceled`，TemplateCenter 向 CubeMaster 的 FAILED 回调也取消，Master 保留过期 RUNNING。启用持续 WSL 保活后用**同一镜像**新 Job `4be59892...` 实测 OCI Pull/EXT4 RootFS **READY** / 节点分发 1/1 全通过；后续 `CREATING_TEMPLATE` 的 Cubelet/Shim 等待事件 10s 超时，Job 最终 **FAILED**。因此“40% 构建卡死”原因 CLOSED，但新的 Guest Boot/Ready Event Gate **OPEN**；Template READY/OpenCode V2 Session 仍 NO-GO，027 不关闭。缺省运行生产容器、磁盘备份不属于本平台职责，第三方 Cube Callback 对账需作为依赖门禁而不是平台自建基础设施。
+
+**2026-10-10 真实 Cube 复验增量：** [最新 V2 复验记录](../poc/opencode_sandbox/opencode2_cube_template/VERIFICATION_20261010.md)。同一镜像的 Guest Agent 冷启动间歇通过但原 Jupyter Code Interpreter Kernel Startup 迟滞，Cubelet 49999 健康探针超时 `PortBindingFailed`；改为 Coding 专用 **envd(49983) + 轻量 health(49999)** 后模板 `tpl-aacac99e38bf46e68ecd2f1f` 真实 **READY**。同一个 MicroVM 内 OpenCode 2.0.24 `2 V2 Session + FS read + Shell write`、Cube Native SDK connect/read、Pydantic Agent 公共 Tool 与 OpenAI SDK FunctionTool 读取 V2 Shell 写入文件、Kill **LIVE LIMITED PASS**，0 模型调用；不再归类为 `BLOCKED BY TEMPLATE`。仍须确认 Git 工作流、Sandbox Scope/Lease/并行隔离、真实 LLM/平台 Typed Event/Cancel/Receipt 等门禁，**027 保持开放，不视为生产验收**。
+
+**2026-10-10 最终 Git-enabled 验收：** [严格 Cube 真机复验报告](../poc/opencode_sandbox/opencode2_cube_template/VERIFICATION_20261010.md)：Git Debian 12 / 2.39.5 已在 Cube 专用 OCI Guest 内置，镜像 Digest `sha256:9e4bde62fad22f2b22a2bd858ec865e403caccead740d113afc8c9a9e89e284f`；Template `tpl-363306ce3b21432cb1ae6536`、Job `c835c0cd-9cf6-4628-9e8e-c4730a3873c0` **READY**。同 1 个真实 Cube MicroVM 内 Git `init/add/commit/log`、OpenCode V2 2 Session、V2 FS/Shell 文件接力、Pydantic Agent 公共 Tool、OpenAI FunctionTool、Cube 同 ID reconnect + Kill **全 PASS**（零托管模型）。**027 功能 POC 门禁可判定 PASS；依照接受标准，真实跨 Scope 授权租约/多 Worker 密度/所有 Host 原生执行入口系统性隔离/平台统一 Runtime 事件、生产安全仍未验收，故 ARCH-TODO-027 保持 OPEN/非 Accepted。** 后续避免重复测试已通过的简单命令/模板，优先推动 025 与 026，再形成完整准入。
+
+## ARCH-TODO-028 Process/Durable 默认实现与任务级恢复对比
+
+**状态：TODO / POC CANDIDATE（P1；未接受）**
+
+**方向：** Temporal、MAF Durable、PG + Worker/Scheduler 作为 Process/Durable SPI 候选。Pydantic 选为默认 Agent Adapter 不等于 Temporal 自动被淘汰或必须成为基础设施。
+
+**待办与完成标准：**
+
+- 冻结同样的任务级恢复场景：Worker A Crash、Worker B 接管、WAITING_APPROVAL、Cancel/Timeout、RecoveryPoint、真实非幂等 Tool Receipt UNKNOWN → Reconciliation。
+- 比较三种方式所需的**新增开发量、版本运行兼容、状态持久化/恢复证据、运维成本**，以任务级继续/安全失败为标准；磁盘/数据库/对象存储备份不属 Harness。
+- 若引入 Pydantic TemporalDurability，需要定义与平台 Workflow/Durable 层的职责分界，防止同一 Agent Run 重复包两层 Durable 引擎。
+- MAF POC-A 与 Temporal POC-C 已有成果继续保留；形成等价验收结论后再决定生产默认并单独更新 Accepted ADR。
+
+**未关闭原因：** 当前三方案尚未按新的多 Runtime/同 Cube 场景完成一致性成本比较。
+
+---
+
+## ARCH-TODO-029 存量 OpenCode PDLC 平台无感替换与跨 Agent 串联
+
+**状态：P0 / 业务目标已确认；旧平台实码盘点与迁移集成未完成（非 Accepted）**
+
+**业务目标：** 当前企业内产品、研发、测试、文档及业务 Agent **统一基于 OpenCode 实现**。新平台必须**替换其 PDLC 执行与控制架构，保留既有建设并实现用户侧平滑迁移**；同时新增能够将不同专业 Agent SDK 编排成一条任务的**跨 Agent 串联能力**。更换底层架构并不要求淘汰 OpenCode Coding Runtime，也不意味着在新平台复制既有 PDLC 需求/迭代/知识库等业务领域模型。
+
+**架构策略：** 保留既有 UI/业务资产/项目与会话读取能力，经 Legacy API Facade 与稳定 ID 映射逐步迁移新 Run；原活动会话由旧执行端安全继续或在经验证的恢复点切换；同一写操作只允许一个执行 Owner，不做有副作用的双写。新 Harness 负责 Recipe/Step/Attempt/任务事实、交接、审核与恢复；各 Agent SDK 由 AgentRuntime SPI 接入。
+
+**分阶段必过门禁：**
+
+1. **M0 旧平台只读事实盘点：** 获取现有 PDLC 源码、运行版本、API/事件、数据 Schema、OpenCode Session、Prompt/Skills/Subagents/Plugins/Hooks/MCP、Workspace/Git、对象存储、身份权限与启用功能清单；形成业务功能与迁移对象的一一对应表。**当前 Agent Harness 仓库无法独立证明旧 PDLC 每项现网能力。**
+2. **M1 原功能与数据兼容：** 既有 URL/页面/SSO、历史消息/附件、项目/工作区、已有 Agent 与 Skill 均可继续使用；旧 Session/新 Run ID 稳定关联，跨 Scope 请求拒绝。
+3. **M2 逐步灰度：** 新请求按确定性路由进入旧/新运行时；有副作用的执行禁止双写，失败和回退不导致重复 Tool/Git/外部业务操作。
+4. **M3 跨 Agent 串联：** 至少一条真实既有 PDLC 场景通过一个 Run 下 ≥2 个 Runtime 的 Recipe/Step 执行、受控 Artifact/Evidence 交接、验收阻断、审批、失败与任务级恢复；该机制必须能被非 PDLC Agent 复用。
+5. **M4 用户无感验收与回退：** 以真实用户/项目和活动会话分别检查原功能、行为、权限、数据、Workspace/历史、一致性及回退；新旧执行权威和副作用对账清晰，未经验收不宣告生产迁移成功。
+
+**专题及验收矩阵：** [现有 PDLC 平台替换与无感迁移方案](references/PDLC_REPLACEMENT_MIGRATION_20261010.md)。本项优先于单独实现通用 Harness Demo；与 ARCH-TODO-025～028 并行，但上述后续 Gate 不因现有 Cube/E2B/OpenCode 功能 POC 通过而自动关闭。
 
 # 5. 推荐讨论顺序
 

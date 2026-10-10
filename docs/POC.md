@@ -14,6 +14,25 @@
 
 **说明：本文件记录的是截至 2026-09-29 的技术事实与首轮架构决策。框架能力、许可和托管策略变化较快，进入采购或正式落地前必须重新核验。**
 
+> **2026-10-10 新增可复验 POC（不覆盖第一轮 Gate）：** [E2B/Cube 原生公开 SDK 真机专项](../poc/opencode_sandbox/E2B_PRIVATE_DNS_VERIFICATION_20261010.md) 对 Cube v0.7.2 使用官方 `e2b==2.40.0` + OpenAI Agents 0.23.1，在隔离 DNS/可信 CA 后完成真实文件/命令/两 Sandbox 隔离/原生 OpenAI Client **PASS**，2.53.1 的 405 仍保留负例。[AgentRuntime SPI POC](../poc/runtime_spi/README.md) 已实现严格绑定与 Typed Event/Cancel/Unsupported，两真实 SDK 的本地确定性 Model Run **PASS**，OpenCode Session SPI 仍 Mock；无 Token Streaming、Receipt/恢复/生产隔离完成证据。继续由 ARCH-TODO-025/026 逐项准入。
+
+> **2026-10-09 增量专项（不回写历史首轮 Gate）：** OpenCode 2 /
+> OpenAI Agents SDK / MAF 的共享 Sandbox 与高密度 Runtime 候选已登记
+> [ARCH-TODO-024](references/MULTI_HARNESS_SANDBOX_RUNTIME_DENSITY_CANDIDATE.md)。
+> [可执行专项 POC](../poc/opencode_sandbox/README.md) 先验证
+> OpenCode 2 真实 Sandbox 与跨 Harness 同 Workspace 接力，
+> 再检查共享 SDK Host 安全边界和资源效率；局部 PASS 不等于 G5 全面通过。
+
+> **2026-10-09 新增候选验证矩阵（不改变首轮 POC-A/B/C 的历史结论）：**
+> [多 Harness 目标架构与真机证据](references/MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md)
+> 和 ARCH-TODO-025～028 负责后续增量。通用 Agent 默认候选 Pydantic AI Harness，
+> OpenCode 2 保留 Coding Runtime；SDK 切换通过平台 AgentRuntime SPI，而非
+> Pydantic 直接运行其他 SDK。自建 Cube v0.7.2 **原生 SDK 真机** MicroVM/Shell/Files/
+> 同 ID reconnect 及 OpenAI FunctionTool 桥有限通过；官方 E2B Python 2.53.1
+> 与 OpenAI E2BSandboxClient 创建均实测 HTTP 405，OpenCode 2 仍缺 Cube 专用模板，
+> Pydantic → Cube 真实工具链、跨 SDK 真实 Agent Loop 与 Worker 崩溃恢复尚未闭合。
+> Temporal、MAF Durable 与 PG Worker 仍需按任务级恢复验收决定，不能提前二选一。
+>
 # 执行摘要
 
 本 POC 不以“谁的 Demo 最快跑起来”为目标，而是验证三条架构路线在企业内建场景下是否满足可自托管、可恢复、可替换、可审计、可桥接 UI 协议等关键约束。所有候选必须使用同一组场景和失败注入测试，避免因示例复杂度不同导致结论失真。

@@ -1,0 +1,15 @@
+# Local artifacts (never commit credentials, caches, local sandbox disks)
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+*.log
+*.xfs
+*.qcow2
+*.vhdx
