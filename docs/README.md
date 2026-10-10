@@ -8,6 +8,8 @@
 |---|---|---|
 | **总体架构、建设必要性、方案优劣势、真实 POC 证据与路线图** | **[根目录 README：架构设计方案](../README.md)** | **现行总入口：集成 POC LIMITED GO / 生产 NO-GO** |
 | **替换现有 OpenCode PDLC、保留存量能力及用户无感迁移** | [PDLC 替换与迁移方案](references/PDLC_REPLACEMENT_MIGRATION_20261010.md) | **业务目标已确认、迁移实码盘点未完成** |
+| **架构收口 HC-01/02/03（ADR-032）** | **[Run↔Hatchet](references/HATCHET_WORKFLOW_MAPPING_CONTRACT_20261010.md) · [状态一致性](references/HARNESS_HATCHET_CONSISTENCY_CONTRACT_20261010.md) · [Worker/Cube 绑定](references/HATCHET_WORKER_SANDBOX_BINDING_CONTRACT_20261010.md)** | **DECIDED，实际集成/生产 Gate OPEN** |
+| **PDLC M0–M4 开发工作清单** | [Development Backlog](DEVELOPMENT_BACKLOG.md) | **DEV-PDLC-01～05，后续实施，不阻挡架构收口** |
 | **Thin Harness Control Plane 自研职责瘦身（ADR-031）** | **[2026-10-10 控制层职责决议](references/THIN_HARNESS_CONTROL_PLANE_DECISION_20261010.md)** | **已明确 Hatchet 执行权威与平台必要领域事实；生产 NO-GO** |
 | **当前 Process/Durable 目标架构、部署拓扑与安全恢复** | **[Hatchet 分层与架构设计（2026-10-10）](references/HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md)** | **Hatchet 唯一优先实施候选；DBOS REJECTED；生产 NO-GO** |
 | 多 Harness 原始目标评估快照 | [2026-10-09 多 Harness 候选](references/MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md) | 历史快照；其 Durable 默认已被上面新决策覆盖 |

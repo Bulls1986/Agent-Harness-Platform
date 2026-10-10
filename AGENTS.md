@@ -27,7 +27,9 @@
 4. `docs/ARCHITECTURE_BACKLOG.md`
 5. `docs/POC.md`
 6. 若涉及 Process/Durable、Agent 串联、持久执行或 Worker 恢复，先读 `docs/references/HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md`（当前实施候选基线）及 `docs/references/THIN_HARNESS_CONTROL_PLANE_DECISION_20261010.md`（ADR-031：Hatchet 技术执行权威；Harness 薄领域控制和最小状态投影，不重造 Scheduler）
-7. 与当前任务直接相关的 `docs/references/*.md`
+7. 涉及业务 Run/Plan/Step/Attempt 到 Hatchet 的映射/Retry/Replan 时阅读 `docs/references/HATCHET_WORKFLOW_MAPPING_CONTRACT_20261010.md`（HC-01）；跨存储/outbox/状态投影/Receipt 阅读 `docs/references/HARNESS_HATCHET_CONSISTENCY_CONTRACT_20261010.md`（HC-02）；Worker/Cube/Scope/Lease/Fencing 阅读 `docs/references/HATCHET_WORKER_SANDBOX_BINDING_CONTRACT_20261010.md`（HC-03）
+8. 涉及现有 PDLC 迁移开发，读取 `docs/DEVELOPMENT_BACKLOG.md`（DEV-PDLC-01～05，旧代码/Schema 实码盘点属后续开发）
+9. 与当前任务直接相关的 `docs/references/*.md`
 
 如果任务涉及已经关闭的架构待办，必须先读取其 Accepted Contract。
 

@@ -6,6 +6,8 @@
 
 **现有架构准确描述：** 产品、研发、测试、文档和业务 Agent **目前统一使用 OpenCode**，不是已经各自运行在 Pydantic、OpenAI 或 MAF 等不同 SDK 上。OpenCode 作为 Coding Agent 快速提供文件、代码、Shell 与 Git 能力；随着业务 Agent 扩展到类型化输出、数据抽取和流程协作，继续在同一个 Coding Harness 上叠加能力的改造成本逐步上升，因此采用多专业 Runtime + 统一 Harness，而非强制让所有 Agent 继续使用 OpenCode。
 
+> **2026-10-10 执行安排：** 本文 M0–M4 不再作为 HC-01/02/03 架构收口阻塞条件；旧平台实码接口/会话/Schema 盘点已列入 [Development Backlog · DEV-PDLC-01～05](../DEVELOPMENT_BACKLOG.md)，须在实际迁移开发时从真实旧系统只读提取。业务目标/单 Writer/安全迁移和生产验收要求不降低。
+
 ## 1. 先区分“替换平台”和“替换 OpenCode”
 
 本次替换对象是**现有 PDLC 的平台层、执行管理方式及其架构约束**，不是一开始就删除 OpenCode：

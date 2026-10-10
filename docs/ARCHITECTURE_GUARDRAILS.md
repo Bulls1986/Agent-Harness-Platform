@@ -36,6 +36,8 @@
 | G19 | D | **候选不等于 Accepted。** Process/Durable SPI 当前唯一优先实施候选为 Hatchet；DBOS 因许可证正式 REJECTED，不再开发、引入依赖或评估替代协调器；Temporal/MAF Durable/手写 PG Worker 仅留历史结论。Runtime/Cube/Process 均须按 Gate 实测，不因 Hatchet 分项 PASS 自动生产 GO。 | 仅凭 Demo 就移除 Process SPI 或宣布生产选型完成。 | [候选](references/MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md)、[Backlog](ARCHITECTURE_BACKLOG.md) |
 | G20 | R | **验收等级不可混淆。** Mock、Offline、Docker、Live、Production 逐项注明，必要时保留失败反例，禁止 skip 降门禁。 | 一个 FunctionTool 独立成功就声称跨 Runtime 全链恢复可用。 | [POC](POC.md)、[Admission](references/MULTI_HARNESS_ADMISSION_20261009.md) |
 
+**ADR-032 集成三合同的 PR 拒绝条件（G01/G03/G04/G06/G07/G08/G09/G10/G16）：** [HC-01 Mapping](references/HATCHET_WORKFLOW_MAPPING_CONTRACT_20261010.md) · [HC-02 Consistency](references/HARNESS_HATCHET_CONSISTENCY_CONTRACT_20261010.md) · [HC-03 Worker/Sandbox](references/HATCHET_WORKER_SANDBOX_BINDING_CONTRACT_20261010.md)。直接把 Provider Task Retry 等同 New Attempt、以旧 Plan/DAG 覆盖 Replan 历史、丢 ACK 后创建重复 Workflow、Hatchet SUCCEEDED 直接写业务 Run Terminal、Worker 用裸 Sandbox ID 或过期 Fencing 执行、无授权回退 Host Shell，均为 Hard Stop。**第 4 项 PDLC M0 迁移盘点已转开发清单，不因尚未拿到旧 Schema 阻挡 HC 架构决议。**
+
 **ADR-031 自研边界补充（不改变 G01/G02/G07 等 Accepted 合同）：** [Thin Harness Control Plane 决议](references/THIN_HARNESS_CONTROL_PLANE_DECISION_20261010.md) 将 Hatchet 作为**技术执行状态权威**；平台只保留 Run/Step/Attempt 业务身份、必要状态投影、Verification/Approval/Receipt/Policy/终态约束。若 PR 新增第二套可领取任务的 Scheduler/History/Worker RecoveryDaemon 或让 Domain 直接依赖 Hatchet SDK，必须拒绝。Provider Workflow/Task ID 不得反向成为平台主键。
 
 **解读：** G05 的「零 Sandbox」指允许并优先用于无需 Shell 的任务；不禁止有权限的业务 Agent 按需申请 Sandbox。G19 明确 Hatchet 是当前实施选择，不代表生产 Accepted；任何引入 DBOS 的新依赖、POC 或替代 Conductor 设计应立即拒绝。G08 同样约束 Hatchet 的自动重试——不确认外部副作用时必须 UNKNOWN → Reconciliation。
