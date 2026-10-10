@@ -321,6 +321,7 @@ flowchart TB
   subgraph PROC["Process/Durable SPI · 当前首选（非生产 Accepted）"]
     HA["Hatchet Adapter\nPlatform IDs / Provider IDs Binding"]
     HE["Hatchet Embedded / 自托管 Engine\nDAG / Queue / Retry / Cross-Worker Failover"]
+    HWRK["共享 Worker / Runtime Dispatcher\n固定并发 / 空闲 Session 不占进程"]
   end
   subgraph EXEC["独立执行技术维度"]
     CUBE["Cube / E2B-compatible API\nLocal baseline / Remote burst 候选"]
@@ -334,7 +335,7 @@ flowchart TB
     OT["OpenTelemetry → 外部 Backend"]
   end
   HTTP --> K --> POLICY
-  POLICY --> HA --> HE --> PY & OAI & OC & MAF
+  POLICY --> HA --> HE --> HWRK --> PY & OAI & OC & MAF
   HE --> HPG
   PY -. "按需 Sandbox" .-> CUBE
   OAI -. "按需 Sandbox" .-> CUBE
@@ -369,14 +370,15 @@ flowchart TB
   GIT["Git Server / Repository Workspace\nRevision Set"]
   EXT["旧 PDLC 业务库 / 历史会话"]
   NATIVE["Runtime Checkpoint / SandboxRef\nOpaque Provider Reference"]
-  HP["Hatchet Workflow / Queue History\nProvider ID / Durable Adapter Binding"]
+  HP["Provider Workflow / Task ID\nOpaque Binding（非业务 ID）"]
+  HPG["PostgreSQL Hatchet 独立 Schema\nQueue / Engine History"]
   C & T & R & P & S & A & E & RP & EV & AR --> PG
   AR -->|"StorageRef + Digest"| OSS
   E -. "Workspace Binding" .-> GIT
   R -. "Legacy ID 映射" .-> EXT
   RP -. "仅引用/能力声明" .-> NATIVE
   E -. "Provider Task / Workflow ID 绑定" .-> HP
-  HP -. "独立引擎存储，不是 Run 事实源" .-> PG
+  HP --> HPG
 ```
 
 **交接数据合同：** Agent A 的结构化输出通过 Verification，附 ArtifactRef/Digest/Scope/版本信息后才交给 Agent B；不能将整段原生 Chat History 或 Sandbox ID 直接当成可复用可信授权。Run 创建冻结 Recipe/Runtime/Model/Tool/Policy/Environment 版本；UNKNOWN 必须查询 Receipt 或人工对账，不盲重试。业务 Event 是事实；Trace/Log/Metric 是诊断。Harness 只做任务恢复，不做数据库/存储备份和灾备。
@@ -704,6 +706,8 @@ python -B poc/compatibility/verify_stack.py --profile cube_e2b_native
 | **跨 SDK Tool 接力** | Pydantic Agent Tool、OpenAI FunctionTool 读取同一 Cube Workspace 的 OpenCode 文件 | 公开 Tool Bridge，不是多 SDK 模型 Agent Loop 或原生 SDK 跨 Worker 恢复（LIVE） | [同 VM 验收](poc/opencode_sandbox/opencode2_cube_template/VERIFICATION_20261010.md)、[Pydantic 原生工具](poc/pydantic_harness/README.md) |
 | **E2B 原生 Client** | Cube + E2B 2.40 的真实 FS/Shell/双沙箱隔离，OpenAI Native E2BSandboxClient create/exec/aclose | E2B 2.53.1 仍 405；生产 TLS/IAM 未验（LIVE） | [E2B DNS/CA 报告](poc/opencode_sandbox/E2B_PRIVATE_DNS_VERIFICATION_20261010.md) |
 | **平台 Runtime SPI 原型** | 真实 Pydantic/OpenAI SDK Run 的归一化输出；Scope/Fencing/Grant 错误拒绝、Cancel UNKNOWN | 事件仅 buffered；OpenCode Session SPI 为 Mock，未落 PG Receipt（SDK-LOCAL/OFFLINE） | [Runtime SPI](poc/runtime_spi/README.md) |
+| **Hatchet Engine 双 SDK DAG** | Embedded v0.110.5、Pydantic→OpenAI Agents SDK 真实公开 API/父子任务交接 | 本地确定性模型，不是远程真模型，也未验证 Token SSE/Cube（LIVE/CI） | [CI PASS](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38020725053) |
+| **Hatchet 双 Engine 自动接管** | 外部 PostgreSQL 16，A 第二步中 SIGKILL 且不重启；B 接管原 Workflow，已完成步骤不重复 | 安全可重试步骤，未验证 Receipt/Approval/复杂 Agent/Cube（LIVE/CI） | [CI PASS](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38021093089) |
 | **版本防漂移** | 已通过版本/负例、镜像 Digest/Template 证据校验；实际虚拟环境 SDK Pin Check | 不等于跨生产集群镜像供应链/不可变安装包锁定（OFFLINE/ENV） | [版本基线](docs/references/VERIFIED_STACK_BASELINE_20261010.md) |
 
 ### 特别值得保留的“失败证据”
@@ -730,6 +734,7 @@ python -B poc/compatibility/verify_stack.py --profile cube_e2b_native
    ├─ pydantic_harness/             ← 并发与 Workspace/Pydantic Tool
    ├─ opencode_sandbox/             ← Cube/OpenCode/E2B SDK/Guest 真机
    ├─ runtime_spi/                  ← 最小平台 Runtime Contract 与 Adapter
+   ├─ durable_engine/               ← Hatchet Embedded 双 SDK/DAG 与双 Engine 真实 PG 恢复 POC
    ├─ compatibility/                ← 已验证版本、Digest 与防漂移验证
    └─ README.md                     ← POC 命令、状态、入口
 ```
