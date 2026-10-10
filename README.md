@@ -105,6 +105,8 @@ flowchart LR
 
 ## 3. 总体架构：控制平面和执行平面分开
 
+**分层视图入口：** [Agent Harness Platform 八类架构视图（业务 / 逻辑 / 应用 / 技术 / 数据 / 部署 / 功能 / 运行）](docs/ARCHITECTURE_VIEWS.md)。该视图集按六层逻辑模型展开下方总图，明确职责、数据归属、运行时序、候选技术状态及生产门禁，不替代已 Accepted 的架构契约。
+
 ```mermaid
 flowchart TB
     U["用户 / PDLC / AI 门户 / 企业 API"]
