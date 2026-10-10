@@ -17,7 +17,7 @@
 |---|---|---|---|---|
 | G01 | H | **领域事实归平台。** Conversation → Turn（1:N Run）→ Run → versioned Plan → Step → Attempt；Retry/Resume/Replan 含义分离；terminal Run 不重开。 | SDK Session ID 当平台 run_id、Replan 覆盖历史 Plan。 | [Domain](references/DOMAIN_MODEL_AND_STATE_CONTRACT.md) |
 | G02 | H | **Control/Data Plane 隔离。** Kernel 由确定性状态机决定审批、调度和 Run/Step 终态；Agent、Tool、Sandbox 只返回结果/事件/证据。 | Control Plane 直接执行宿主 Shell/Git；模型自行修改审批终态。 | [Control/Data](references/CONTROL_DATA_PLANE.md) |
-| G03 | H | **领域/SPI 不依赖厂商 SDK。** Public API/Adapter 优先；不以 fork/monkey patch/SDK 私有 API 补成平台强制能力。 | Domain 导入 pydantic_ai、agents、opencode、Temporal；Adapter 替换迫使修改 Run 语义。 | [正式架构 2.1](ARCHITECTURE.md#21-公开扩展点优先原则) |
+| G03 | H | **领域/SPI 不依赖厂商 SDK。** Hatchet 只能经 Process/Durable Adapter 访问，Domain 不得导入 Hatchet；Public API/Adapter 优先；不以 fork/monkey patch/SDK 私有 API 补成平台强制能力。 | Domain 导入 pydantic_ai、agents、opencode、hatchet_sdk；Adapter 替换迫使修改 Run 语义。 | [正式架构 2.1](ARCHITECTURE.md#21-公开扩展点优先原则) |
 | G04 | H | **AgentRuntime、Process/Durable、SandboxProvider、ModelProvider 独立替换。** | 把 Temporal 当 Agent SDK；在 Pydantic 内部实现另一个 Runtime；把某个框架 Session 作为唯一任务事实。 | [分层架构](../README.md#31-八类分层架构视图) |
 | G05 | H | **Session ≠ Run ≠ OS Process ≠ Workspace ≠ Sandbox。** 无 Shell/Files 需求允许零 Sandbox；不能强制每历史 Session 常驻独立进程/VM。 | 1 Session = 1 永久容器；无执行需求也申请 MicroVM。 | [Topology](references/RUNTIME_TOPOLOGY.md)、[Workspace](references/WORKSPACE_AND_GIT_MODEL.md) |
 | G06 | H | **Sandbox 与 Tool 授权可信绑定。** Scope/Execution/Owner/Capability/Lease/Fencing 必须来自平台可信上下文；Sandbox ID 不是凭据；Coding 生产默认隔离。 | Scope 不匹配时回退 Host Shell；以 Session ID 授权 Git。 | [Identity](references/IDENTITY_AND_AUTHORIZATION_PROPAGATION.md)、[Lease](references/EXECUTION_LEASE_FENCING_HEARTBEAT.md) |
@@ -32,11 +32,11 @@
 | G15 | R | **真实可回放的协议。** SDK 事件转换成平台 Responses-compatible/Harness Typed Event；不伪造实时 Tool Activity/Token SSE；业务 Event 不受 OTel Sampling 影响。 | buffered 文本伪装 Token 级 streaming；SDK 私有事件直接驱动 UI。 | [Protocol](references/CONVERSATION_PROTOCOL.md)、[OTel](references/OBSERVABILITY_CONTRACT.md) |
 | G16 | R | **跨 Agent 串联由平台编排。** Recipe/Step 依赖、受控结构化 Artifact/WorkspaceRef 交接、Verification/审批/失败阻断都由平台保障。 | 仅通过 Prompt 请下一个 Agent 继续；交接裸 Sandbox ID 和全历史。 | [PDLC 迁移](references/PDLC_REPLACEMENT_MIGRATION_20261010.md) |
 | G17 | R | **存量 PDLC 迁移单 Writer。** 老历史/接口/资产可查，旧新执行端不双写副作用；影子比较只读或无副作用。 | 新旧端都执行同一 Tool/MR/Git Push；历史聊天被当成新平台已执行的 Run。 | [PDLC 迁移](references/PDLC_REPLACEMENT_MIGRATION_20261010.md) |
-| G18 | R | **部署、数据、协议与模型独立性。** 关键 Harness 能力不强制依赖厂商托管 Control Plane；不无依据新增分布式锁、重型引擎。 | 为简单任务强制另一 SaaS 控制面；新增统一 Registry 或锁服务。 | [Deployment](references/DEPLOYMENT_INDEPENDENCE.md)、[Lease](references/EXECUTION_LEASE_FENCING_HEARTBEAT.md) |
-| G19 | D | **候选不等于 Accepted。** Pydantic、OpenCode、OpenAI/MAF、Cube、PG Worker/Temporal/MAF Durable 均按专项 POC 证据决定角色，不因局部 PASS 自动生产 GO。 | 仅凭 Demo 就移除 Process SPI 或宣布生产选型完成。 | [候选](references/MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md)、[Backlog](ARCHITECTURE_BACKLOG.md) |
+| G18 | R | **部署、数据、协议与模型独立性。** 关键 Harness 能力不强制依赖厂商托管 Control Plane 或收费多 Executor 协调组件；复用 Hatchet 已有调度能力，不重造通用队列/定时器/Worker 心跳服务。 | 为简单任务强制另一 SaaS 控制面；新增统一 Registry 或锁服务。 | [Deployment](references/DEPLOYMENT_INDEPENDENCE.md)、[Lease](references/EXECUTION_LEASE_FENCING_HEARTBEAT.md) |
+| G19 | D | **候选不等于 Accepted。** Process/Durable SPI 当前唯一优先实施候选为 Hatchet；DBOS 因许可证正式 REJECTED，不再开发、引入依赖或评估替代协调器；Temporal/MAF Durable/手写 PG Worker 仅留历史结论。Runtime/Cube/Process 均须按 Gate 实测，不因 Hatchet 分项 PASS 自动生产 GO。 | 仅凭 Demo 就移除 Process SPI 或宣布生产选型完成。 | [候选](references/MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md)、[Backlog](ARCHITECTURE_BACKLOG.md) |
 | G20 | R | **验收等级不可混淆。** Mock、Offline、Docker、Live、Production 逐项注明，必要时保留失败反例，禁止 skip 降门禁。 | 一个 FunctionTool 独立成功就声称跨 Runtime 全链恢复可用。 | [POC](POC.md)、[Admission](references/MULTI_HARNESS_ADMISSION_20261009.md) |
 
-**解读：** G05 的「零 Sandbox」指允许并优先用于无需 Shell 的任务；不禁止有权限的业务 Agent 按需申请 Sandbox。G19 不将 Pydantic、Temporal 或 Cube 的候选角色冻结成不可修改的正式选型。
+**解读：** G05 的「零 Sandbox」指允许并优先用于无需 Shell 的任务；不禁止有权限的业务 Agent 按需申请 Sandbox。G19 明确 Hatchet 是当前实施选择，不代表生产 Accepted；任何引入 DBOS 的新依赖、POC 或替代 Conductor 设计应立即拒绝。G08 同样约束 Hatchet 的自动重试——不确认外部副作用时必须 UNKNOWN → Reconciliation。
 
 ## 3. 依赖关系与禁止边
 
@@ -46,14 +46,15 @@
 平台 Domain / Harness Control / State Machine / Verification
    ↓（稳定 SPI + 可信 ExecutionContext）
 AgentRuntime SPI      → 独立 SDK Adapters（Pydantic / OpenAI / OpenCode / MAF）
-Process/Durable SPI   → PG Worker / Temporal / MAF Durable（候选）
+Process/Durable SPI   → Hatchet Adapter → Hatchet Engine / Queue / Worker（首选候选）
+                      → PostgreSQL Hatchet 独立 History/Queue Schema
 SandboxProvider SPI   → Cube/其他 Provider → 外部 Sandbox Infra
 Model/Tool/Storage SPI→ 企业 Model Gateway / MCP / OSS
    ↑
 真实 Result / Evidence / Event 回到平台事实与验收边界
 ~~~
 
-**禁止依赖边：** Domain → 厂商 SDK；Control → 宿主 Shell；SDK/Guest → 平台 Run 最终状态；Runtime Session ID → 授权；Runtime Topology → 调度；OTel/LLM 文本 → Task Facts。平台只约束自己 Kernel/Scheduler→Executor 之间的 Lease，不接管 Temporal/Cube/框架内部 Worker Coordination。
+**禁止依赖边：** Domain → Hatchet/任何厂商 SDK；Control → 宿主 Shell；Hatchet Engine/SDK/Guest → 平台 Run 最终状态；Provider Workflow ID → 平台 Run ID；Runtime Session ID → 授权；Runtime Topology → 调度；Hatchet History / OTel / LLM 文本 → Task Facts。平台只治理自己 Kernel→Executor 的授权、Lease/Fencing 与恢复裁决，不接管 Hatchet/Cube 内部 Worker Coordination。
 
 核心工程测试应证明：**更换 AgentRuntime/Process/Sandbox 任意一个 Adapter，不需修改平台 Run/Plan/Step 领域契约**。如果某实现缺公开扩展点，优先显式 Unsupported，不修改底层 SDK 私有实现。
 
@@ -72,7 +73,8 @@ Model/Tool/Storage SPI→ 企业 Model Gateway / MCP / OSS
 - 模型文字充当审批/验证状态；非幂等 Tool 超时直接重试；旧 Worker 绕过 Fencing 更新结果。
 - 一历史 Session 强制常驻一 Worker + Sandbox 作为默认容量模型。
 - 在 Harness Kernel 新建 Tenant/项目 Story/MCP 市场/计费/Backup 领域产品。
-- 默认强绑 Temporal/MAF Durable/PG Worker 或某模型厂商，却没有 ADR/对照验证。
+- 在 Process/Durable 新增 DBOS SDK/Conductor、以变通实现规避商业许可约束，或重新建与 Hatchet 重复的通用队列/Scheduler；如需要替换 Hatchet，必须先有新的架构决策。
+- 直接让 Hatchet Worker 重做 UNKNOWN 外部副作用，或把 Hatchet 的 Workflow History 当作平台 Run/Step/Attempt 权威。
 
 ## 5. PR 评审契约
 
