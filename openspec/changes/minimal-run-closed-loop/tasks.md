@@ -39,9 +39,6 @@
 - [x] 5.3 Persisted [post-implementation retrospective](../../../docs/retrospectives/MINIMAL_CLOSED_LOOP_20261010.md) with Run/Workflow IDs, test evidence and NOT_TESTED gates; real Token SSE/Approval/Receipt/Cube/100 concurrency still OPEN.
 - [ ] 5.4 Review diff, remove secrets/cache/build artifacts, create PR and merge only if CI and negative gates are green.
 
-## 6. Subsequent increments (tracked, not blockers for first model-only closed loop)
+## Out of scope — tracked outside this change
 
-- [ ] 6.1 HC-02 production increment: PG Schema review, Provider query/dedup ACK-lost reconciliation, transactional inbox and external non-idempotent Tool Receipt evidence.
-- [ ] 6.2 HC-03 production increment: true trusted ExecutionContext issuing, Scope/Lease/Fencing, Cube same-workspace rebind after worker crash, blocked Host Shell paths.
-- [ ] 6.3 Protocol/operations: live Token SSE with replay/cancel, durable WAITING_APPROVAL/INPUT, resource density at 100 Active Runs.
-- [ ] 6.4 M0–M4 PDLC legacy inventory and migration only via DEV-PDLC-01～05; not part of this minimal loop.
+Production HC-02 Receipt/Inbox/Provider-side ACK reconciliation, real HC-03 Cube/Lease/Fencing, Token SSE/Approval/100 concurrency and PDLC M0–M4 migration **are not acceptance tasks for this model-only OpenSpec change**. They remain **OPEN** in [Development Backlog](../../../docs/DEVELOPMENT_BACKLOG.md) and [ARCH-TODO-025–029](../../../docs/ARCHITECTURE_BACKLOG.md); see [retrospective](../../../docs/retrospectives/MINIMAL_CLOSED_LOOP_20261010.md). Do not silently close or relabel them as integrated/production PASS.
