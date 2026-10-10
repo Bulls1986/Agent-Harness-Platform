@@ -457,62 +457,72 @@ sequenceDiagram
   autonumber
   actor U as 用户
   participant G as API / Legacy Facade
-  participant H as Harness Kernel
-  participant D as PG Task Facts / Events
-  participant W as Shared Runtime Worker
+  participant H as Harness Kernel / Domain
+  participant D as PG Harness Task Facts
+  participant P as Process/Durable SPI (Hatchet Adapter)
+  participant E as Hatchet Engine / Durable Queue
+  participant W as Hatchet Worker / AgentRuntime SPI
   participant S as SandboxProvider / Cube
   participant O as OSS Artifact/Evidence
   U->>G: 提交意图
-  G->>H: 路由到新 Run（单 Writer）
-  H->>D: Run / Plan / Steps / Version Freeze
-  H->>W: Step A 产品 Agent
-  Note over W,S: 无 FS / Shell 需求：不申请 Sandbox
-  W-->>H: 结构化 PRD / Typed Event
-  H->>O: Artifact / Digest
-  H->>D: Verification PASS / ArtifactRef
-  opt 需要人工批准
-    H->>D: WAITING_APPROVAL / RecoveryPoint
+  G->>H: 通过旧入口路由到新 Run（单 Writer）
+  H->>D: 创建 Run / Plan / Steps / 版本冻结
+  H->>P: 入队可执行 Step + Provider Binding
+  P->>E: enqueue Workflow / DAG
+  E->>W: dispatch Step A（Pydantic Agent）
+  Note over W,S: 纯模型/结构化任务：零 Sandbox
+  W->>H: 真实 Step A Outcome / Typed Events
+  H->>O: Artifact Payload + Digest
+  H->>D: Verification PASS / EvidenceRef / Step Fact
+  opt 需要人工批准（目标契约，尚未端到端验收）
+    H->>D: WAITING_APPROVAL + RecoveryPoint
+    H->>P: 持久等待原 Workflow（释放活动 Worker）
     H-->>G: approval.required
     G-->>U: 展示审批
     U->>G: 已授权 Principal 审批
-    G->>H: 验证 Approval(Principal/Resource/Action)
+    G->>H: 校验 Approval(Principal/Resource/Action)
+    H->>D: 审批事实与恢复裁决
+    H->>P: 恢复同一个业务 Run 的等待
   end
-  H->>S: Step B 申请/复用同 Scope Lease
-  S-->>H: SandboxRef / WorkspaceRef / Generation
-  H->>W: 执行 OpenCode 2 Coding Step
-  W->>S: Guest FS / Shell / Git Tool
-  S-->>W: ToolResult / 可能的 Receipt
-  W-->>H: Patch / Evidence
-  H->>D: Attempt / Verification / Receipt
-  H->>W: Step C 测试 Agent（受控 ArtifactRef）
-  W-->>H: Test Result / Evidence
-  H->>O: 验证证据 Payload
-  H->>D: Run Terminal Result / Event Sequence
-  H-->>G: Typed SSE / ArtifactRef
-  G-->>U: 可追溯执行结果
-  H->>S: 根据 Lease 策略释放或保留 Sandbox
+  P->>E: 下一个可执行 Step
+  E->>W: dispatch Step B（OpenCode Coding）
+  W->>S: 授权 Scope / Lease / Fencing / WorkspaceRef
+  S-->>W: Cube SandboxRef（同 Scope 方可复用）
+  W->>S: Guest FS / Shell / Git（禁止回退 Host）
+  S-->>W: Tool Result / ReceiptRef
+  W->>H: Patch / Typed Events / Outcome
+  H->>D: Attempt / Execution / Verification / Receipt
+  P->>E: Step B 通过后才放行 Step C
+  E->>W: dispatch Step C（测试 Agent）
+  W->>H: Test Result / Evidence
+  H->>O: 测试报告 Payload
+  H->>D: Run Terminal / Event Sequence
+  H-->>G: SSE Event Cursor + ArtifactRef
+  G-->>U: 可回放的执行结果
+  H->>S: 按 Lease Policy 释放/保留 Sandbox
 ```
 
 ##### 3.1.8.2 故障路径：UNKNOWN 不能直接重试
 
 ```mermaid
 flowchart TB
-  RUN["活动 Run / Step / Attempt"] --> FAIL{"Worker 故障 / 超时 / Cancel？"}
-  FAIL -->|"否"| DONE["记录真实 Outcome / Event"]
-  FAIL -->|"是"| CHECK["读 PG Task Facts / Lease Epoch\nRecoveryPoint + Tool Receipt"]
-  CHECK --> KNOW{"副作用结果已证实？"}
-  KNOW -->|"已证实"| SAFE["选择最深可信恢复边界"]
-  SAFE --> CAP{"Runtime 支持原生同 Attempt Resume？"}
-  CAP -->|"是"| RES["Same Run / Step / Attempt Resume"]
-  CAP -->|"否且可安全重试"| RET["Same Run / Step 新 Attempt"]
-  KNOW -->|"UNKNOWN"| REC["Reconciliation\n查回执 / 人工介入 / Fail Safe"]
-  REC -->|"对账完成"| SAFE
-  REC -->|"仍 UNKNOWN"| HOLD["禁止非幂等 Tool 盲目重试"]
+  RUN["活动 Run / Step / Attempt"] --> FAIL{"Worker Crash / Timeout / Cancel?"}
+  FAIL -->|"否"| DONE["持久真实 Outcome / Event"]
+  FAIL -->|"是"| ENGINE["Hatchet Durable History\nQueue / DAG / Worker B 可接手"]
+  ENGINE --> CHECK["Harness 核对 PG Task Facts\nExecution Owner / Lease / Fencing / RecoveryPoint"]
+  CHECK --> KNOW{"外部副作用是否可证明安全?"}
+  KNOW -->|"PURE 或幂等已验证"| SAFE["选最深可信恢复边界\n授权 B 的新 Owner / Fencing"]
+  KNOW -->|"可能已产生但 ACK 未收到"| REC["UNKNOWN → Reconciliation\n查询 Receipt / 外部系统 / 人工核对"]
+  REC -->|"核对成功且允许继续"| SAFE
+  REC -->|"仍 UNKNOWN"| HOLD["禁止 Hatchet 自动重放非幂等 Tool"]
+  SAFE --> CAP{"Runtime 原生 Same Attempt Resume?"}
+  CAP -->|"支持且有可信 Checkpoint"| RES["Same Run / Step / Attempt Resume"]
+  CAP -->|"不支持但可安全重试"| RET["Same Run / Step / New Attempt"]
   RES --> DONE
   RET --> DONE
 ```
 
-Runtime State、Workspace State、Sandbox State 彼此独立；平台只拥有任务级 RecoveryPoint 与 SDK 原生 checkpoint 的 Opaque Reference，不重写框架恢复引擎，不引入跨组件 2PC。Cancel Request 不等于下游已终止。SSE 只能反映真实执行事件。此时序是**目标一体化链路**，现有多个局部 POC 不能拼成一个已经完成的 E2E 生产证据。
+Runtime State、Workspace State、Sandbox State 彼此独立；**Hatchet 的引擎恢复和平台领域恢复分别由 Engine 与 Harness Domain 负责**，不能把两个 Owner 合并。平台只拥有任务级 RecoveryPoint 与 SDK 原生 checkpoint 的 Opaque Reference，不重写框架恢复引擎，不引入跨组件 2PC。Cancel Request 不等于下游已终止。SSE 只能反映真实执行事件。此时序是**目标一体化链路**，现有多个局部 POC 不能拼成一个已经完成的 E2E 生产证据。
 
 #### 3.1.9 跨视图一致性门禁
 
