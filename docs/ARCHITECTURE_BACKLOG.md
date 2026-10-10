@@ -737,6 +737,8 @@ OpenCode 2 / MAF；目前全部为候选，尚无完美零适配技术栈。
 
 **2026-10-10 架构调整权威说明：** [Hatchet Process/Durable 六层职责、Provider ID Binding、数据/部署/运行架构及恢复门禁](references/HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md) 为当前实施基线；[根目录 README 八视图](../README.md#31-八类分层架构视图) 已联动更新。**实施方向已确定，不再把 DBOS 许可证问题视为待解决事项，不并行重造 PG Scheduler；但生产 Accepted ADR 仍等待端到端 Gate。**
 
+**2026-10-10 自研 Control Plane 瘦身决议（ADR-031，已确认职责边界）：** [Thin Harness Control Plane / Hatchet 执行权威 / 最小业务状态投影](references/THIN_HARNESS_CONTROL_PLANE_DECISION_20261010.md)。**Hatchet 负责 Workflow/Task 的真实技术执行状态及 DAG/Queue/Retry/Worker 接管；平台仍须持久化 Run/Step/Attempt 的必要业务事实、Approval/Receipt/Policy/RecoveryPoint 与终态约束，但不再自建第二套技术执行状态机/调度器。** 本条后续仅验证 Adapter 一致性、安全恢复与集成门禁，不重新开放 DBOS 选型。
+
 **2026-10-10 原始 POC 证据：** [DBOS/Hatchet G8 许可及 A→B 接管专项](references/DURABLE_ENGINE_LICENSE_GATE_20261010.md)。[Hatchet 实际双 SDK DAG CI PASS](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38020725053)；[Hatchet 双 Engine/外部 PostgreSQL 16、Worker A SIGKILL 不重启→B 接管原 Workflow CI PASS](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38021093089)。后者已完成安全可重试阶段，证明原 Run 能接管、已完成 Step 不重复，**但没有验证非幂等 Tool、WAITING_APPROVAL、SSE 或真实 Cube Session**。两个真实 Agent SDK 的调用与跨 Worker 故障是两个单独实验，不应声称同一任务端到端同时覆盖。
 
 **待办与完成标准：**
@@ -744,7 +746,7 @@ OpenCode 2 / MAF；目前全部为候选，尚无完美零适配技术栈。
 - 冻结同样的任务级恢复场景：Worker A Crash、Worker B 接管、WAITING_APPROVAL、Cancel/Timeout、RecoveryPoint、真实非幂等 Tool Receipt UNKNOWN → Reconciliation。
 - 聚焦 Hatchet 的**新增开发量、版本运行兼容、恢复证据、运维成本及 MIT 开源许可**；只在 Hatchet 关键门禁失败时再评估非 DBOS 其他候选，避免并行重复选型。磁盘/数据库/对象存储备份不属 Harness。
 - 若引入 Pydantic TemporalDurability，需要定义与平台 Workflow/Durable 层的职责分界，防止同一 Agent Run 重复包两层 Durable 引擎。
-- MAF POC-A 与 Temporal POC-C 已有成果继续保留；形成等价验收结论后再决定生产默认并单独更新 Accepted ADR。
+- MAF POC-A 与 Temporal POC-C 保留**历史证据**；当前只推进 Hatchet 同一业务 Run 的集成门禁，**不再做三方案等价选型竞赛**。生产默认须另走 Accepted ADR。
 
 **外部设计参考 ADR-030（2026-10-10）：** [Multica 架构思想参考与源码不复用决议](references/MULTICA_DESIGN_REFERENCE_DECISION_20261010.md) 仍然生效。本平台独立实现领域状态机、执行授权/Lease/Fencing、容量等级与 SPI 协议；**不复制 Multica 源码，不自行重造 Hatchet 通用 Durable DAG/Queue/Scheduler**。这不改变 Hatchet 为当前唯一优先实施候选。
 
