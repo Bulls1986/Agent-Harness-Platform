@@ -737,6 +737,8 @@ OpenCode 2 / MAF；目前全部为候选，尚无完美零适配技术栈。
 
 **2026-10-10 架构调整权威说明：** [Hatchet Process/Durable 六层职责、Provider ID Binding、数据/部署/运行架构及恢复门禁](references/HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md) 为当前实施基线；[根目录 README 八视图](../README.md#31-八类分层架构视图) 已联动更新。**实施方向已确定，不再把 DBOS 许可证问题视为待解决事项，不并行重造 PG Scheduler；但生产 Accepted ADR 仍等待端到端 Gate。**
 
+**2026-10-10 三项实施合同已收口（ADR-032 / HC-01~03，架构 DECIDED；真实集成 Gate 仍 OPEN）：** [HC-01 Run/Plan/Step/Attempt↔Hatchet Workflow/Task/Replan Mapping](references/HATCHET_WORKFLOW_MAPPING_CONTRACT_20261010.md) · [HC-02 Outbox/Binding/状态投影/UNKNOWN Receipt 一致性](references/HARNESS_HATCHET_CONSISTENCY_CONTRACT_20261010.md) · [HC-03 Worker/ExecutionContext/Cube Scope/Lease/Fencing](references/HATCHET_WORKER_SANDBOX_BINDING_CONTRACT_20261010.md)。架构阶段无需重新比较 Durable SDK；**执行时须按三份合同验收同 Run 的故障注入**，不能把文档 DECIDED 记为集成 PASS。
+
 **2026-10-10 自研 Control Plane 瘦身决议（ADR-031，已确认职责边界）：** [Thin Harness Control Plane / Hatchet 执行权威 / 最小业务状态投影](references/THIN_HARNESS_CONTROL_PLANE_DECISION_20261010.md)。**Hatchet 负责 Workflow/Task 的真实技术执行状态及 DAG/Queue/Retry/Worker 接管；平台仍须持久化 Run/Step/Attempt 的必要业务事实、Approval/Receipt/Policy/RecoveryPoint 与终态约束，但不再自建第二套技术执行状态机/调度器。** 本条后续仅验证 Adapter 一致性、安全恢复与集成门禁，不重新开放 DBOS 选型。
 
 **2026-10-10 原始 POC 证据：** [DBOS/Hatchet G8 许可及 A→B 接管专项](references/DURABLE_ENGINE_LICENSE_GATE_20261010.md)。[Hatchet 实际双 SDK DAG CI PASS](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38020725053)；[Hatchet 双 Engine/外部 PostgreSQL 16、Worker A SIGKILL 不重启→B 接管原 Workflow CI PASS](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38021093089)。后者已完成安全可重试阶段，证明原 Run 能接管、已完成 Step 不重复，**但没有验证非幂等 Tool、WAITING_APPROVAL、SSE 或真实 Cube Session**。两个真实 Agent SDK 的调用与跨 Worker 故障是两个单独实验，不应声称同一任务端到端同时覆盖。
@@ -756,11 +758,13 @@ OpenCode 2 / MAF；目前全部为候选，尚无完美零适配技术栈。
 
 ## ARCH-TODO-029 存量 OpenCode PDLC 平台无感替换与跨 Agent 串联
 
-**状态：P0 / 业务目标已确认；旧平台实码盘点与迁移集成未完成（非 Accepted）**
+**状态：DEFERRED TO DEVELOPMENT / P0 DELIVERY（业务目标已确认；旧平台实码盘点 M0 与 M1–M4 迁移为开发任务，不阻挡本次架构阶段 HC-01/02/03 收口；生产迁移 NO-GO）**
 
 **业务目标：** 当前企业内产品、研发、测试、文档及业务 Agent **统一基于 OpenCode 实现**。新平台必须**替换其 PDLC 执行与控制架构，保留既有建设并实现用户侧平滑迁移**；同时新增能够将不同专业 Agent SDK 编排成一条任务的**跨 Agent 串联能力**。更换底层架构并不要求淘汰 OpenCode Coding Runtime，也不意味着在新平台复制既有 PDLC 需求/迭代/知识库等业务领域模型。
 
 **架构策略：** 保留既有 UI/业务资产/项目与会话读取能力，经 Legacy API Facade 与稳定 ID 映射逐步迁移新 Run；原活动会话由旧执行端安全继续或在经验证的恢复点切换；同一写操作只允许一个执行 Owner，不做有副作用的双写。新 Harness 负责 Recipe/Step/Attempt/任务事实、交接、审核与恢复；各 Agent SDK 由 AgentRuntime SPI 接入。
+
+**开发跟踪入口：** [Development Backlog · DEV-PDLC-01～05](DEVELOPMENT_BACKLOG.md)。本架构清单只保留已确认的 M0–M4 业务目标、单 Writer、兼容和安全边界；**本项不再要求在架构阶段先拿到旧系统源码/Schema**，但开发迁移前必须实际盘点，不能凭假设通过迁移验收。
 
 **分阶段必过门禁：**
 
@@ -770,7 +774,19 @@ OpenCode 2 / MAF；目前全部为候选，尚无完美零适配技术栈。
 4. **M3 跨 Agent 串联：** 至少一条真实既有 PDLC 场景通过一个 Run 下 ≥2 个 Runtime 的 Recipe/Step 执行、受控 Artifact/Evidence 交接、验收阻断、审批、失败与任务级恢复；该机制必须能被非 PDLC Agent 复用。
 5. **M4 用户无感验收与回退：** 以真实用户/项目和活动会话分别检查原功能、行为、权限、数据、Workspace/历史、一致性及回退；新旧执行权威和副作用对账清晰，未经验收不宣告生产迁移成功。
 
-**专题及验收矩阵：** [现有 PDLC 平台替换与无感迁移方案](references/PDLC_REPLACEMENT_MIGRATION_20261010.md)。本项优先于单独实现通用 Harness Demo；与 ARCH-TODO-025～028 并行，但上述后续 Gate 不因现有 Cube/E2B/OpenCode 功能 POC 通过而自动关闭。
+**专题及验收矩阵：** [现有 PDLC 平台替换与无感迁移方案](references/PDLC_REPLACEMENT_MIGRATION_20261010.md)。迁移实施使用 DEV-PDLC-01～05；可以与 ARCH-TODO-025～028 集成 POC 并行，**不作为 HC-01/02/03 架构决策阻塞项**，但旧平台生产切换必须按 M0→M4 和安全门禁验收。
+
+## ARCH-TODO-030 Hatchet 三项集成实施合同（HC-01 / HC-02 / HC-03）
+
+**状态：CLOSED / ARCHITECTURE DECIDED（2026-10-10；非生产 Accepted、非集成 PASS）**
+
+**Decision：** 已明确① 一个业务 Run 的版本化 Workflow Segment/Step/Attempt 绑定、Retry/Resume/Replan 安全边界；② Harness/Engine 两个事实域的 Outbox+幂等绑定、ACK 不确定窗口、最小状态投影与非幂等 Receipt UNKNOWN 对账；③ Hatchet Worker 领取任务后须通过平台 ExecutionContext/Owner/Fencing/Scope/Capability，再经 SandboxProvider 按需绑定或可信重连 Cube。**不创建第二套 Durable Queue/Scheduler**。全部契约兼容 G01–G20、ADR-031，不改变已 Accepted Domain/Recovery/Policy。
+
+**落档与验收**：[HC-01](references/HATCHET_WORKFLOW_MAPPING_CONTRACT_20261010.md)、[HC-02](references/HARNESS_HATCHET_CONSISTENCY_CONTRACT_20261010.md)、[HC-03](references/HATCHET_WORKER_SANDBOX_BINDING_CONTRACT_20261010.md)。每份文档内的 M/C/B 负例门禁都归 ARCH-TODO-025～028 与 [Development Backlog](DEVELOPMENT_BACKLOG.md) 后续 POC/实现，**不因 ARCH-TODO-030 CLOSED 就修改生产 NO-GO**。
+
+**第 4 项（PDLC 迁移接口实码盘点）**：明确延期为 [DEV-PDLC-01～05](DEVELOPMENT_BACKLOG.md)，ARCH-TODO-029 保留真实生产迁移 Gate 的事实追踪，但从本阶段架构讨论顺序移除。
+
+---
 
 # 5. 推荐讨论顺序
 
