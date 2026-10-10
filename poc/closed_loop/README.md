@@ -37,10 +37,16 @@ export HARNESS_POC_DATABASE_URL=postgresql://harness_poc:local_poc_only@127.0.0.
 python -B -m poc.closed_loop.serve
 ```
 
+## Read the demo like a product reviewer
+
+The first screen explains **what is being verified**, its scope and the exact two-node chain. The right pane starts with a **final Run result**, followed by explicit Step A/Step B purpose, real persisted input and actual output. Step B's input must equal the persisted output of Step A. Below that, a human-readable event timeline tells what happened; raw JSON and Provider IDs are in a collapsed technical-details panel.
+
+**This is a deterministic-model orchestration demo.** It uses real Pydantic AI/OpenAI Agents SDKs but each SDK receives a local model with a fixed test answer. The system is **not** interpreting the submitted business text and must never pretend to generate an actual product report. The completed Run's final result is the confirmed output of Step B, persisted atomically as a dedicated business result. A previously completed Run with no persisted original prompt shows “not recorded” instead of inventing its input; its older final result can be read from Step B's committed output and marked as derived.
+
 ## What the browser shows
 
 - Submit prompt to **create a real** Platform Run and PG Outbox, dispatch on **one shared Hatchet Engine/Worker**.
-- Inspect Platform Run ID and distinct Hatchet Provider WorkflowRun ID; each Step state/Attempt, verified output and lineage.
+- Inspect **final Run output and status** first, **what Step A/B did**, original Step A prompt, Step B handoff input, their exact outputs and Attempt count. Provider IDs remain available in the collapsed raw diagnostics.
 - Refresh and reload persisted results and ordered Domain Event history from PostgreSQL.
 - Distinguish `runtime.run.completed` (SDK-level) from the **sole** `run.completed` business terminal event.
 - No fake success if engine is unavailable. An unresolved workflow submission ACK becomes `BLOCKED_UNKNOWN` rather than replaying an unknown duplicate.
