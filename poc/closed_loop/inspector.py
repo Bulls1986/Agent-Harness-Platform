@@ -53,7 +53,7 @@ def create_app(
         db = facts()
         run_id = "run-" + uuid4().hex
         try:
-            key = db.create(run_id)
+            key = db.create(run_id, prompt=body.prompt)
         except Exception:
             raise HTTPException(503, "Unable to create persisted Run") from None
         try:

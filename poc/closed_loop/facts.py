@@ -41,11 +41,15 @@ class PgFacts:
                     id TEXT PRIMARY KEY, plan_version INTEGER NOT NULL,
                     state TEXT NOT NULL, provider_workflow_id TEXT UNIQUE,
                     event_seq BIGINT NOT NULL DEFAULT 0,
-                    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    input_prompt TEXT, result_json JSONB
                 )
             """)
             c.execute("ALTER TABLE harness_run ADD COLUMN IF NOT EXISTS "
                       "created_at TIMESTAMPTZ NOT NULL DEFAULT now()")
+            # Backward-compatible POC migration for persisted existing Runs.
+            c.execute("ALTER TABLE harness_run ADD COLUMN IF NOT EXISTS input_prompt TEXT")
+            c.execute("ALTER TABLE harness_run ADD COLUMN IF NOT EXISTS result_json JSONB")
             c.execute("""
                 CREATE TABLE IF NOT EXISTS harness_step (
                     run_id TEXT NOT NULL REFERENCES harness_run(id), id TEXT NOT NULL,
@@ -81,11 +85,13 @@ class PgFacts:
             (rid, seq, kind, json.dumps(data, sort_keys=True)),
         )
 
-    def create(self, rid: str) -> str:
+    def create(self, rid: str, prompt: str | None = None) -> str:
+        # Prompt is only kept for local Inspector diagnosis; never forward
+        # this POC plain-text input storage practice to production secrets.
         key = f"{rid}:segment-0:create:v1"
         with self.tx() as c:
-            c.execute("INSERT INTO harness_run(id,plan_version,state) "
-                      "VALUES (%s,1,'CREATED')", (rid,))
+            c.execute("INSERT INTO harness_run(id,plan_version,state,input_prompt) "
+                      "VALUES (%s,1,'CREATED',%s)", (rid, prompt))
             for name in ("pydantic", "openai"):
                 c.execute("INSERT INTO harness_step(run_id,id,state) "
                           "VALUES (%s,%s,'PENDING')", (rid, name))
@@ -137,10 +143,12 @@ class PgFacts:
     def start_step(self, rid: str, name: str, value: str) -> str | None:
         with self.tx() as c:
             # Acquire the parent Run serialization lock before Step locks.
-            run = c.execute("SELECT state FROM harness_run WHERE id=%s FOR UPDATE",
+            run = c.execute("SELECT state,input_prompt FROM harness_run WHERE id=%s FOR UPDATE",
                             (rid,)).fetchone()
             if not run or run[0] not in ("CREATED", "RUNNING"):
                 raise UnsafeDispatch("Run is missing or terminal")
+            if name == "pydantic" and run[1] is not None and run[1] != value:
+                raise UnsafeDispatch("Step A input differs from frozen original Prompt")
             row = c.execute(
                 "SELECT state,attempts,input_hash,output FROM harness_step "
                 "WHERE run_id=%s AND id=%s FOR UPDATE", (rid, name),
@@ -200,11 +208,19 @@ class PgFacts:
                     or len(steps) != 2
                     or any(s[1] != "COMPLETED" for s in steps)):
                 raise UnsafeDispatch("Unverified Steps or missing Workflow binding")
-            c.execute("UPDATE harness_run SET state='COMPLETED' WHERE id=%s",
-                      (rid,))
+            output_by_step = {name: output for name, _, output in steps}
+            result = {
+                "final_output": output_by_step["openai"],
+                "result_source_step": "openai",
+                "step_outputs": output_by_step,
+                "mode": "deterministic_local_model",
+            }
+            c.execute("UPDATE harness_run SET state='COMPLETED',result_json=%s::jsonb "
+                      "WHERE id=%s", (json.dumps(result), rid))
             self.event(c, rid, "run.completed",
-                       {"provider_workflow_run_id": run[1]})
-            return {name: output for name, _, output in steps}
+                       {"provider_workflow_run_id": run[1],
+                        "result_source_step": "openai"})
+            return output_by_step
 
     def report_execution_error(self, rid: str, error_kind: str):
         # Diagnostic only: provider outcome may remain uncertain, not FAILED.
@@ -227,8 +243,8 @@ class PgFacts:
     def snapshot(self, rid: str) -> dict:
         with self.tx() as c:
             run = c.execute(
-                "SELECT plan_version,state,provider_workflow_id FROM harness_run "
-                "WHERE id=%s", (rid,),
+                "SELECT plan_version,state,provider_workflow_id,input_prompt,result_json "
+                "FROM harness_run WHERE id=%s", (rid,),
             ).fetchone()
             steps = c.execute(
                 "SELECT id,state,attempts,output_hash,output FROM harness_step "
@@ -243,14 +259,28 @@ class PgFacts:
             ).fetchone()
         if not run:
             raise KeyError(rid)
+        step_values = {name: {"state": state, "attempts": attempts,
+                              "digest": digest, "output": output}
+                       for name, state, attempts, digest, output in steps}
+        if "pydantic" in step_values:
+            step_values["pydantic"]["input"] = run[3]
+        if "openai" in step_values:
+            parent = step_values.get("pydantic", {})
+            step_values["openai"]["input"] = (
+                parent.get("output") if step_values["openai"]["attempts"] else None
+            )
+        # A pre-migration Run did not persist its final result; derive only
+        # from its actual committed Step B result, explicitly marking legacy.
+        result = run[4]
+        if result is None and run[1] == "COMPLETED" and step_values.get("openai", {}).get("output") is not None:
+            result = {"final_output": step_values["openai"]["output"],
+                      "result_source_step": "openai", "mode": "deterministic_local_model",
+                      "provenance": "derived_legacy_step"}
         return {
             "run_id": rid, "plan_version": run[0], "state": run[1],
             "provider_workflow_run_id": run[2], "outbox": outbox[0],
-            "steps": {
-                name: {"state": state, "attempts": attempts,
-                       "digest": digest, "output": output}
-                for name, state, attempts, digest, output in steps
-            },
+            "input_prompt": run[3], "result": result,
+            "steps": step_values,
             "events": [
                 {"seq": seq, "type": kind, "data": data}
                 for seq, kind, data in events

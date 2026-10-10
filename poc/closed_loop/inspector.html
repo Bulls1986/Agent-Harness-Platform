@@ -2,117 +2,204 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Harness · Run Inspector</title>
+<title>Harness · Run Inspector | 双 Agent 接力演示</title>
 <style>
-:root {font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color-scheme:dark;background:#101621;color:#e2e8f0}
-*{box-sizing:border-box}body{margin:0 auto;padding:24px;max-width:1080px}
-h1{font-size:26px;margin:8px 0}p{color:#9caec3;margin:6px 0 22px}.notice{border:1px solid #6c5362;border-radius:8px;padding:10px;color:#dec4ce;font-size:13px}
-main{display:grid;grid-template-columns:270px minmax(0,1fr);gap:18px;margin-top:18px}
-.panel{background:#182233;border:1px solid #34455d;border-radius:12px;padding:17px}
-label{display:block;color:#b7c5d6;margin-bottom:8px}textarea{width:100%;resize:vertical;min-height:74px;background:#0f1724;border:1px solid #50617a;color:#e2e8f0;border-radius:8px;padding:10px;font:inherit}
-button{background:#2563eb;color:white;border:0;padding:11px 14px;border-radius:8px;cursor:pointer}
-button:disabled{opacity:.45;cursor:default}.muted{color:#9caec3;font-size:13px}.run{display:block;width:100%;margin-top:8px;text-align:left;background:#243348;border:1px solid #455671}
-.run:hover,.run.active{background:#344f77}.bar{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
-.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.card{background:#121b29;border:1px solid #354860;border-radius:8px;padding:13px;min-width:0}
-pre{white-space:pre-wrap;word-break:break-all;background:#111827;border-radius:7px;padding:10px;color:#bdd3e8;font-size:12px}
-ol{padding-left:22px}li{padding:6px 0;border-bottom:1px solid #334155;overflow-wrap:anywhere}
-.error{color:#fca5a5}.ok{color:#86efac}code{word-break:break-all}
-@media(max-width:700px){main{grid-template-columns:1fr}.cards{grid-template-columns:1fr}}
+:root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color-scheme:dark;background:#0e1420;color:#edf2fa}
+*{box-sizing:border-box}body{max-width:1160px;margin:0 auto;padding:30px 22px;font-size:14px}
+h1{font-size:27px;margin:8px 0}h2{font-size:18px;margin:0 0 12px}h3{font-size:16px;margin:0 0 10px}
+p{line-height:1.65}.muted{color:#9cadc6}.small{font-size:12px}
+header{margin-bottom:22px}.eyebrow{color:#7eb6ff;letter-spacing:.08em;font-size:12px;font-weight:650}
+.lead{max-width:820px;color:#b8c9df;font-size:15px}
+.panel{border:1px solid #34465d;border-radius:13px;background:#172234;padding:19px;margin-bottom:16px}
+.intro{background:#14243a;border-color:#3b6588}.intro p{margin:0;color:#c5d5e7}
+.pipeline{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:15px 0 0}
+.chip{background:#213751;border:1px solid #496583;border-radius:20px;padding:7px 11px;font-size:12px}.arrow{color:#6f9bc4}
+.layout{display:grid;grid-template-columns:280px minmax(0,1fr);gap:18px}
+textarea{width:100%;min-height:92px;resize:vertical;border:1px solid #526780;border-radius:9px;padding:12px;background:#0f1929;color:#e6f0ff;font:inherit}
+label{display:block;margin-bottom:8px;font-weight:600}button{border:0;border-radius:9px;padding:10px 13px;cursor:pointer;color:white;background:#2563eb;font:inherit}
+button:disabled{opacity:.48;cursor:not-allowed}
+.run{background:#22354d;border:1px solid #3e5872;display:block;width:100%;margin:6px 0;text-align:left;font-size:12px;overflow-wrap:anywhere}
+.run:hover,.run.active{background:#334e72}
+.status{border-radius:16px;padding:4px 10px;border:1px solid #54708f;font-weight:650;font-size:12px}
+.status.ok{border-color:#397762;color:#8dedb9}.status.wait{color:#ffc985;border-color:#836141}
+.headrow{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.value{white-space:pre-wrap;overflow-wrap:anywhere;background:#0e1828;border:1px solid #2e435e;border-radius:9px;padding:12px;margin:6px 0 13px;min-height:43px}
+.value.result{font-size:16px;font-weight:650;border-color:#4a85bd;background:#112943;color:#d4eaff}
+.caption{font-size:12px;color:#9cadc6;line-height:1.55}
+.steps{display:grid;grid-template-columns:1fr;gap:12px}
+.step{border:1px solid #364e69;border-radius:12px;padding:15px;background:#112034}
+.step p{margin:8px 0 13px;color:#bbcce0}
+.fieldname{display:block;font-size:12px;color:#93a9c1;font-weight:600;margin:10px 0 4px}
+.step .value{margin:0;font-weight:normal}
+.next{margin:0 0 0 16px;color:#7faacb;font-size:12px}
+.eventlist{list-style:none;padding:0;margin:0}
+.eventlist li{border-bottom:1px solid #34465d;display:flex;gap:13px;padding:10px 0;align-items:baseline}
+.eventlist li:last-child{border:0}.index{font-variant-numeric:tabular-nums;font-size:12px;color:#86a1bf}
+details{border:1px solid #34465d;border-radius:10px;background:#121e30;padding:13px}
+summary{cursor:pointer;font-weight:600}.technical{white-space:pre-wrap;word-break:break-word;font-size:12px;max-height:320px;overflow:auto}
+.error{color:#ffb1b1;margin-top:10px}.notice{font-size:12px;color:#dac2a0;line-height:1.6}
+code{overflow-wrap:anywhere;font-size:12px}#message{min-height:2.4em}
+@media(max-width:780px){.layout{grid-template-columns:1fr}body{padding:16px}h1{font-size:23px}}
 </style>
 </head>
 <body>
-<div class="bar"><h1>Harness · Run Inspector</h1><span class="muted">Local POC · Docker PostgreSQL</span></div>
-<div class="notice">调试用途：仅模型级 Agent SDK 验证。真实 Token SSE、Cube 跨 Worker 恢复、Approval、非幂等 Receipt 均未验收。不会模拟任务成功。</div>
-<main>
-<aside class="panel">
-<h2>启动真实 Run</h2><label for="prompt">业务输入</label>
-<textarea id="prompt">Review a short product requirement</textarea>
-<div style="margin-top:12px"><button id="start">Start Run</button></div>
-<p id="message" role="status" aria-live="polite" class="muted"></p>
-<h3>PostgreSQL Run 历史</h3>
-<div id="history"></div>
-</aside>
-<section class="panel">
-<div class="bar"><h2>Execution Details</h2><span id="state" class="muted">尚未选择 Run</span></div>
-<div class="muted">Platform Run ID: <code id="run-id">—</code></div>
-<div class="muted">Hatchet WorkflowRun ID: <code id="provider-id">—</code></div>
-<div class="muted">Plan: <code id="plan">—</code> · Outbox: <code id="outbox">—</code></div>
-<h3>真实 Agent Steps</h3><div id="steps" class="cards"></div>
-<h3>PostgreSQL Event Timeline</h3><ol id="timeline"></ol>
-<div id="detail-error" class="error" role="alert"></div>
+<header>
+<div class="eyebrow">AGENT HARNESS PLATFORM · Local POC</div>
+<h1>双 Agent 接力执行 · Run Inspector</h1>
+<p class="lead">这个页面不是聊天应用。它用一次真实的 Hatchet 工作流验证：两个不同 Agent SDK 能否依次执行、将上一步输出交给下一步，并把过程与结果保存到 PostgreSQL。</p>
+</header>
+<section class="panel intro" aria-labelledby="about-title">
+<h2 id="about-title">这个演示验证什么</h2>
+<p><strong>输入 → 节点 A（Pydantic AI）→ 节点 B（OpenAI Agents SDK）→ Harness 最终结果。</strong>
+Hatchet 负责两个节点的调度；Harness 保存业务 Run、每步输入输出、技术关联和最终状态。</p>
+<div class="pipeline"><span class="chip">提交输入</span><span class="arrow">→</span><span class="chip">节点 A · SDK 调用</span><span class="arrow">→</span><span class="chip">节点 B · 结果接力</span><span class="arrow">→</span><span class="chip">Run 结果</span></div>
+<p class="notice" style="margin-top:14px"><strong>重要：</strong>当前调用的是真实公开 Agent SDK，但模型是<strong>确定性本地模型</strong>，固定返回测试文本，不会真正理解、总结或分析你的输入，也不会调用远程 LLM。这次验证的是执行链路，不是 AI 业务能力。Cube、真 Token SSE、审批与非幂等工具未验收。</p>
 </section>
+<div class="layout">
+<aside>
+<section class="panel">
+<h2>开始一次演示</h2>
+<label for="prompt">提交给节点 A 的输入</label>
+<textarea id="prompt">Review a short product requirement</textarea>
+<p class="caption">输入会保存到本地 POC PostgreSQL 用于执行回看；请勿填写密码或敏感资料。确定性模型的返回内容不会随输入语义变化。</p>
+<button id="start" type="button">执行完整链路</button>
+<p id="message" class="muted" role="status" aria-live="polite"></p>
+</section>
+<section class="panel">
+<h2>历史运行</h2><p class="caption">点击一条 Run，查看持久化结果；刷新后仍可恢复。</p>
+<div id="history"></div>
+</section>
+</aside>
+<main>
+<section class="panel" aria-labelledby="result-title">
+<div class="headrow"><h2 id="result-title">最终运行结果</h2><span id="state" class="status">尚未选择</span></div>
+<p id="outcome-description" class="muted">从左侧提交任务，或选择历史记录。</p>
+<span class="fieldname">最终输出 · 来自节点 B</span>
+<div id="final-output" class="value result">尚无输出</div>
+<div id="result-explanation" class="caption">这是运行链路的最终 SDK 输出，不代表需求分析报告。</div>
+</section>
+<section class="panel">
+<h2>节点做了什么</h2>
+<div class="steps" id="steps">
+<p class="muted">选择一个 Run 后，会显示每个节点的职责、真实输入、输出和运行状态。</p>
+</div>
+</section>
+<section class="panel">
+<h2>执行过程</h2><p class="caption">这里展示持久化事件的人类可读摘要；原始技术字段在最下方展开查看。</p>
+<ol class="eventlist" id="timeline"></ol>
+</section>
+<details id="raw-details">
+<summary>原始事件与 JSON · 技术调试信息（默认收起）</summary>
+<p class="caption">Run ID：<code id="run-id">—</code>　Hatchet Workflow ID：<code id="provider-id">—</code></p>
+<p class="caption">Plan：<code id="plan">—</code> · Outbox：<code id="outbox">—</code></p>
+<pre id="raw-json" class="technical">未选择 Run</pre>
+</details>
+<p id="detail-error" class="error" role="alert"></p>
 </main>
+</div>
 <script>
 "use strict";
-const $ = id => document.getElementById(id);
-let current = location.hash.startsWith("#run-") ? location.hash.slice(1) : null;
-let busy = false;
-async function api(path,options) {
-  const result=await fetch(path,options);
-  let data=await result.json().catch(()=>({detail:"Invalid HTTP response"}));
-  if(!result.ok) throw new Error(typeof data.detail==="string"?data.detail:JSON.stringify(data.detail));
-  return data;
+const $=id=>document.getElementById(id);
+const stageInfo={
+  pydantic:{name:"节点 A · Pydantic AI",role:"接收原始输入，真实调用 Pydantic AI SDK，把本地模型返回的测试结果持久化，作为下一节点的输入。"},
+  openai:{name:"节点 B · OpenAI Agents SDK",role:"只在节点 A 完成后，读取并验证 A 的已保存输出，再真实调用 OpenAI Agents SDK，生成本次 Run 的最终输出。"}
+};
+const eventLabels={
+  "run.created":"创建业务 Run 并保存到 PostgreSQL",
+  "workflow.dispatching":"向 Hatchet 提交工作流",
+  "workflow.bound":"Hatchet 已接收，绑定工作流",
+  "step.started":"开始执行节点",
+  "step.completed":"节点输出已持久化",
+  "run.completed":"两个节点完成，Harness 确认业务 Run 完成",
+  "runtime.run.started":"Agent SDK 开始运行",
+  "runtime.run.completed":"Agent SDK 返回完成结果",
+  "runtime.output.delta":"Agent SDK 返回内容片段",
+  "workflow.unknown":"工作流提交结果不确定，停止盲目重试",
+  "workflow.observation_error":"运行过程发生错误，请查看技术详情"
+};
+const stateLabels={CREATED:"已创建",RUNNING:"执行中",COMPLETED:"完成",FAILED:"失败",CANCELLED:"已取消"};
+let current=location.hash.startsWith("#run-")?location.hash.slice(1):null;
+let busy=false;
+function node(tag,value,css){const x=document.createElement(tag);x.textContent=String(value??"—");if(css)x.className=css;return x}
+async function api(url,opts){
+  const r=await fetch(url,opts),d=await r.json().catch(()=>({detail:"无效 HTTP 响应"}));
+  if(!r.ok)throw new Error(typeof d.detail==="string"?d.detail:JSON.stringify(d.detail));
+  return d;
 }
-function node(tag,text,css) {
-  const e=document.createElement(tag); e.textContent=String(text??"—");
-  if(css)e.className=css;return e;
-}
-function selectRun(runId) {current=runId;location.hash=runId;refresh();}
-async function history() {
-  const list=await api("/api/runs");
+function selectRun(id){current=id;location.hash=id;refresh()}
+async function loadHistory(){
+  const data=await api("/api/runs");
   $("history").replaceChildren();
-  for(const item of list.runs) {
-    const b=node("button",item.run_id.slice(0,24)+" · "+item.state,"run");
-    if(item.run_id===current)b.classList.add("active");
-    b.addEventListener("click",()=>selectRun(item.run_id));
+  if(!current&&data.runs.length){current=data.runs[0].run_id;location.hash=current}
+  for(const it of data.runs){
+    const b=node("button",it.run_id.slice(0,20)+" · "+(stateLabels[it.state]||it.state),"run");
+    b.type="button";
+    if(it.run_id===current)b.classList.add("active");
+    b.addEventListener("click",()=>selectRun(it.run_id));
     $("history").append(b);
   }
 }
-function render(snapshot) {
-  $("state").textContent=snapshot.state;
-  $("run-id").textContent=snapshot.run_id;
-  $("provider-id").textContent=snapshot.provider_workflow_run_id??"—";
-  $("plan").textContent=snapshot.plan_version;
-  $("outbox").textContent=snapshot.outbox;
+function field(card,label,value){card.append(node("span",label,"fieldname"),node("div",value??"等待执行…","value"))}
+function render(s){
+  const unknown=s.outbox==="BLOCKED_UNKNOWN";
+  const state=unknown?"状态不确定":(stateLabels[s.state]||s.state);
+  $("state").textContent=state;
+  $("state").className="status "+(s.state==="COMPLETED"?"ok":unknown?"wait":"");
+  $("outcome-description").textContent=s.state==="COMPLETED"
+    ?"两个 Agent SDK 均执行成功，Hatchet 完成调度，Harness 已写入业务终态和最终输出。"
+    :unknown?"Hatchet 工作流创建结果不确定，平台不会盲目再次执行。"
+    :"Run 尚未完成；最终结果只在所有必需节点完成后产生。";
+  const result=s.result;
+  $("final-output").textContent=result?.final_output??"等待节点 B 执行完成…";
+  $("result-explanation").textContent=result
+    ?(result.provenance==="derived_legacy_step"?"历史 Run：最终输出从数据库中已完成的节点 B 结果推导，原始汇总字段未保存。":
+      "最终输出确实取自节点 B，并作为本次 Run 的结果保存到 PostgreSQL。")+" 注意：确定性本地模型返回测试文本，不代表真实的业务分析报告。"
+    :"尚无最终返回值。节点 A 或 B 的单独成功不等于整个 Run 完成。";
   $("steps").replaceChildren();
-  for(const [name,step] of Object.entries(snapshot.steps)) {
-    const card=node("div","","card");
-    card.append(node("h4",name==="pydantic"?"Step A · Pydantic AI":"Step B · OpenAI Agents SDK"));
-    card.append(node("div","State: "+step.state));
-    card.append(node("div","Attempts: "+step.attempts,"muted"));
-    card.append(node("pre",step.output??"(waiting)"));
+  for(const id of ["pydantic","openai"]){
+    const step=s.steps[id];if(!step)continue;
+    const info=stageInfo[id],card=node("article","","step");
+    const head=node("div","","headrow");head.append(node("h3",info.name),node("span",stateLabels[step.state]||step.state,"status"));
+    card.append(head,node("p",info.role));
+    field(card,"输入",step.input??(id==="pydantic"?"历史 Run 没有记录原始输入":"等待节点 A 产生输出"));
+    field(card,"实际输出",step.output??"尚未生成");
+    card.append(node("p","执行尝试："+step.attempts+" 次。"+(id==="pydantic"?"输出被持久化后才允许节点 B 执行。":"节点 B 的输出是最终 Run Result 的来源。"),"caption"));
     $("steps").append(card);
+    if(id==="pydantic")$("steps").append(node("p","↓ A 的已验证输出作为 B 的输入","next"));
   }
   $("timeline").replaceChildren();
-  for(const event of snapshot.events) {
-    $("timeline").append(node("li",String(event.seq).padStart(3,"0")+" · "+event.type+" · "+JSON.stringify(event.data)));
+  for(const e of s.events){
+    const id=e.data?.step_id||"";
+    const who=id==="pydantic"?"（节点 A）":id==="openai"?"（节点 B）":"";
+    const li=document.createElement("li");
+    li.append(node("span",String(e.seq).padStart(3,"0"),"index"),
+              node("span",(eventLabels[e.type]||"技术事件："+e.type)+who));
+    $("timeline").append(li);
   }
+  $("run-id").textContent=s.run_id;
+  $("provider-id").textContent=s.provider_workflow_run_id??"尚未绑定";
+  $("plan").textContent=s.plan_version;
+  $("outbox").textContent=s.outbox;
+  $("raw-json").textContent=JSON.stringify(s,null,2);
 }
-async function refresh() {
- if(busy) return;busy=true;
- try {
-   await history();
-   if(current) {
-     const data=await api("/api/runs/"+encodeURIComponent(current));
-     render(data);
-     $("detail-error").textContent="";
-   }
- } catch(error) {
-   $("detail-error").textContent=error.message;
- } finally { busy=false; }
+async function refresh(){
+  if(busy)return;busy=true;
+  try{
+    await loadHistory();
+    if(current){render(await api("/api/runs/"+encodeURIComponent(current)))}
+    $("detail-error").textContent="";
+  }catch(err){$("detail-error").textContent="读取真实执行数据失败："+err.message}
+  finally{busy=false}
 }
 $("start").addEventListener("click",async()=>{
-  $("start").disabled=true;
-  $("message").textContent="请求已提交，等待真实服务响应…";
-  try {
-    const data=await api("/api/runs",{method:"POST",
-      headers:{"Content-Type":"application/json"},
+  $("start").disabled=true;$("message").textContent="正在保存 Run 并提交 Hatchet…";
+  try{
+    const d=await api("/api/runs",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({prompt:$("prompt").value})});
-    $("message").textContent="已创建 "+data.run_id+"；从 PostgreSQL 读取进度";
-    selectRun(data.run_id);
-  } catch(e) { $("message").textContent="失败："+e.message; }
-  finally { $("start").disabled=false; }
+    $("message").textContent="已创建 Run。右侧将自动展示两个节点和最终输出。";
+    selectRun(d.run_id);
+  }catch(err){$("message").textContent="未能提交："+err.message}
+  finally{$("start").disabled=false}
 });
 refresh();
 setInterval(refresh,1500);

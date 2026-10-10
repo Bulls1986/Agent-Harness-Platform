@@ -38,6 +38,8 @@ class InspectorAPIContractTests(unittest.TestCase):
         self.assertEqual(record.status_code, 200, record.text)
         snap = record.json()
         self.assertEqual(snap["state"], "CREATED")
+        self.assertEqual(snap["input_prompt"], "inspect PG facts")
+        self.assertIsNone(snap["result"])
         self.assertEqual(snap["outbox"], "PENDING")
         self.assertEqual(set(snap["steps"]), {"pydantic", "openai"})
         self.assertIn(run_id, [x["run_id"] for x in
@@ -70,6 +72,12 @@ class InspectorAPIContractTests(unittest.TestCase):
         self.assertIn("Local POC", page.text)
         self.assertIn("textContent", page.text)
         self.assertNotIn("innerHTML", page.text)
+        self.assertIn("这个演示验证什么", page.text)
+        self.assertIn("节点 A", page.text)
+        self.assertIn("节点 B", page.text)
+        self.assertIn("最终运行结果", page.text)
+        self.assertIn("原始事件与 JSON", page.text)
+        self.assertIn("确定性本地模型", page.text)
 
 
 if __name__ == "__main__":

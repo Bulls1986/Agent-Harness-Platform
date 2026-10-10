@@ -14,7 +14,7 @@ class PostgreSQLFactsTests(unittest.TestCase):
     def setUp(self):
         self.db = PgFacts()
         self.run_id = "facts-" + uuid4().hex
-        self.command = self.db.create(self.run_id)
+        self.command = self.db.create(self.run_id, prompt="用户的演示输入")
 
     def event(self, runtime, output):
         return [TypedEvent(self.run_id, 1, "run.started", runtime),
@@ -25,6 +25,10 @@ class PostgreSQLFactsTests(unittest.TestCase):
         snapshot = self.db.snapshot(self.run_id)
         self.assertEqual(snapshot["state"], "CREATED")
         self.assertEqual(snapshot["outbox"], "PENDING")
+        self.assertEqual(snapshot["input_prompt"], "用户的演示输入")
+        self.assertIsNone(snapshot["result"])
+        self.assertEqual(snapshot["steps"]["pydantic"]["input"], "用户的演示输入")
+        self.assertIsNone(snapshot["steps"]["openai"]["input"])
         self.assertEqual(set(snapshot["steps"]), {"pydantic", "openai"})
         with self.assertRaises(Exception):
             self.db.create(self.run_id)
@@ -45,10 +49,10 @@ class PostgreSQLFactsTests(unittest.TestCase):
             self.db.start_step(self.run_id, "openai", "input")
         with self.assertRaises(UnsafeDispatch):
             self.db.complete(self.run_id)
-        self.db.start_step(self.run_id, "pydantic", "prompt")
+        self.db.start_step(self.run_id, "pydantic", "用户的演示输入")
         self.db.finish_step(self.run_id, "pydantic", "pydantic-output",
                             self.event("pydantic", "pydantic-output"))
-        self.assertEqual(self.db.start_step(self.run_id, "pydantic", "prompt"),
+        self.assertEqual(self.db.start_step(self.run_id, "pydantic", "用户的演示输入"),
                          "pydantic-output")
         with self.assertRaises(UnsafeDispatch):
             self.db.start_step(self.run_id, "pydantic", "different-prompt")
@@ -63,6 +67,11 @@ class PostgreSQLFactsTests(unittest.TestCase):
         another_connection = PgFacts()
         snapshot = another_connection.snapshot(self.run_id)
         self.assertEqual(snapshot["state"], "COMPLETED")
+        self.assertEqual(snapshot["steps"]["openai"]["input"], "pydantic-output")
+        self.assertEqual(snapshot["result"]["final_output"], "openai-output")
+        self.assertEqual(snapshot["result"]["result_source_step"], "openai")
+        self.assertEqual(snapshot["result"]["mode"], "deterministic_local_model")
+        self.assertEqual(snapshot["result"]["step_outputs"], outputs)
         self.assertEqual(snapshot["steps"]["pydantic"]["attempts"], 1)
         self.assertEqual(snapshot["steps"]["openai"]["attempts"], 1)
         self.assertEqual([e["seq"] for e in snapshot["events"]],

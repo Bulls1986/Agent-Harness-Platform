@@ -47,6 +47,12 @@ def verify(base: str, *, run_id: str | None = None) -> dict:
                for s in status["steps"].values()), status
     assert status["steps"]["pydantic"]["output"] == "pydantic-sdk-real-run"
     assert status["steps"]["openai"]["output"] == "openai-sdk-real-run"
+    assert status["result"]["final_output"] == "openai-sdk-real-run"
+    assert status["result"]["mode"] == "deterministic_local_model"
+    assert status["result"]["result_source_step"] == "openai"
+    assert status["steps"]["openai"]["input"] == status["steps"]["pydantic"]["output"]
+    if status["input_prompt"] is not None:
+        assert status["steps"]["pydantic"]["input"] == status["input_prompt"]
     assert run_id in [r["run_id"] for r in history["runs"]], history
     assert [e["seq"] for e in events] == list(range(1, len(events)+1))
     assert [e["seq"] for e in one] == [e["seq"] for e in events if e["seq"] > 1]
@@ -56,7 +62,8 @@ def verify(base: str, *, run_id: str | None = None) -> dict:
         "outcome": "PASS", "real_hatchet": True, "real_2_sdk_dag": True,
         "docker_pg": True, "run_id": run_id,
         "workflow_id": status["provider_workflow_run_id"], "events": len(events),
-        "inspector_refresh": "PASS",
+        "inspector_refresh": "PASS", "final_result_visibility": "PASS",
+        "result_source": "openai", "final_output": status["result"]["final_output"],
         "cube": "NOT_TESTED", "real_token_sse": "NOT_TESTED",
         "side_effect_receipt": "NOT_TESTED"
     }
