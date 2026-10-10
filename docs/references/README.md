@@ -4,6 +4,8 @@
 
 > 这些文件是 **讨论记录 / 设计参考**，不是最终架构规范。正式决策以 `docs/ARCHITECTURE.md`、`docs/POC.md` 和后续 ADR 为准。
 
+> **最新入口（候选状态）：** [文档导航](../README.md) → [目标架构](MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md) → [准入结论](MULTI_HARNESS_ADMISSION_20261009.md)。下列其余条目是历史背景、正式 Contract 或专项 POC 证据，读者必须看每份文件的 Status 与日期。
+
 ## 分类
 
 1. [OpenAI Agent / Harness 能力梳理](OPENAI_AGENT_STACK.md)
@@ -38,10 +40,16 @@
 30. [Cancellation / Timeout Propagation 契约](CANCELLATION_TIMEOUT_PROPAGATION.md)
 31. [Harness Scope Alignment Review](HARNESS_SCOPE_ALIGNMENT_REVIEW.md)
 32. [Microsoft Execution Containers（MXC）Sandbox Backend 候选评估](MXC_EXECUTION_CONTAINER_CANDIDATE.md)
+33. [多 Harness 共享 Sandbox 与 Runtime 密度（2026-10-09 POC 候选，未 Accepted）](MULTI_HARNESS_SANDBOX_RUNTIME_DENSITY_CANDIDATE.md)
+34. [多 Harness 技术选型增量评估（Pydantic AI Harness / OpenAI Agents SDK / Temporal / CubeSandbox）](MULTI_HARNESS_TECH_SELECTION_20261009.md)
+35. [多 Harness 目标架构候选与 Cube 实测快照（2026-10-09，未 Accepted）](MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md)
+36. [多 Harness 集成 POC 与生产分级准入（2026-10-09）](MULTI_HARNESS_ADMISSION_20261009.md)
+37. [**已验证技术栈版本基线、E2B 兼容矩阵、Cube OCI Digest 与 Template（2026-10-10）**](VERIFIED_STACK_BASELINE_20261010.md)
+38. [**现有 OpenCode PDLC 替换、已有能力无感迁移与跨 Agent 串联方案（2026-10-10）**](PDLC_REPLACEMENT_MIGRATION_20261010.md)
 
 ## 阶段评估处置索引
 
-- [POC-C C00–C16 技术评估收口与生产 NO-GO](../POC_C_EVALUATION_CLOSEOUT.md)：是候选技术裁决，不是生产 Accepted ADR；后续行动统一由 [ARCH-TODO-025](../ARCHITECTURE_BACKLOG.md) 管理。
+- [POC-C C00–C16 技术评估收口与生产 NO-GO](../POC_C_EVALUATION_CLOSEOUT.md)：保留主干已合并的阶段证据，后续行动由 [ARCH-TODO-025](../ARCHITECTURE_BACKLOG.md) 管理。
 
 ## 使用原则
 

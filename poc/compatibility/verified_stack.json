@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "baseline_id": "agent-harness-cube-poc-20261010",
+  "recorded_at": "2026-10-10",
+  "admission": "integration_poc_limited_go",
+  "production_admission": "no_go",
+  "description": "Observed and explicitly scoped component versions, NOT a general requirements lockfile.",
+  "components": {
+    "cube_server": {"version": "0.7.2", "status": "LIVE_PASS", "type": "service", "evidence": "poc/opencode_sandbox/opencode2_cube_template/VERIFICATION_20261010.md"},
+    "cubesandbox": {"version": "0.7.0", "distribution": "cubesandbox", "status": "LIVE_PASS", "type": "python_sdk", "evidence": "poc/opencode_sandbox/opencode2_cube_template/VERIFICATION_20261010.md"},
+    "e2b": {"version": "2.40.0", "distribution": "e2b", "status": "LIVE_PASS", "type": "python_sdk", "evidence": "poc/opencode_sandbox/E2B_PRIVATE_DNS_VERIFICATION_20261010.md"},
+    "openai_agents": {"version": "0.23.1", "distribution": "openai-agents", "status": "LIVE_PASS", "type": "python_sdk", "evidence": "poc/opencode_sandbox/E2B_PRIVATE_DNS_VERIFICATION_20261010.md"},
+    "opencode2": {"version": "2.0.24", "status": "LIVE_PASS", "type": "guest_executable", "evidence": "poc/opencode_sandbox/opencode2_cube_template/VERIFICATION_20261010.md"},
+    "git_guest": {"version": "2.39.5", "status": "LIVE_PASS", "type": "guest_executable", "evidence": "poc/opencode_sandbox/opencode2_cube_template/VERIFICATION_20261010.md"},
+    "pydantic_ai_slim": {"version": "2.54.0", "distribution": "pydantic-ai-slim", "status": "SDK_RUN_PASS_LOCAL_MODEL", "type": "python_sdk", "evidence": "poc/runtime_spi/README.md"},
+    "pydantic_ai_harness": {"version": "0.54.0", "distribution": "pydantic-ai-harness", "status": "INSTALLED_CANDIDATE_ONLY", "type": "python_sdk", "evidence": "poc/pydantic_harness/README.md"}
+  },
+  "sdk_profiles": {
+    "cube_native": ["cubesandbox"],
+    "cube_e2b_native": ["e2b", "openai_agents"],
+    "runtime_spi_sdk": ["pydantic_ai_slim", "openai_agents"],
+    "pydantic_harness_candidate": ["pydantic_ai_harness"]
+  },
+  "verified_combinations": [
+    {"id": "cube_native_public_tools", "components": ["cube_server", "cubesandbox", "opencode2", "git_guest", "openai_agents", "pydantic_ai_slim"], "status": "LIVE_LIMITED_PASS", "scope": "real Cube MicroVM; OpenCode V2 Session/FS/Shell/Git and Pydantic/OpenAI public Tool handoff; no hosted model", "evidence": "poc/opencode_sandbox/opencode2_cube_template/VERIFICATION_20261010.md"},
+    {"id": "cube_official_e2b_minimum", "components": ["cube_server", "e2b"], "status": "LIVE_LIMITED_PASS", "scope": "create/files.read/write/commands.run/kill with isolated cube.app DNS, trusted local CA, local auth-disabled demo", "evidence": "poc/opencode_sandbox/E2B_PRIVATE_DNS_VERIFICATION_20261010.md"},
+    {"id": "cube_openai_e2b_native", "components": ["cube_server", "e2b", "openai_agents"], "status": "LIVE_LIMITED_PASS", "scope": "2 distinct Sandboxes/files isolation and native E2BSandboxClient.create/exec/aclose, zero model calls", "evidence": "poc/opencode_sandbox/E2B_PRIVATE_DNS_VERIFICATION_20261010.md"},
+    {"id": "runtime_spi_public_sdk", "components": ["pydantic_ai_slim", "openai_agents"], "status": "SDK_RUN_PASS_LOCAL_MODEL", "scope": "real Agent.run and Runner.run with deterministic local models; not hosted model or token streaming", "evidence": "poc/runtime_spi/README.md"}
+  ],
+  "known_incompatible": [
+    {"id": "e2b_current_405", "component": "e2b", "version": "2.53.1", "cube_server_version": "0.7.2", "failure": "official SDK POST /v2/sandboxes -> HTTP 405 (Cube supports native POST /sandboxes)", "status": "LIVE_FAIL", "evidence": "poc/opencode_sandbox/CUBE_E2B_COMPATIBILITY_FINDINGS.md"},
+    {"id": "e2b_v240_default_dns", "component": "e2b", "version": "2.40.0", "cube_server_version": "0.7.2", "failure": "default E2B_DOMAIN=e2b.app / WSL resolver misses Cube's ~cube.app DNS; Files ConnectError; isolated resolver and E2B_DOMAIN=cube.app required", "status": "LIVE_FAIL_UNCONFIGURED", "evidence": "poc/opencode_sandbox/E2B_PRIVATE_DNS_VERIFICATION_20261010.md"}
+  ],
+  "deployment_artifacts": {
+    "opencode_git_cube_guest": {
+      "image_tag": "localhost:5000/ahp-opencode2-cube:2.0.24-lightprobe-git",
+      "image_digest": "sha256:9e4bde62fad22f2b22a2bd858ec865e403caccead740d113afc8c9a9e89e284f",
+      "digest_kind": "observed_local_registry_manifest",
+      "template_id": "tpl-363306ce3b21432cb1ae6536",
+      "template_job_id": "c835c0cd-9cf6-4628-9e8e-c4730a3873c0",
+      "template_status": "READY",
+      "guest_startup": "envd:49983; light health probe:49999; OpenCode V2:4096 on lease",
+      "scope": "local WSL2 Cube instance ONLY; template ids are not portable",
+      "evidence": "poc/opencode_sandbox/opencode2_cube_template/VERIFICATION_20261010.md"
+    }
+  },
+  "runtime_environment": {
+    "tested_host": "independent Ubuntu under WSL2 with KVM; local Cube v0.7.2",
+    "python": "3.12",
+    "dns": "E2B_DOMAIN=cube.app; process-private systemd-resolved ~cube.app -> Cube CoreDNS",
+    "tls": "trusted local mkcert CA through SSL_CERT_FILE; verification enabled",
+    "cube_api": "http://127.0.0.1:3000 (local opt-in POC only)",
+    "test_auth": "local Cube auth-disabled; no production auth acceptance",
+    "hosted_model_calls": 0
+  },
+  "rebuild_risks": [
+    "Cube source guest Dockerfile currently uses sandbox-code:latest: base version could drift when rebuilding",
+    "OpenCode source Dockerfile tag is 2.0.24 but no portable source registry manifest digest is frozen",
+    "git is installed via Debian apt without an immutable package build id; observed guest version is 2.39.5",
+    "image_digest is immutable for the tested image; new rebuild yields a new digest and requires new Cube template validation",
+    "model gateway LiteLLM backend, MAF, Temporal and production versions were not frozen by these Cube POC checks"
+  ],
+  "open_gates": [
+    "real LiteLLM model → AgentRuntime SPI → token-level Typed SSE",
+    "platform-owned Scope/Lease/Fencing authorization and SandboxGrant generation",
+    "durable Tool Dispatch/Receipt/Cancel and cross-Worker task recovery",
+    "real Pydantic AI Harness E2BSandbox/Coder, OpenCode model.run",
+    "cross-SDK native reconnect to the same Cube Sandbox ID",
+    "end-to-end security isolation, concurrency, production DNS/TLS/auth and resource tests"
+  ]
+}
