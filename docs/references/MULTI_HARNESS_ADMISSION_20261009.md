@@ -4,6 +4,7 @@
 > 当前架构以 [目标架构候选](MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md) 为权威；
 > 未完成事项仅登记 [架构 Backlog ARCH-TODO-024～028](../ARCHITECTURE_BACKLOG.md)。
 > [验证入口](../../poc/README.md) 提供可重复的最小测试。
+> **版本不可漂移：** [2026-10-10 已验证组件 / SDK / Guest OCI Digest / Template 快照](VERIFIED_STACK_BASELINE_20261010.md)。这里的 GO 只对标记的真实验证组合有效，升级版本或换 Cube 部署需独立复验。
 
 > **2026-10-10 ARCH-TODO-025/026 最新真机与 SDK 增量：** [E2B 2.40 + OpenAI Native 真机兼容修复](../../poc/opencode_sandbox/E2B_PRIVATE_DNS_VERIFICATION_20261010.md)：Cube v0.7.2 在受控私有 DNS + 有效本地 CA 下，官方 `e2b==2.40.0` 的真实 create/files/commands/kill、两 Sandbox 文件隔离、`openai-agents==0.23.1` 原生 `E2BSandboxClient.create/exec/aclose` **PASS**（SDK 未私有补丁）；而 e2b 2.53.1 **仍 405**。[平台 AgentRuntime SPI POC](../../poc/runtime_spi/README.md) 的 Pydantic `Agent.run` / OpenAI `Runner.run` 在真实安装 SDK + 本地确定性 Model 下映射 Run Typed Events，有限 PASS；OpenCode `session.prepare` 仍仅合同 Mock，Token SSE / Tool Receipt/Run 持久化/取消恢复尚无真实准入。**集成 POC 限定 GO，生产继续 NO-GO。** 2026-10-09 以及下文关于 E2B 2.40 文件 ConnectError 的旧数据仅代表当时未配置正确 DNS 的历史尝试。
 

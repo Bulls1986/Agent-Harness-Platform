@@ -11,6 +11,7 @@
 3. [多 Harness 当前目标架构](docs/references/MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md)
 4. [POC 验证脚本导航](poc/README.md)
 5. [架构待办：唯一主清单](docs/ARCHITECTURE_BACKLOG.md)
+6. [**已验证技术版本基线：兼容矩阵 / OCI Digest / Cube Template / 升级门禁**](docs/references/VERIFIED_STACK_BASELINE_20261010.md)
 
 ## 历史研究与专题证据（保留原路径）
 
@@ -33,6 +34,8 @@
 - [POC-A 阶段性结论与证据台账](docs/POC_A_STAGE_FINDINGS.md)
 - [POC-A / A30 任务恢复覆盖矩阵](docs/POC_A_RECOVERY_MATRIX.md)
 - [架构待办 / Architecture Backlog](docs/ARCHITECTURE_BACKLOG.md)
+
+> **2026-10-10 集成准入更新：** [唯一版本基线](docs/references/VERIFIED_STACK_BASELINE_20261010.md) 已明确锁定实测组合：Cube v0.7.2、原生 SDK 0.7.0、E2B 官方 2.40.0（专用 DNS/CA）、OpenAI Agents 0.23.1、OpenCode 2.0.24、Pydantic AI Slim 2.54.0，以及通过的 Git-enabled Guest Template 和 OCI Digest。**真实 Cube / 双 Session / FS / Shell / Git / 原生 E2B/跨 SDK Tool 的基础技术路径已通过；项目进入集成 POC，仍非生产 GO**。以下 2026-10-09 状态是历史快照，不能用它否定 2026-10-10 的 E2B v2.40 Native PASS。
 
 > **当前增量选型（2026-10-09，候选而非 Accepted）：** Pydantic AI Harness 为通用 Agent 默认 Runtime Adapter 首选；OpenCode 2 保留 Coding、OpenAI Agents SDK/MAF 保留可选 Adapter；平台自有 AgentRuntime SPI 才负责 SDK 切换，Process/Durable SPI 的 Temporal 或 PG Worker 仍待等价验证。Cube 原生 SDK 的真实 MicroVM/文件/命令/重连已通过，但 E2B 2.53.1/OpenAI 原生 E2B Client 对当前 Cube v0.7.2 的创建均返回 HTTP 405。详见上述目标架构快照与 [ARCH-TODO-025～028](docs/ARCHITECTURE_BACKLOG.md)。下文首轮 POC 优先级仅保留历史基线。
 

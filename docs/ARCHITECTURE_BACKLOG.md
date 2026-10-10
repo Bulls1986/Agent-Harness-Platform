@@ -657,6 +657,8 @@ OpenCode 2 / MAF；目前全部为候选，尚无完美零适配技术栈。
 **状态：POC / ARCHITECTURE CANDIDATE（P1；未接受）**
 
 **方向：** Pydantic AI Harness 是新通用 Agent 的默认 Runtime Adapter 候选；OpenAI Agents SDK、OpenCode 2 和 MAF 分别作为独立适配器。SDK 切换由**平台 AgentRuntime SPI** 实现，不由 Pydantic 原生托管其他 SDK；模型 Provider 切换另行治理。关联 [目标架构候选](references/MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md)。
+**2026-10-10 版本冻结门禁：** [已验证 SDK/Runtime/OCI Digest/Template 快照](references/VERIFIED_STACK_BASELINE_20261010.md) 已单独存为机器可读基线，包含 E2B 2.40.0 限定 PASS / 2.53.1 HTTP405 负例及自动防漂移验证；后续集成必须依 [Accepted Registry & Versioning Contract](references/REGISTRY_AND_VERSIONING.md) **在 Run 创建时**记录确切 Runtime/Adapter/SDK/Environment/Digest，重试/恢复沿用冻结绑定。POC 快照不等于数据库层已实现此持久化。
+
 
 **待办与完成标准：**
 

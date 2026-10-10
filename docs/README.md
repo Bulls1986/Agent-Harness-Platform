@@ -8,6 +8,7 @@
 |---|---|---|
 | 当前多 Harness 目标架构与分层 | [多 Harness 目标架构候选](references/MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md) | **CANDIDATE，不是 Accepted ADR** |
 | 本轮技术准入 / GO-NO GO 和证据 | [准入评估](references/MULTI_HARNESS_ADMISSION_20261009.md) | POC 分级准入 |
+| **已验证技术版本 / 可兼容 SDK 组合 / OCI Digest / Cube Template** | [2026-10-10 实测版本基线](references/VERIFIED_STACK_BASELINE_20261010.md) | **POC 锁定版本，生产未 Accepted** |
 | 唯一架构待办主清单 | [ARCHITECTURE_BACKLOG](ARCHITECTURE_BACKLOG.md)（024～028） | OPEN |
 | 平台既有架构总设计 | [ARCHITECTURE](ARCHITECTURE.md) | V1.0 及其 Accepted Contract 不被 POC 候选覆盖 |
 | POC 硬门禁、方案 A/C 历史范围 | [POC](POC.md) | 历史基线 + 新候选补充 |
@@ -19,7 +20,7 @@
 
 ## 各项 POC 与历史记录
 
-- [Cube / OpenCode 2 / OpenAI Agents SDK](../poc/opencode_sandbox/README.md)：真实 Cube SDK PASS、E2B 原生 405、OpenCode 2 Cube 自定义模板阻塞。
+- [Cube / OpenCode 2 / OpenAI Agents SDK](../poc/opencode_sandbox/README.md)：真实 Cube OpenCode V2 / Git / SDK 接力 PASS；官方 E2B 2.40.0 + OpenAI Native 在指定 DNS/CA 下 PASS，2.53.1 405 仍为已知不兼容组合。
 - [Pydantic AI Harness](../poc/pydantic_harness/README.md)：共享 Agent Run、Linux 本地工具路由 PASS；真实 Cube 的默认 E2B Backend 尚未 PASS。
 - [MAF](../poc/maf/)：POC-A 归档。保留 Workflow、Recovery、协议结论，并作为可选 Runtime 比较。
 - [Temporal](../poc/temporal/)：POC-C 归档。保留任务级可靠性证据，并作为可选 Durable Backend 比较。

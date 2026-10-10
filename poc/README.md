@@ -7,6 +7,8 @@
 ```sh
 python -B poc/verify_admission_offline.py
 python -B poc/verify_repo_navigation.py    # 检查文档入口与链接
+python -B poc/compatibility/verify_stack.py # 版本/验证证据/已知不兼容/OCI Digest 离线检查
+python -B poc/compatibility/verify_stack.py --self-test # fail-closed 防漂移回归
 ```
 
 脚本依次验证：Cube Native 预检（**无真实 Sandbox**）、Session→Sandbox Scope/Generation Fail Closed、E2B Session 路由 Mock。PASS 表示逻辑/SDK 边界测试已通过，不代表 Cube / OpenCode / Agent Loop 真机准入。
@@ -17,6 +19,8 @@ python -B poc/pydantic_harness/verify_offline_density.py
 # Linux/WSL / CI，POSIX-only：
 python -B poc/pydantic_harness/verify_local_tool_routing_posix.py
 ```
+
+**版本基线：** [真实通过的 SDK/Runtime 版本、失败组合、镜像与模板 ID](../docs/references/VERIFIED_STACK_BASELINE_20261010.md)；`poc/compatibility/verify_stack.py --profile cube_e2b_native` 在对应已安装 SDK 的隔离 venv 中验证实际 package pin；不启动 Cube，也不把 `e2b==2.53.1` 视作已通过版本。
 
 ## 二、自建 Cube 真机（必须显式 opt-in）
 
