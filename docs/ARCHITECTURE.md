@@ -308,6 +308,8 @@ Agent Runtime 的 Session、Workflow、Context、模型 HTTP、MCP 和事件流�
 
 ExecutionScheduler 只决定 ExecutionRequest 进入哪个容量池，不直接执行 shell。建议至少区分 LIGHT / MEDIUM / HEAVY / SPECIAL 四类资源等级，并将 interactive、normal verification、heavy verification、background queue 隔离，避免长时间 full build/E2E 阻塞秒级交互任务。[R14]
 
+**外部参考的使用边界（2026-10-10）：** 可以借鉴 Multica 对队列领取、并发控制、Worker/Run 生命周期与持久化的**通用设计思路**，但不复制、修改、提取、迁入其源码，也不引入其依赖、Daemon 或 CLI 执行层。ExecutionScheduler 及任务状态机由平台根据既有 Contract **独立设计实现**；PG + Worker/Scheduler、Temporal、MAF Durable 的默认 Process/Durable 选型仍待同口径 POC，不因此提前收口。[Multica 设计参考与独立实现决策](references/MULTICA_DESIGN_REFERENCE_DECISION_20261010.md)。
+
 ## 6.5 Local CubeSandbox baseline + Remote CubeSandbox burst
 
 生产 Coding Execution 默认进入隔离 Sandbox。本地 CubeSandbox 承担 baseline capacity；当本地 CPU/内存、Sandbox slot 或 queue wait 达到阈值时，在 Policy 允许的前提下切换到 Remote CubeSandbox cluster。
@@ -916,6 +918,7 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 | ADR-027 | 冻结 MCP Trust 边界：MCP 准入与信任由外部 Governance 负责；Harness 对可调用 MCP 视为已准入，不建立 Trust Score/二次审核，只负责当前 Execution 的 Policy、Credential、SideEffect、Audit 与版本绑定。 | Accepted |
 | ADR-028 | 冻结 Cancellation/Timeout：Cancel Request 先进入 CANCELLING 并下传；ACK 不等于停止；Timeout 是 Failure Type；已 dispatch 副作用不确定时 UNKNOWN→Reconciliation；取消不隐式回滚。 | Accepted |
 | ADR-029 | POC-C C00–C16 阶段**技术评估**收口，Temporal 保留 Durable Adapter 优先候选；G2/G3/G6 完整硬门禁未过，生产主架构 NO-GO，后续归 ARCH-TODO-025。 | Accepted（仅评估处置；非生产 ADR） |
+| ADR-030 | Multica 仅作为调度/任务生命周期的架构思想参考；不复制或依赖其源码，平台独立实现，执行层不采用 Multica；不预先决定 Process/Durable 默认选型。 | Accepted（源码使用边界；非生产选型） |
 
 # 19. MAF 扩展性验证要求
 

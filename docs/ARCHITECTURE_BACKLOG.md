@@ -742,6 +742,8 @@ OpenCode 2 / MAF；目前全部为候选，尚无完美零适配技术栈。
 - 若引入 Pydantic TemporalDurability，需要定义与平台 Workflow/Durable 层的职责分界，防止同一 Agent Run 重复包两层 Durable 引擎。
 - MAF POC-A 与 Temporal POC-C 已有成果继续保留；形成等价验收结论后再决定生产默认并单独更新 Accepted ADR。
 
+**外部方案参考边界（2026-10-10，ADR-030 已决定）：** 允许参考 Multica 的 Scheduler / Run / Worker 管理**设计思想**，但不复制、改写、迁入其源码，不接入其 CLI/Daemon 执行层；Harness 自行设计实现相关状态机和调度逻辑，仍须按照本条故障注入门禁验收。[决定记录](references/MULTICA_DESIGN_REFERENCE_DECISION_20261010.md)。
+
 **未关闭原因：** 当前三方案尚未按新的多 Runtime/同 Cube 场景完成一致性成本比较。
 
 ---
