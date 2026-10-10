@@ -2,8 +2,10 @@
 
 **现有 OpenCode PDLC 平台的下一代执行架构：保留已建能力、支持无感迁移，新增可组合的专业 Agent 与任务串联。** Coding 能力继续复用 OpenCode，平台层不再与单一 Agent SDK 绑定。
 
-> **架构状态：集成 POC 阶段（LIMITED GO），非生产准入。** 更新依据截至 **2026-10-10**。已证明关键技术路径可运行；统一平台的持久化、真实模型全链、跨 Worker 恢复、生产级隔离尚未整体验收。
+> **架构状态：集成 POC 阶段（LIMITED GO），非生产准入。** 更新依据截至 **2026-10-10**。**当前 Process/Durable SPI 首选实现为 Hatchet Embedded / 私有化集群 + PostgreSQL；DBOS 因许可证约束正式排除（REJECTED），不作为候选或备选。** Hatchet 双 SDK DAG 与两个独立 Engine 的跨 Worker 安全步骤恢复已分别 LIVE PASS；统一平台的 Task Facts 对接、真实模型 SSE、审批、非幂等 Tool Receipt、Cube 恢复和生产隔离仍未整体验收。
 > **阅读说明：** 本 README 是项目的**总体方案与项目入口**。正式语义遵循已 Accepted 的 [Architecture Contracts](docs/references/README.md)；正在比较的技术方案、具体实现、历史实验和风险以所链接的专题及 [Backlog](docs/ARCHITECTURE_BACKLOG.md) 为准。本文不将候选方案擅自升级为正式 ADR。
+
+> **当前架构选型与分层图权威增量：** [Hatchet Process/Durable 架构与职责/恢复/部署边界](docs/references/HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md)（候选实施基线，非生产 Accepted ADR）。
 
 > **开发架构护栏：** [G01–G20 架构原则、硬约束和 PR/CI 准入](docs/ARCHITECTURE_GUARDRAILS.md)。开发前从 AGENTS.md 进入；违反 Accepted Contract 必须先经过 ADR，候选选型不得因局部 POC PASS 自动升格。
 
@@ -57,7 +59,8 @@
 | 一个 Cube 内能运行 OpenCode 2，并创建两个逻辑 V2 Session 吗？ | **真实 POC 通过** |
 | Git、文件、Shell 与 Pydantic/OpenAI Tool 能接力吗？ | **真实 POC 通过**；同一 Sandbox、零托管模型调用 |
 | 官方 E2B SDK 可直接连接自建 Cube 吗？ | **限定版本通过**：E2B 2.40.0 + 指定 DNS/TLS；2.53.1 创建请求仍 HTTP 405 |
-| 两个 Agent SDK 能在统一平台 Run Contract 下运行吗？ | **局部通过**：Pydantic / OpenAI 真实 SDK + 本地确定性模型 |
+| 两个 Agent SDK 能在统一平台 Run Contract 下运行吗？ | **局部通过**：Pydantic / OpenAI 真实 SDK + 本地确定性模型；Hatchet 真 Engine DAG 顺序交接也已 LIVE PASS |
+| Hatchet 多 Engine / PostgreSQL 下 Worker A 强杀、B 接手原 Workflow 吗？ | **真实限定 PASS**：安全步骤、A 不重启、已完成步骤不重复；尚未验证平台同 Run + Cube + 非幂等 Tool 全链 |
 | 统一 Agent 运行、真实模型 Token SSE、Tool Receipt、租约接管是否端到端完成？ | **没有**；需继续集成 |
 | 可以进入集成开发吗？ | **可以（LIMITED GO）** |
 | 可以宣布企业生产上线了吗？ | **不可以（NO-GO）** |
@@ -76,7 +79,7 @@
 | 分配可执行环境 | SandboxProvider + 外部 Cube | 授权 Scope、Lease、Sandbox ID、WorkspaceRef |
 | 读取代码、修改、运行测试 | OpenCode 或其他 Agent，经 Cube 执行 | Attempt、Execution、Tool 调用与实际 Evidence |
 | 判断是否完成 | Verifier + Harness 状态机 | Verification、Artifact、失败原因、下一次 Attempt/Replan |
-| 审批、暂停或重试 | Harness / 外部审批输入 / Durable Adapter | Approval、RecoveryPoint、版本、执行结果及可能的 UNKNOWN 副作用 |
+| 审批、暂停或重试 | Harness + Process/Durable SPI（Hatchet Adapter）/ 外部审批输入 | Approval、RecoveryPoint、版本、执行结果及可能的 UNKNOWN 副作用 |
 | 返回用户 | Responses-compatible API + SSE | 真实 Text/Activity/Tool/Artifact 事件与可回放序号 |
 
 **一个直观例子：** 产品 Agent 产生需求说明后，研发 Agent 可以在同一**已授权**项目 Workspace 内修改代码，测试 Agent 从相同 Workspace 获取结果继续验证。平台记录“哪一次尝试修改了什么、验证依据是什么”，而不要求三个 Agent 共用一个进程或同一个框架。
@@ -123,16 +126,17 @@ flowchart TB
     BOUND["可信执行绑定\nScope + Lease + Fencing + Capability"]
     SB["SandboxProvider SPI\nLocal / Remote Cube"]
     VM["CubeSandbox MicroVM / Workspace\n按需 Shell · Files · Git · Compile"]
-    DUR["Process / Durable SPI\nPG Worker / Temporal / MAF Durable 候选"]
+    DUR["Process / Durable SPI\nHatchet Adapter（当前首选）\nRun/Step ↔ Provider ID Binding"]
+    HAT["Hatchet Embedded / 自托管 Engine\nDAG · 持久队列 · Retry · Worker 接管"]
     STATE["PostgreSQL\nRun / Attempt / Binding / Task Facts"]
     OSS["外部 S3 / OSS\nArtifact / Evidence Payload"]
     MOD["ModelProvider / LiteLLM Gateway\n独立于 Agent SDK 选择"]
     EXT["外部 IAM · MCP 治理 · Secrets\nOTel 后端 · 存储/集群运维"]
-    U --> API --> CP --> SPI --> POOL
-    POOL --> PY & OAI & OC & MAF
+    U --> API --> CP --> DUR --> HAT --> POOL --> SPI
+    SPI --> PY & OAI & OC & MAF
     PY & OAI & OC & MAF --> BOUND --> SB --> VM
     PY & OAI & OC & MAF --> MOD
-    CP --> DUR
+    HAT -. "Provider History / 队列独立 Schema" .-> STATE
     CP --> STATE
     CP --> OSS
     EXT -. "提供授权/能力/凭据/运行条件" .-> CP
@@ -140,7 +144,7 @@ flowchart TB
 
 **读图时记住三个“不等于”：**
 
-- **AgentRuntime 不等于 Process/Durable：** Pydantic/OpenCode 负责 Agent 怎么运行；Temporal/Worker 负责任务怎样持久地等待、重试和恢复。
+- **AgentRuntime 不等于 Process/Durable：** Pydantic/OpenCode 负责 Agent 怎么运行；Hatchet 负责持久 DAG、任务队列、重试与 Engine 层 Worker 接管，平台负责 Run/Step/Attempt、审批、Receipt 与恢复裁决。
 - **逻辑 Session 不等于 OS 进程，也不等于 Sandbox：** 可以让许多逻辑 Session 由共享 Worker 服务；只有需要实际命令/文件隔离时才拿 Sandbox Lease。
 - **Cube 不等于 Harness Control Plane：** Cube 负责启动和销毁 MicroVM，平台负责为什么执行、是否有权限、失败是否允许重试。
 
@@ -152,7 +156,7 @@ flowchart TB
 | Harness Kernel | **Recipe/Step 依赖与 Agent 串联**、Attempt、结果交接/验收、Policy、审批事实、恢复裁决 | 各 SDK 的完整 Agent Loop、重型 BPMN 引擎 |
 | AgentRuntime SPI | 能力装配、公开 SDK Adapter、工具执行授权绑定、运行时事件翻译 | 私有 SDK 内核与各 SDK 原生 Session |
 | SandboxProvider | 申请/绑定/释放 Sandbox、WorkspaceRef、Scope 和 Lease 检查 | MicroVM 内核、网络、镜像仓库、节点管理 |
-| Process / Durable SPI | 统一任务事实、恢复点引用、执行结果/副作用语义 | 重造 Temporal/MAF 的 History/Scheduler |
+| Process / Durable SPI | **Hatchet Adapter（当前首选实现）**：Run/Step 与 Workflow/Task Binding、状态核对/错误映射、领域审批和 Receipt 恢复门禁 | 重造 Hatchet 已有的队列/DAG/重试/调度协调器；把 Hatchet History 当成领域 Task Facts |
 | State / Artifact | PostgreSQL 中的任务事实、版本与 Lineage；S3/OSS 引用 | PostgreSQL/OSS 产品本身、备份/DR |
 | 外部治理 | 消费 IAM、Secret、MCP、观察性与策略输入 | 企业 IAM、MCP Marketplace、Secret Manager、APM/计费平台 |
 
@@ -223,7 +227,7 @@ flowchart TB
   end
   subgraph L4["L4 Adapter 装配层"]
     AR["AgentRuntime SPI"]
-    DU["Process / Durable SPI"]
+    DU["Process / Durable SPI\nHatchet Adapter / ID Binding"]
     SB["SandboxProvider SPI\nLease / Scope / WorkspaceRef"]
     OTHER["Model / Tool / Storage Adapter"]
   end
@@ -233,13 +237,15 @@ flowchart TB
     TOOL["Model / MCP / Shell / Git / Browser"]
   end
   subgraph L6["L6 基础设施与数据"]
-    PG["PostgreSQL Task Facts"]
+    PG["PostgreSQL\nHarness Task Facts Schema"]
+    HATP["PostgreSQL\nHatchet Engine History / Queue Schema"]
+    HATE["Hatchet Engine / Durable DAG\n持久队列 · Retry · 故障接管"]
     OSS["OSS / S3 Payload"]
     CUBE["Cube MicroVM（按需）"]
   end
   PORT --> FACADE --> API --> CORE --> CTRL
-  CORE --> AR --> WORK
-  CORE --> DU
+  CORE --> DU --> HATE --> WORK --> AR
+  HATE --> HATP
   CTRL --> SB --> CUBE
   AR --> OTHER --> TOOL
   WORK --> TOOL & CODE
@@ -264,7 +270,7 @@ flowchart LR
   subgraph APP["Harness 应用层"]
     API["Chat/Run API + SSE"]
     RUN["Recipe / Plan / Step Controller"]
-    SAFE["Policy / Approval\nScheduler / Recovery"]
+    SAFE["Policy / Approval\n领域恢复与 Receipt 核对"]
     EVT["Event / Artifact Reference API"]
   end
   subgraph AD["Runtime / Provider Adapter"]
@@ -272,11 +278,11 @@ flowchart LR
     SDK["Pydantic / OpenAI / MAF Adapters"]
     OC["OpenCode 2 Coding Adapter"]
     PVD["Sandbox / Model / Tool Adapters"]
-    DUR["PG Worker / Temporal / MAF Durable\nProcess SPI 候选"]
+    DUR["Process/Durable SPI → Hatchet Engine\nDurable DAG / Queue / Retry（当前首选）"]
   end
   subgraph INF["外部设施"]
     CUBE["Cube API + Guest"]
-    PG["PostgreSQL"]
+    PG["PostgreSQL\nHarness Task Facts / Hatchet History 独立 Schema"]
     OSS["OSS / S3"]
     MODEL["Model Gateway"]
     IAM["IAM / Credential / MCP Governance"]
@@ -285,8 +291,8 @@ flowchart LR
   F -->|"旧会话"| OLD
   F -->|"新 Run 单一 Writer"| API
   API --> RUN --> SAFE
-  RUN --> EVT & DISP
-  SAFE --> DUR
+  RUN --> EVT
+  SAFE --> DUR --> DISP
   DISP --> SDK & OC
   SDK & OC --> PVD
   PVD --> CUBE & MODEL
@@ -312,10 +318,9 @@ flowchart TB
     OC["OpenCode 2\nCoding 保留"]
     MAF["MAF\n兼容可选"]
   end
-  subgraph PROC["Process/Durable SPI 候选"]
-    PGW["PG + 轻量 Worker"]
-    TEMP["Temporal OSS"]
-    MAFD["MAF Durable（MSSQL 等）"]
+  subgraph PROC["Process/Durable SPI · 当前首选（非生产 Accepted）"]
+    HA["Hatchet Adapter\nPlatform IDs / Provider IDs Binding"]
+    HE["Hatchet Embedded / 自托管 Engine\nDAG / Queue / Retry / Cross-Worker Failover"]
   end
   subgraph EXEC["独立执行技术维度"]
     CUBE["Cube / E2B-compatible API\nLocal baseline / Remote burst 候选"]
@@ -323,13 +328,14 @@ flowchart TB
     TOOL["MCP / Tool / Git / Browser"]
   end
   subgraph PERSIST["存储与观测"]
-    PG["PostgreSQL Task Facts / Events"]
+    PG["PostgreSQL Harness Task Facts / Events"]
+    HPG["PostgreSQL Hatchet Workflow / Queue\n独立 Schema / Migration Ownership"]
     S3["S3 / OSS Artifact & Evidence"]
     OT["OpenTelemetry → 外部 Backend"]
   end
   HTTP --> K --> POLICY
-  K --> PY & OAI & OC & MAF
-  POLICY --> PGW & TEMP & MAFD
+  POLICY --> HA --> HE --> PY & OAI & OC & MAF
+  HE --> HPG
   PY -. "按需 Sandbox" .-> CUBE
   OAI -. "按需 Sandbox" .-> CUBE
   MAF -. "按需 Sandbox" .-> CUBE
@@ -339,11 +345,11 @@ flowchart TB
   K -. "Correlation" .-> OT
 ```
 
-**已知证据与限制：** Cube v0.7.2 + E2B Python 2.40.0 在指定 DNS/TLS 条件下有真实功能 PASS；E2B 2.53.1 创建接口仍 405；OpenCode 2 在 Cube Guest 的双 Session/FS/Shell/Git 已局部通过。当前**统一平台**真实 Token SSE、跨 Worker 接管、可信 Lease、全链非幂等 Receipt、生产隔离/容量仍 OPEN。Temporal/PG Worker/MAF Durable 默认选型未 Accepted；MSSQL 不是 Harness PostgreSQL Task Facts 的强制依赖。详见 [版本和兼容矩阵](docs/references/VERIFIED_STACK_BASELINE_20261010.md)。
+**已知证据与限制：** Hatchet v0.110.5（Python SDK 1.42.1）在真实 Engine、PostgreSQL、双 SDK DAG 与双 Engine 跨 Worker 安全步骤接管均获得**分项 LIVE PASS**，但不是同一 Run 全链 PASS。Cube v0.7.2 + E2B Python 2.40.0 在指定 DNS/TLS 条件下有真实功能 PASS；E2B 2.53.1 创建接口仍 405。平台任务级 Approval / SideEffectReceipt UNKNOWN、真实 Token SSE、可信 Lease/Cube 跨 Worker 重绑和容量仍 OPEN；**DBOS REJECTED，Hatchet 仅为当前实施首选，尚非生产 Accepted**。详见 [Hatchet 架构决议](docs/references/HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md)及[版本矩阵](docs/references/VERIFIED_STACK_BASELINE_20261010.md)。
 
 #### 3.1.5 数据架构（Data Architecture）
 
-平台拥有 Task Facts 与 Metadata，OSS/S3 承载大 Payload；旧 PDLC 业务数据、Git Revision 和 SDK 原生 Checkpoint 归各自 Owner。
+平台拥有 Task Facts 与 Metadata，OSS/S3 承载大 Payload；**Hatchet Engine 使用独立 Workflow/Queue History Schema**，平台只存 Provider Workflow/Task ID Binding 与状态核对事实；旧 PDLC 业务数据、Git Revision 和 SDK 原生 Checkpoint 归各自 Owner。
 
 ```mermaid
 flowchart TB
@@ -363,11 +369,14 @@ flowchart TB
   GIT["Git Server / Repository Workspace\nRevision Set"]
   EXT["旧 PDLC 业务库 / 历史会话"]
   NATIVE["Runtime Checkpoint / SandboxRef\nOpaque Provider Reference"]
+  HP["Hatchet Workflow / Queue History\nProvider ID / Durable Adapter Binding"]
   C & T & R & P & S & A & E & RP & EV & AR --> PG
   AR -->|"StorageRef + Digest"| OSS
   E -. "Workspace Binding" .-> GIT
   R -. "Legacy ID 映射" .-> EXT
   RP -. "仅引用/能力声明" .-> NATIVE
+  E -. "Provider Task / Workflow ID 绑定" .-> HP
+  HP -. "独立引擎存储，不是 Run 事实源" .-> PG
 ```
 
 **交接数据合同：** Agent A 的结构化输出通过 Verification，附 ArtifactRef/Digest/Scope/版本信息后才交给 Agent B；不能将整段原生 Chat History 或 Sandbox ID 直接当成可复用可信授权。Run 创建冻结 Recipe/Runtime/Model/Tool/Policy/Environment 版本；UNKNOWN 必须查询 Receipt 或人工对账，不盲重试。业务 Event 是事实；Trace/Log/Metric 是诊断。Harness 只做任务恢复，不做数据库/存储备份和灾备。
@@ -384,8 +393,9 @@ flowchart TB
   end
   subgraph PLATFORM["平台计算区（容器或主机）"]
     API["Harness API / SSE"]
-    K["Kernel / Scheduler\n不可直接执行 Coding Shell"]
-    W["共享 Agent Runtime Worker\nPydantic / OpenAI / MAF"]
+    K["Harness Kernel / 领域控制\n不重复实现 Hatchet 调度器"]
+    HE["Hatchet Engine Fleet\n自托管 / Embedded · 持久队列"]
+    W["共享 Hatchet Worker + AgentRuntime Dispatcher\nPydantic / OpenAI / MAF"]
     O["OpenCode 2 Adapter\n经公开协议访问 Guest"]
   end
   subgraph STORE["企业数据区"]
@@ -399,7 +409,9 @@ flowchart TB
   RC["Remote Cube Cluster\nburst 候选"]
   EXT["已有 IAM / Credential / Git / MCP\nLiteLLM / OTel Backend"]
   U --> LB --> API --> K
-  K --> W & PG & S3
+  K --> HE --> W
+  K --> PG & S3
+  HE -->|"Workflow / Queue Schema"| PG
   W --> O
   W -->|"授权 Scope / Lease"| CM
   O --> VM
@@ -428,6 +440,7 @@ flowchart TB
   C --> C1["AgentRuntime / Tool / Model SPI\nSkills / Subagents / 可选 Sandbox"]
   D --> D1["Policy / Approval / Credential\nScope / Lease / Fencing / Cancel"]
   E --> E1["Run / Attempt / Event / RecoveryPoint\nSideEffect Receipt / Reconciliation / Evidence"]
+  E --> E2["Hatchet Durable Adapter\nQueue / DAG / Retry / Worker 接管\n平台决定安全恢复边界"]
   F --> F1["Typed Event / Token SSE / Replay\nTopology Participant / OTel Correlation"]
 ```
 
@@ -507,10 +520,10 @@ Runtime State、Workspace State、Sandbox State 彼此独立；平台只拥有�
 |---|---|---|
 | 原 PDLC 无感兼容和跨 Agent 串联分别验收 | 业务/应用/功能 | 业务目标已确认，真实 E2E OPEN |
 | Conversation → Turn → Run → Plan(vN) → Step → Attempt，Run 终态不重开 | 逻辑/数据/运行 | Accepted Contract |
-| AgentRuntime、Process/Durable、SandboxProvider 三个 SPI 相互独立 | 逻辑/应用/技术 | Accepted 边界，候选实现未定 |
+| AgentRuntime、Process/Durable、SandboxProvider 三个 SPI 相互独立 | 逻辑/应用/技术 | Accepted 边界；Process/Durable 当前首选 Hatchet Adapter（未生产 Accepted） |
 | Control Plane 才能最终裁决 Run 状态 | 逻辑/应用/运行 | Accepted Contract |
 | 轻量 Agent 零 Sandbox；Coding 默认隔离 | 技术/部署/运行 | 局部 Cube/OpenCode 功能 POC PASS，生产隔离 OPEN |
-| Session ID 非授权；Binding 要校验 Scope / Lease / Fencing | 数据/部署/运行 | Accepted 合同，真实跨 Worker 接管 OPEN |
+| Session ID 非授权；Binding 要校验 Scope / Lease / Fencing | 数据/部署/运行 | Accepted 合同；Hatchet 跨 Engine 安全任务接管已 LIVE PASS，平台可信 Lease/Cube 接管仍 OPEN |
 | PG 保存任务事实，OSS 保存大 Payload，Native Checkpoint 是 Opaque 引用 | 数据/部署 | Accepted Contract，全链集成 OPEN |
 | UNKNOWN → Reconciliation；禁止非幂等盲重试 | 数据/功能/运行 | Accepted Contract，真实回执全链 OPEN |
 | IAM / MCP 治理 / Secret / 观测后端 / Backup 不由 Harness 自建 | 全视图 | 明确 Ownership Boundary |
@@ -562,19 +575,20 @@ Runtime State、Workspace State、Sandbox State 彼此独立；平台只拥有�
 
 E2B 官方 SDK 兼容要**按版本说话**：Cube v0.7.2 + `e2b==2.40.0` + `E2B_DOMAIN=cube.app`、专用 DNS 与可信 CA，真实 Files/Commands/原生 OpenAI E2B Client PASS；`e2b==2.53.1` 对 `POST /v2/sandboxes` 返回 405。详见 [完整兼容证据](poc/opencode_sandbox/E2B_PRIVATE_DNS_VERIFICATION_20261010.md)。
 
-### 4.4 Durable：为什么仍未确定 PG Worker / Temporal / MAF Durable？
+### 4.4 Durable：为何以 Hatchet 作为当前首选实现？
 
-Agent 能写文件，并不意味着它能在**Worker 异常退出后正确继续**。
+Agent 能写文件，并不意味着它能在**Worker 异常退出后正确继续**。经过版本/许可核验与两轮真实 Hatchet Engine CI，目前明确一条实施路线，不再开发手写通用 PG Scheduler，也不以 Temporal/MAF Durable 与 Hatchet 同时维护多套候选实现。
 
-| 候选 | 长处 | 负担与风险 | 当前定位 |
-|---|---|---|---|
-| **PG Task Facts + 轻量 Worker/Scheduler** | 与平台只需任务级恢复的范围契合；少维护一套专门 Workflow 基础设施 | 执行领取、Lease、Retry、Timer、回执对账需要自行实现和验证 | **待等价 POC 的轻量候选** |
-| **Temporal OSS** | 原生 History/Workflow Replay、定时等待、HITL、Worker 恢复证据丰富 | 独立 Server/数据库与运维、Workflow 版本兼容、升级/HA 复杂度 | **较成熟的 Durable 备选；未决定为默认** |
-| **MAF Durable + MSSQL/Functions** | 既有 MAF Worker/HITL/MSSQL POC 可用 | 与专有 TaskHub/MSSQL、许可及运维模型绑定更深 | 保留兼容能力，**不作为当然默认** |
+| 方案 | 现阶段定位 | 工程边界 |
+|---|---|---|
+| **Hatchet Embedded / Self-hosted + PostgreSQL** | **唯一优先实施候选（分项 LIVE PASS，尚未生产 Accepted）** | 复用持久 DAG、任务队列、Worker 派发/故障接管与 Retry；平台自有 Run/Step/Attempt、审批事实、SideEffectReceipt/UNKNOWN 和事件序号 |
+| **Temporal OSS / MAF Durable / 手写 PG Worker** | 历史 POC / 备用调研资料，不并行推进 | 若 Hatchet 存在不可接受的新门禁问题，先提出新的架构决策再考虑重启其他方案 |
+| **DBOS** | **REJECTED / OUT OF SCOPE** | 自托管 Conductor 多 Executor 涉及商业许可；不再作为备选，不再继续 POC |
 
-**不选定的原因是诚实的工程取舍：** POC-A 和 POC-C 已分别证明多项原生恢复能力，但**还没有在同一真实任务、同一故障注入、同负载下**对“任务级恢复正确性、非幂等 Tool Receipt、开发和维护成本”作完一致比较。不能单纯因 Temporal 功能多或 PG 更轻，就宣布最终胜出。
+**证据切分：** [真实 Hatchet Embedded 双 SDK DAG](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38020725053) 和 [两个独立 Engine 共用外部 PostgreSQL，A 故障 B 接管原 Workflow](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38021093089) 是**两个分别通过的 POC**，不可拼接为“同一业务 Run 已实现跨 Agent、审批、Cube 和非幂等操作完整恢复”。生产缺口仍是 WAITING_APPROVAL、UNKNOWN Receipt → Reconciliation、实时 SSE / Cancel、Cube Lease/Fencing 与资源容量。
 
-来源：[MAF 决策报告](poc/maf/POC_A_DECISION_CLOSEOUT.md)、[MAF vs Temporal 同口径比较](poc/temporal/C14_COMPARATIVE_DECISION.md)。
+**职责切分：** Harness 的 State Machine 和 Task Facts 不由 Hatchet 托管；Hatchet 的 Workflow/Task ID 是独立 Binding，Engine/Queue 数据库历史也不替代平台的 Event/Run 数据表。跨 Worker 恢复必须先经平台 Scope/Execution Owner/Fencing 和 Side Effect Gate；除 PURE/可证明幂等步骤外，禁止让 Hatchet 自动 Retry 外部不可确认副作用。Session 空闲不占 Worker/Agent 进程，不需 Sandbox 的 Agent 不创建 Sandbox。详见 [完整 Hatchet 分层与时序设计](docs/references/HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md)。
+
 
 ## 5. 平台最重要的设计契约
 
@@ -720,7 +734,7 @@ python -B poc/compatibility/verify_stack.py --profile cube_e2b_native
 | **P0 / 025** | **跨 Agent 串联 + AgentRuntime SPI + 执行 API** | 一个 Run 中至少两个不同 Runtime 按 Recipe/Step 串联，Artifact/Evidence 交接可追踪；失败阻断/重试/审批暂停和真正 Token SSE | **Tool 接力真机通过；统一业务串联待集成** |
 | **P0 / 025–027** | SandboxProvider/Execution Lease 集成 | 从可信 Scope 签发 Lease、绑定 Workspace、同 Sandbox 接力；未知/过期/跨 Scope 拒绝；无执行需求不申请 Sandbox | **原生 Cube 功能已过；平台授权集成未过** |
 | **P0 / 026** | E2B 版本兼容与原生 SDK 续连 | 固定 2.40 已验组合；补官方 `connect(same_id)`、Pydantic Harness E2B Coder 和生产 DNS/TLS 契约；2.53 明确不支持或升级 Cube | **2.40 最小 LIVE PASS / 后续 OPEN** |
-| **P0 / 028** | Task Facts / RecoveryPoint / Receipt | Worker SIGKILL、跨 Worker 接管、HITL、非幂等 UNKNOWN Tool 对账；选择 PG Worker 或 Temporal/MAF Durable | **历史子项有实证，统一新链路未验** |
+| **P0 / 028** | **Hatchet Process/Durable SPI + Task Facts / RecoveryPoint / Receipt** | Hatchet 两 Engine 故障接管已过；继续同 Run 的 HITL、非幂等 UNKNOWN 对账、Scope/Lease/Fencing、资源回收和 Cube 接力，禁止并行重造 Scheduler | **真实 Hatchet DAG/跨 Engine 安全接管分项 LIVE PASS；统一新链路未验** |
 | **P1** | 真实模型/协议/全场景验收 | LiteLLM 真模型→当前 Runtime SPI→真正逐 Token SSE/Tool/Artifact；Snapshot/Last-Event-ID/Cancellation 完整核对 | **MAF 专项有受限实证，新链路待集成** |
 | **P1** | 上线门禁与容量 | 目标约 100 人并发场景下 Worker/Sandbox 数、启动耗时、P95、失败回收、隔离负例、镜像与证书部署检查 | **未进行新架构等价压测，不虚构指标** |
 
@@ -732,7 +746,7 @@ python -B poc/compatibility/verify_stack.py --profile cube_e2b_native
 
 **已经确认或由 Accepted Contract 冻结的：** 厂商无关、平台拥有 Run/Plan/Step/Attempt/RecoveryPoint 事实；Coding 默认隔离；Runtime/Sandbox/Model 解耦；只做任务级恢复而非底层灾备；E2B 兼容作为 Cube 对外接口；仅按需使用沙箱；内部系统不必引入 SaaS 租户模型；版本创建时冻结；生产不能把工具权限授权给 Session ID 本身。
 
-**当前是优先候选、尚非 Accepted ADR 的：** 通用 Agent 默认使用 Pydantic AI Harness；Coding 使用 OpenCode 2 Harness-in-Cube；Cube 作为 SandboxProvider；Process/Durable 默认究竟 PG Worker 还是 Temporal；以及是否在某些受限 Runtime 使用共享 Host + Remote Sandbox Tool Adapter。
+**当前是优先候选、尚非 Accepted ADR 的：** 通用 Agent 默认使用 Pydantic AI Harness；Coding 使用 OpenCode 2 Harness-in-Cube；Cube 作为 SandboxProvider；Process/Durable 优先使用 Hatchet（DBOS 已排除）；以及是否在某些受限 Runtime 使用共享 Host + Remote Sandbox Tool Adapter。
 
 **需要业务方最终明确的取舍**（不阻断现有架构/POC 收口）：
 
