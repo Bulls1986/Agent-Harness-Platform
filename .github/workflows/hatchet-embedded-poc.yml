@@ -25,5 +25,6 @@ jobs:
       - name: Verify real Hatchet DAG and two public Agent SDKs
         env:
           PYTHONUNBUFFERED: '1'
-          HATCHET_CLIENT_EMBEDDED_VERSION: 'v0.105.0'
+          HATCHET_CLIENT_EMBEDDED_VERSION: 'v0.110.5'
+          HATCHET_CLIENT_EMBEDDED_CHECKSUM: '18ddacae0005042bd982328bcb8d370cca6907352a1ab2a3c8406001d31e7dee'
         run: python -B -m poc.durable_engine.hatchet_embedded_live
