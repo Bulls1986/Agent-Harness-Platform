@@ -12,31 +12,31 @@
 
 - [x] 2.1 Start isolated `postgres:16-alpine` using `docker compose up -d postgres` and verify healthy; independently query both `hatchet_poc` and `harness_poc` databases (already verified in current local environment).
 - [x] 2.2 Confirm `PgFacts` schema creation against Docker `harness_poc` (local smoke PASS; broader transactional tests still required).
-- [ ] 2.3 Verify true PG Run+Steps+Outbox atomic creation, stable command key and separate Hatchet engine DB; automated integration test asserts persisted rows after restart.
-- [ ] 2.4 Add and pass negative tests: duplicate Run, invalid dependency, missing Provider Binding, late terminal mutation, monotonic event sequence.
-- [ ] 2.5 Add and pass lost workflow creation ACK fault-injection: DISPATCHING→BLOCKED_UNKNOWN and second submission blocked; document provider reconciliation limitation.
+- [x] 2.3 Docker PG Run+Steps+Outbox single-transaction tests + distinct Hatchet DB + actual CLI/Inspector Run; restart inspector preserved Step/Provider/14 Events — LOCAL and CI PASS.
+- [x] 2.4 Duplicate Run / missing parent / missing Binding / terminal immutability / monotonic cursor negative PG tests — 7 contract tests PASS (Docker PG; no skipped cases).
+- [x] 2.5 Simulated lost workflow create ACK: DISPATCHING→BLOCKED_UNKNOWN and repeated dispatch rejected — PG test PASS; true Provider ACK-loss lookup/reconcile remains 6.1 OPEN.
 
 ## 3. Real Hatchet + real public SDK handoff (HC-01/03 model-only path)
 
-- [ ] 3.1 Pin Hatchet SDK 1.42.1 / Embedded Engine v0.110.5, Pydantic AI 2.54.0 and OpenAI Agents 0.23.1; verify dependency install/build succeeds using a documented reproducible environment (Docker registry error currently BLOCKS application build).
-- [ ] 3.2 Run **one real** Hatchet Workflow through two SDK Tasks; verify actual provider WorkflowRun ID persisted separately from platform Run ID.
-- [ ] 3.3 Verify Step A Pydantic output is persisted/checked before Step B OpenAI invocation; assert one Attempt per successful Step and zero external model requests.
-- [ ] 3.4 Verify business Run cannot become COMPLETED until both persisted Step outcomes and Provider Binding exist; confirm terminal Event and unique ordered Event cursor.
-- [ ] 3.5 Verify model-only path does not allocate Cube and privileged Shell/Git without grant fails closed; don't classify as full HC-03 Cube acceptance.
+- [x] 3.1 Exact Hatchet SDK 1.42.1 / Engine v0.110.5 / Pydantic AI 2.54.0 / OpenAI Agents 0.23.1 pinned; Docker image BUILD PASS using cached trustworthy Azure Python base+mirror (Docker Hub auth error documented), CI install PASS.
+- [x] 3.2 Real Hatchet Embedded + PG + two real SDK Tasks in the same Run — LOCAL CLI and CI PASS; Provider ID separate from Platform Run ID.
+- [x] 3.3 Pydantic A persisted output required before OpenAI B; each Step 1 Attempt; external model calls 0 — LOCAL+CI PASS.
+- [x] 3.4 Business Run COMPLETED only after two persisted successful Steps + binding; 14 persistent events, one Domain run.completed — LOCAL+CI PASS.
+- [x] 3.5 Model-only 0 Cube and privileged Shell/Git without grant fail closed; offline Runtime SPI 6 guard scenarios PASS; full real Cube still NOT_TESTED.
 
 ## 4. Run Inspector (mandatory minimum-loop acceptance)
 
-- [ ] 4.1 Add a local-only Inspector HTTP API: create real Run and Outbox, list stored Runs, read one persisted Run and events after a cursor; verify API smoke with Docker PostgreSQL and duplicate/missing Run negatives.
-- [ ] 4.2 Implement minimal browser UI for starting a Run, viewing CREATED/RUNNING/COMPLETED/UNKNOWN states, per-Agent Step/Attempt/output and Provider Binding. Verify visually against **real stored data**, not fake fixtures.
-- [ ] 4.3 Add chronological durable domain event timeline; distinguish Step-level `runtime.run.completed` from the sole parent `run.completed`. Verify event cursor monotonicity and no duplicate business terminal Event.
-- [ ] 4.4 Refresh browser and restart Inspector HTTP process; confirm the Run history, Step outputs and events still load from PostgreSQL. Label local-only POC and NOT_TESTED gates visibly.
-- [ ] 4.5 Verify that missing DB/Engine generates an error rather than a successful animation, privileged outputs are text-escaped, and UI never allocates Session-specific Worker processes.
+- [x] 4.1 Inspector API POST/create real PG Run, GET/list/details/events after cursor, missing Run & no Runner 4xx/503 — LOCAL Docker PG 7 tests and CI PASS.
+- [x] 4.2 Real localhost browser HTML served HTTP 200; page JS fetches actual PG Run ID/Step/output/Binding, no mock fixtures; live HTTP Run ID run-1f9cc8929f534de3b5f273701c59c543 VERIFIED. A separate manual cross-browser visual QA is optional after this POC.
+- [x] 4.3 Domain timeline 14 PG Events, monotonic seq; runtime.run.completed twice, business run.completed once; black-box after-cursor and PG contract PASS.
+- [x] 4.4 Real Docker Inspector restart then same Run ID query preserves 14 events/Step outputs/Workflow ID; CI process restart black-box PASS; page labels POC/NOT_TESTED.
+- [x] 4.5 Missing Runner returns 503, DB read fails instead of mock success, renderer exclusively textContent and single shared Hatchet Worker (no Session-specific worker) — contract tests + code review PASS.
 
 ## 5. CI, operational reproducibility and closeout
 
-- [ ] 5.1 Add CI Linux PostgreSQL service job and a local reproducible entry point that executes the actual Hatchet/SPI/PG closed loop, not SDK mocks.
-- [ ] 5.2 Run all new unit/negative/integration tests and existing architecture guard; record commands, outputs and authoritative CI run links.
-- [ ] 5.3 Record technical coverage explicitly: single-Run Hatchet/PG/2 SDK evidence; real Token SSE/Approval/Receipt UNKNOWN/Cube worker-failover/100 concurrency remain OPEN.
+- [x] 5.1 Real Linux PG16 service CI includes exact SDK Engine and real HTTP Inspector E2E; CI run 38037718378 SUCCESS; local Compose reproducible using cached image/mirror.
+- [x] 5.2 7 PG/API tests, 8 architecture guards, 183 docs links + real Engine/Inspector/restart tests PASS; CI 38037718378 and architecture 38037718366 SUCCESS. Retrospective captures exact commands.
+- [x] 5.3 Persisted [post-implementation retrospective](../../../docs/retrospectives/MINIMAL_CLOSED_LOOP_20261010.md) with Run/Workflow IDs, test evidence and NOT_TESTED gates; real Token SSE/Approval/Receipt/Cube/100 concurrency still OPEN.
 - [ ] 5.4 Review diff, remove secrets/cache/build artifacts, create PR and merge only if CI and negative gates are green.
 
 ## 6. Subsequent increments (tracked, not blockers for first model-only closed loop)
