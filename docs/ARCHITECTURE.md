@@ -156,6 +156,10 @@ Define minimal Harness contract
 
 IAM、MCP Governance、Cost/Quota/Billing、Secret、APM/Logging Backend、Object Storage Backup/DR 等外围能力只验证 Ownership Boundary 与 Adapter/Reference 接入是否成立，不要求 Harness 在 POC 中建设对应产品。只有当外围集成失败直接破坏 correctness、recoverability、replaceability 或 production viability 时，才升级为 POC blocker。
 
+## 2.4 开发架构护栏与准入
+
+既有 Accepted Contract 对研发的具体硬约束、边界依赖、变更准入和 PR/CI 检查统一在 [Architecture Guardrails G01–G20](ARCHITECTURE_GUARDRAILS.md) 展开。该护栏是本设计的执行映射，而不是新的技术选型或第二套领域规范；改动 Accepted Contract 仍先走 Architecture Backlog / ADR。
+
 # 3. 总体目标架构
 
 ```mermaid

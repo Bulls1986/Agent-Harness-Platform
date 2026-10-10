@@ -5,6 +5,8 @@
 > **架构状态：集成 POC 阶段（LIMITED GO），非生产准入。** 更新依据截至 **2026-10-10**。已证明关键技术路径可运行；统一平台的持久化、真实模型全链、跨 Worker 恢复、生产级隔离尚未整体验收。
 > **阅读说明：** 本 README 是项目的**总体方案与项目入口**。正式语义遵循已 Accepted 的 [Architecture Contracts](docs/references/README.md)；正在比较的技术方案、具体实现、历史实验和风险以所链接的专题及 [Backlog](docs/ARCHITECTURE_BACKLOG.md) 为准。本文不将候选方案擅自升级为正式 ADR。
 
+> **开发架构护栏：** [G01–G20 架构原则、硬约束和 PR/CI 准入](docs/ARCHITECTURE_GUARDRAILS.md)。开发前从 AGENTS.md 进入；违反 Accepted Contract 必须先经过 ADR，候选选型不得因局部 POC PASS 自动升格。
+
 ## 1. 一分钟读懂：为什么做、做什么、现在到哪一步
 
 ### 当前建设现状：从一个 Coding Agent 扩展到了多种业务场景
