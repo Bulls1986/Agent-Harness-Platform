@@ -731,18 +731,20 @@ OpenCode 2 / MAF；目前全部为候选，尚无完美零适配技术栈。
 
 ## ARCH-TODO-028 Process/Durable 默认实现与任务级恢复对比
 
-**状态：TODO / POC CANDIDATE（P1；未接受）**
+**状态：POC / Hatchet 双 Engine 外部 PG 自动接管 LIVE LIMITED PASS（P1；未 Accepted，生产 NO-GO）**
 
-**方向：** Temporal、MAF Durable、PG + Worker/Scheduler 作为 Process/Durable SPI 候选。Pydantic 选为默认 Agent Adapter 不等于 Temporal 自动被淘汰或必须成为基础设施。
+**方向：** Hatchet（当前首选候选，开源双 Engine 接管已实测），DBOS（单进程恢复已实测，但免费自托管 Conductor 每应用仅一个 Executor 的 G8 许可阻断）、Temporal、MAF Durable、PG + Worker/Scheduler 均保留独立 Process/Durable SPI 候选。Pydantic 只是 AgentRuntime Adapter 候选，不拥有跨 SDK Durable 语义。
+
+**2026-10-10 原始 POC 证据：** [DBOS/Hatchet G8 许可及 A→B 接管专项](references/DURABLE_ENGINE_LICENSE_GATE_20261010.md)。[Hatchet 实际双 SDK DAG CI PASS](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38020725053)；[Hatchet 双 Engine/外部 PostgreSQL 16、Worker A SIGKILL 不重启→B 接管原 Workflow CI PASS](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38021093089)。后者已完成安全可重试阶段，证明原 Run 能接管、已完成 Step 不重复，**但没有验证非幂等 Tool、WAITING_APPROVAL、SSE 或真实 Cube Session**。两个真实 Agent SDK 的调用与跨 Worker 故障是两个单独实验，不应声称同一任务端到端同时覆盖。
 
 **待办与完成标准：**
 
 - 冻结同样的任务级恢复场景：Worker A Crash、Worker B 接管、WAITING_APPROVAL、Cancel/Timeout、RecoveryPoint、真实非幂等 Tool Receipt UNKNOWN → Reconciliation。
-- 比较三种方式所需的**新增开发量、版本运行兼容、状态持久化/恢复证据、运维成本**，以任务级继续/安全失败为标准；磁盘/数据库/对象存储备份不属 Harness。
+- 比较 Hatchet / DBOS 与原有候选所需的**新增开发量、版本运行兼容、状态持久化/恢复证据、运维成本和开源许可**，以任务级继续/安全失败为标准；磁盘/数据库/对象存储备份不属 Harness。
 - 若引入 Pydantic TemporalDurability，需要定义与平台 Workflow/Durable 层的职责分界，防止同一 Agent Run 重复包两层 Durable 引擎。
 - MAF POC-A 与 Temporal POC-C 已有成果继续保留；形成等价验收结论后再决定生产默认并单独更新 Accepted ADR。
 
-**未关闭原因：** 当前三方案尚未按新的多 Runtime/同 Cube 场景完成一致性成本比较。
+**未关闭原因：** Hatchet 的核心队列/双 SDK DAG 与两 Engine 接管已通过真实有限 POC；但审批等待、真实非幂等 Receipt UNKNOWN → Reconciliation、Token SSE、Cube Session/Scope/Lease/Fencing、100 Run 资源对照未验收。DBOS 的分布式恢复/Conductor G8 许可阻断尚未解除，不能正式 Accepted。
 
 ---
 
