@@ -32,6 +32,8 @@ services:
       HATCHET_CLIENT_EMBEDDED_CHECKSUM: "18ddacae0005042bd982328bcb8d370cca6907352a1ab2a3c8406001d31e7dee"
       HATCHET_POC_DATABASE_URL: "postgres://harness_poc:local_poc_only@postgres:5432/hatchet_poc"
       HARNESS_POC_DATABASE_URL: "postgresql://harness_poc:local_poc_only@postgres:5432/harness_poc"
+    volumes:
+      - harness_hatchet_sidecar:/home/.hatchet/embedded
     command: ["python", "-B", "-m", "poc.closed_loop.hatchet_pg_live"]
     profiles: ["demo"]
   inspector:
@@ -54,7 +56,10 @@ services:
       HARNESS_POC_DATABASE_URL: "postgresql://harness_poc:local_poc_only@postgres:5432/harness_poc"
     ports:
       - "127.0.0.1:${HARNESS_INSPECTOR_PORT:-8765}:8765"
+    volumes:
+      - harness_hatchet_sidecar:/home/.hatchet/embedded
     command: ["python", "-B", "-m", "poc.closed_loop.serve"]
     profiles: ["inspector"]
 volumes:
   harness_poc_pg:
+  harness_hatchet_sidecar:
