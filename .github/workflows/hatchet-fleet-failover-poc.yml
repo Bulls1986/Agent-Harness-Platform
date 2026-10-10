@@ -1,0 +1,42 @@
+name: Hatchet External PG Failover POC
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'poc/durable_engine/hatchet_fleet_failover_live.py'
+      - '.github/workflows/hatchet-fleet-failover-poc.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  two-engine-a-to-b-failover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: hatchetpoc
+          POSTGRES_PASSWORD: disposable_ci_password_only
+          POSTGRES_DB: hatchetpoc
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hatchetpoc -d hatchetpoc"
+          --health-interval 2s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install exact Hatchet SDK version
+        run: python -m pip install 'hatchet-sdk==1.42.1'
+      - name: Real independent Engine A failure / Engine B recovery
+        env:
+          PYTHONUNBUFFERED: '1'
+          HATCHET_CLIENT_EMBEDDED_VERSION: 'v0.110.5'
+          HATCHET_CLIENT_EMBEDDED_CHECKSUM: '18ddacae0005042bd982328bcb8d370cca6907352a1ab2a3c8406001d31e7dee'
+          HATCHET_FLEET_DATABASE_URL: 'postgres://hatchetpoc:disposable_ci_password_only@127.0.0.1:5432/hatchetpoc'
+        run: python -B -m poc.durable_engine.hatchet_fleet_failover_live
