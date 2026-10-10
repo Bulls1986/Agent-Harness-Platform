@@ -180,6 +180,10 @@ flowchart TB
 
 平台分为交互层、控制平面与执行平面。Interaction Gateway 负责协议适配与事件转换；Control Plane 是系统最终控制者；Data Plane 是可替换的执行能力集合。
 
+## 3.1 八类分层架构视图
+
+总体架构之外，另有 [八类分层架构视图集](ARCHITECTURE_VIEWS.md)，按业务、逻辑、应用、技术、数据、部署、功能、运行八个维度展开，并统一六层逻辑模型、分层权责与跨视图不变式。该文档仅是当前 Accepted Contract 与多 Harness 候选的映射，不单独引入新领域对象、服务拆分或技术选型 ADR；实际实施状态仍按专项 Findings、Backlog 和准入报告判断。
+
 # 4. 端到端主链
 
 ```mermaid
