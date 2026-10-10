@@ -1,0 +1,29 @@
+name: Hatchet Embedded POC (isolated)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'poc/durable_engine/hatchet_embedded_live.py'
+      - '.github/workflows/hatchet-embedded-poc.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  embedded-agent-dag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install exact SDK and engine client versions
+        run: |
+          python -m pip install 'hatchet-sdk==1.42.1' 'pydantic-ai-slim==2.54.0' 'openai-agents==0.23.1'
+      - name: Verify real Hatchet DAG and two public Agent SDKs
+        env:
+          PYTHONUNBUFFERED: '1'
+          HATCHET_CLIENT_EMBEDDED_VERSION: 'v0.105.0'
+        run: python -B -m poc.durable_engine.hatchet_embedded_live
