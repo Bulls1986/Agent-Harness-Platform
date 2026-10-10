@@ -58,6 +58,8 @@
 
 ## 5. 实施分解与影响
 
+**最终实施合同**：本 ADR-031 仅冻结瘦身职责；[HC-01](HATCHET_WORKFLOW_MAPPING_CONTRACT_20261010.md)、[HC-02](HARNESS_HATCHET_CONSISTENCY_CONTRACT_20261010.md)、[HC-03](HATCHET_WORKER_SANDBOX_BINDING_CONTRACT_20261010.md)（合称 ADR-032）进一步冻结映射、异常一致性与可信 Sandbox Binding。任何新状态机/队列/恢复模块必须先对照这三份合同审查。
+
 - **ExecutionScheduler 瘦身**：仅保留平台资源类别、执行准入/安全策略及容量规则；Queue/Dispatch/通用 Worker 管理和 Durable Retry 交 Hatchet。
 - **Run/Step/Execution 状态收敛**：保留最小身份/审计/版本/验收/业务终态不变式，技术状态由 Provider Binding + Hatchet History 提供并形成平台投影。
 - **RecoveryManager 瘦身**：专注安全恢复裁决、Receipt 对账和受信任 Lease；真正的 wait/retry/resume/failover 复用 Hatchet。
