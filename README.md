@@ -602,6 +602,12 @@ Agent 能写文件，并不意味着它能在**Worker 异常退出后正确继�
 **职责切分：** Harness 的 State Machine 和 Task Facts 不由 Hatchet 托管；Hatchet 的 Workflow/Task ID 是独立 Binding，Engine/Queue 数据库历史也不替代平台的 Event/Run 数据表。跨 Worker 恢复必须先经平台 Scope/Execution Owner/Fencing 和 Side Effect Gate；除 PURE/可证明幂等步骤外，禁止让 Hatchet 自动 Retry 外部不可确认副作用。Session 空闲不占 Worker/Agent 进程，不需 Sandbox 的 Agent 不创建 Sandbox。详见 [完整 Hatchet 分层与时序设计](docs/references/HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md)。
 
 
+### 4.5 Multica 设计参考边界（已决定 ADR-030）
+
+**2026-10-10 已 Accepted 的源码使用边界：** Multica 仅作为 Queue/Worker 生命周期、任务状态、并发与容量治理的**架构思想参考**，不复制、改写、提取或引入其源码/依赖，不采用其 CLI/Daemon 执行层。Harness 的领域状态机、Execution 授权/Lease/Fencing/资源容量规则与对外调度合同由本项目独立设计；**可复用 Hatchet 的开源 Durable Engine、DAG、Queue、Worker 调度与故障接管作为 Process/Durable SPI 的当前实现，不再从零开发这些通用引擎能力。** 两者不冲突：ADR-030 限定的是 Multica 源码和平台自有领域/策略，而 Hatchet 是经独立技术评估选中的 SPI Provider。
+
+这条 ADR **不构成 Hatchet 生产 Accepted ADR**；技术准入继续追踪 [ARCH-TODO-028](docs/ARCHITECTURE_BACKLOG.md)。见 [Multica 设计参考和独立实现决定](docs/references/MULTICA_DESIGN_REFERENCE_DECISION_20261010.md)。
+
 ## 5. 平台最重要的设计契约
 
 ### 5.1 统一任务语义：Conversation / Turn / Run / Plan / Step / Attempt
