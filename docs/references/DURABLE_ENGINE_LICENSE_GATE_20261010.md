@@ -22,7 +22,9 @@
 | CubeSandbox / Session / WorkspaceRef / Scope / Fencing | NOT TESTED | NOT TESTED |
 | 生产准入 | NO-GO | NO-GO |
 
-> **2026-10-10 实际 CI 更新：** [Hatchet Embedded 真实引擎与双 SDK PASS](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38020725053)：Bundled PostgreSQL 完成 246 项迁移，真实启动 Engine/Worker、Pydantic task、OpenAI task，并以父任务输出作为子任务输入。`remote_model_calls=0`。停止进程出现 `resource_tracker` 信号量回收警告，需单独测 Worker 资源释放；此 PASS 不证明 A→B 自动接管。[外部 PostgreSQL + 双 Engine 强制故障专用测试](../../poc/durable_engine/hatchet_fleet_failover_live.py) 独立执行，未获得 PASS 前不得升级该 Gate。\n\n**此分支新增：** [真实 Hatchet Embedded DAG + Pydantic/OpenAI 两 SDK 测试](../../poc/durable_engine/hatchet_embedded_live.py) 与 [独立 GitHub CI](../../.github/workflows/hatchet-embedded-poc.yml)。两 Agent SDK 使用本地确定性 Model，仍实际通过仓库既有 `AgentRuntimeDispatcher`；不能宣称真实 LLM/token stream。下载或启动引擎失败即 CI FAIL，不允许 Mock 回退。
+> **2026-10-10 实际 CI 更新：** [Hatchet Embedded 真实引擎与双 SDK PASS](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38020725053)：Bundled PostgreSQL 完成 246 项迁移，真实启动 Engine/Worker、Pydantic task、OpenAI task，并以父任务输出作为子任务输入。`remote_model_calls=0`。停止进程出现 `resource_tracker` 信号量回收警告，需单独测 Worker 资源释放；此 PASS 不证明 A→B 自动接管。[外部 PostgreSQL + 双 Engine 强制故障专用测试](../../poc/durable_engine/hatchet_fleet_failover_live.py) 独立执行，未获得 PASS 前不得升级该 Gate。
+
+**此分支新增：** [真实 Hatchet Embedded DAG + Pydantic/OpenAI 两 SDK 测试](../../poc/durable_engine/hatchet_embedded_live.py) 与 [独立 GitHub CI](../../.github/workflows/hatchet-embedded-poc.yml)。两 Agent SDK 使用本地确定性 Model，仍实际通过仓库既有 `AgentRuntimeDispatcher`；不能宣称真实 LLM/token stream。下载或启动引擎失败即 CI FAIL，不允许 Mock 回退。
 
 ## 三、跨 Worker 下一阶段验收
 
