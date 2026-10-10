@@ -2,6 +2,8 @@
 
 这里列出**最短可复验路径**。原有分散脚本及其证据保留原位；本索引不创建另一份架构待办，唯一主清单是 [ARCHITECTURE_BACKLOG](../docs/ARCHITECTURE_BACKLOG.md)。
 
+**2026-10-10 Hatchet Durable Engine（ARCH-TODO-028）：** [Embedded 引擎 + 两真实 SDK DAG](durable_engine/hatchet_embedded_live.py) 已在 [GitHub CI #38020725053](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38020725053) PASS；[双 Engine 共用外部 PostgreSQL / A 强杀不重启 → B 接管原 Workflow](durable_engine/hatchet_fleet_failover_live.py) 已在 [GitHub CI #38021093089](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38021093089) PASS。两项是独立有限 POC，**非端到端同一 Run**；非幂等 Tool、WAITING_APPROVAL、真正 Token SSE / Cube / 资源压力未通过，生产 NO-GO。**DBOS 已因商业许可约束排除，不作为备选，也不再安排测试**；历史许可证说明见 [专项评估](../docs/references/DURABLE_ENGINE_LICENSE_GATE_20261010.md)。
+
 ## 一、无需外部服务：可以在 Windows/Linux 验证
 
 ```sh

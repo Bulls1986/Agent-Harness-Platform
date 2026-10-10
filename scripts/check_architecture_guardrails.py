@@ -10,6 +10,7 @@ REQUIRED = (
     "README.md", "AGENTS.md", "docs/ARCHITECTURE.md",
     "docs/ARCHITECTURE_BACKLOG.md", "docs/POC.md",
     "docs/ARCHITECTURE_GUARDRAILS.md", "docs/ARCHITECTURE_VIEWS.md",
+    "docs/references/HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md",
     ".github/PULL_REQUEST_TEMPLATE.md", ".github/workflows/architecture-guard.yml",
     "poc/runtime_spi/contract.py",
     "docs/references/DOMAIN_MODEL_AND_STATE_CONTRACT.md",
@@ -22,7 +23,7 @@ REQUIRED = (
 # Scope intentionally only current platform-owned contract.py, not SDK adapters.
 VENDOR_ROOTS = frozenset({"agents", "openai", "pydantic", "pydantic_ai",
                           "opencode", "cubesandbox", "e2b", "temporalio",
-                          "azure", "microsoft", "sqlalchemy",
+                          "azure", "microsoft", "hatchet_sdk", "dbos", "sqlalchemy",
                           "psycopg", "psycopg2", "asyncpg"})
 VIEW_NAMES = ("业务架构", "逻辑架构", "应用架构", "技术架构",
               "数据架构", "部署架构", "功能架构", "运行架构")

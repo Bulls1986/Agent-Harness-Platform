@@ -40,6 +40,10 @@ class GuardTests(unittest.TestCase):
         issues = check_vendor_imports("from agents import Runner\nimport pydantic_ai\n", "contract.py")
         self.assertEqual(len(issues), 2)
 
+    def test_hatchet_and_rejected_dbos_are_forbidden_in_platform_domain(self):
+        issues = check_vendor_imports("from hatchet_sdk import Hatchet\nfrom dbos import DBOS\n", "contract.py")
+        self.assertEqual(len(issues), 2)
+
     def test_relative_contract_import_allowed(self):
         self.assertEqual(check_vendor_imports("from .contract import RunRequest\n", "contract.py"), [])
 

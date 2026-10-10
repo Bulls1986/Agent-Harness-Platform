@@ -22,5 +22,7 @@ jobs:
         run: python -B -m unittest discover -s tests -p "test_architecture_guardrails.py" -v
       - name: Architecture docs and import boundaries
         run: python -B scripts/check_architecture_guardrails.py
+      - name: Current architecture navigation and local Markdown link targets
+        run: python -B poc/verify_repo_navigation.py
       - name: Runtime SPI no-Sandbox and Fail-Closed offline contract
         run: python -B poc/runtime_spi/verify_runtime_spi.py

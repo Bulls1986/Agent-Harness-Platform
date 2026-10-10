@@ -5,9 +5,9 @@
 > 不以“所有 OpenCode 原生执行入口已隔离”作为前置条件**；完整隔离与审计仍是
 > 生产门禁，不能因阶段降级而从正式架构契约中删除。
 
-> **最新权威候选快照：** [多 Harness 目标架构（2026-10-09）](MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md)。下方“Pydantic + Temporal + Cube 为首选组合”、 “Cube 未部署”及历史能力对照保留为**早期候选/当时证据**，不再表示最新默认 Durable 选型。当前默认 Runtime 候选为 Pydantic Adapter，Durable 后端未决；Cube 原生 SDK 真机已过、E2B 2.53.1 原生兼容仍失败。
+> **历史快照与最新权威增量：** 本页 2026-10-09 的“Pydantic + Temporal + Cube”“Durable 后端未决”“Cube 未部署”均为**历史评估原文**，不再作为当前选型。**2026-10-10 已转为 [Hatchet Process/Durable 唯一优先实施候选](HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md)，DBOS 因商业许可证正式排除，Temporal/MAF Durable/手写 PG Worker 仅作历史保留**；保持平台 AgentRuntime SPI 独立和 Cube 按需隔离。当前统一新 Run 的审批/Tool Receipt/SSE/Cube 恢复仍未生产通过。
 
-## 2026-10-09 傍晚：技术选型收敛候选（尚非 Accepted ADR）
+## 2026-10-09 傍晚：历史技术选型收敛候选（已被 2026-10-10 的 Durable 实施决议覆盖，尚非 Accepted ADR）
 
 **结论：默认轻量 Agent 执行适配器优先 Pydantic AI Harness，统一替换能力来自平台 AgentRuntime SPI，而不是 Pydantic AI 自动执行其他 Agent SDK。**
 
