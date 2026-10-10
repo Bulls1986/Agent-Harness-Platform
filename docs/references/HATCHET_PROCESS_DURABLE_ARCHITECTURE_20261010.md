@@ -51,7 +51,7 @@ flowchart TB
 6. **不确定外部副作用**：工具可能已经成功但 ACK 丢失，一律 UNKNOWN → Reconciliation（查询 SideEffectReceipt/外部事务 ID/人工核对）→ 决定 Resume/Retry/Fail；绝不让 Hatchet retries 直接重放 Git push、提交工单、部署等不可确认的副作用。
 7. **取消与恢复**：Cancel 是请求，不等于 Agent、Tool、Cube 已终止；必须向当前 Worker/Runtime/Sandbox 逐级传播，最后核对实际终态。平台恢复粒度上限取决于 Runtime-native checkpoint 和最近可信 Step 边界，不承诺从任意 Token 继续。
 
-**双层恢复约束：** 默认只有**外围 Hatchet**作为统一 Process/Durable 驱动；Pydantic SDK 内的 DBOSDurability/TemporalDurability 等内部持久化不是默认依赖，不得为同一平台 Step 同时创建两个互相竞争的 durable owner。对真正需要原生 Runtime Resume 的运行，只保存其 Opaque CheckpointRef 并单独制定恢复 Adapter 契约。
+**双层恢复约束：** 默认只有**外围 Hatchet**作为统一 Process/Durable 驱动；Pydantic/其他 SDK 自带的 Runtime-native Durability/Checkpoint 并非平台默认任务引擎，不得为同一平台 Step 同时创建两个互相竞争的 durable owner。对真正需要原生 Runtime Resume 的运行，只保存其 Opaque CheckpointRef 并单独制定恢复 Adapter 契约。
 
 ## 4. 部署与资源拓扑（候选）
 
