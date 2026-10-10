@@ -7,6 +7,8 @@
 
 > **当前架构选型与分层图权威增量：** [Hatchet Process/Durable 架构与职责/恢复/部署边界](docs/references/HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md)（候选实施基线，非生产 Accepted ADR）。**Control Plane 自研边界已按 [ADR-031：薄应用/领域控制层](docs/references/THIN_HARNESS_CONTROL_PLANE_DECISION_20261010.md) 收敛**：Hatchet 是技术执行状态/队列/调度权威；Harness 保留必要 Run/Step/Attempt 业务事实、Approval/Receipt/授权/业务终态和状态投影，不再造第二套技术执行状态机。
 
+> **架构阶段最终三合同（ADR-032 / ARCH-TODO-030：DECIDED）**：[HC-01 Workflow Mapping / Replan](docs/references/HATCHET_WORKFLOW_MAPPING_CONTRACT_20261010.md) · [HC-02 Outbox / 状态投影 / 非幂等 Receipt 一致性](docs/references/HARNESS_HATCHET_CONSISTENCY_CONTRACT_20261010.md) · [HC-03 Worker / ExecutionContext / Cube 可信绑定](docs/references/HATCHET_WORKER_SANDBOX_BINDING_CONTRACT_20261010.md)。**这三份冻结接口与安全语义，非真实集成验收 PASS。**第 4 项旧 PDLC API/会话/数据盘点已转 [Development Backlog](docs/DEVELOPMENT_BACKLOG.md) 中的 DEV-PDLC-01～05，不阻碍架构阶段收口。
+
 > **开发架构护栏：** [G01–G20 架构原则、硬约束和 PR/CI 准入](docs/ARCHITECTURE_GUARDRAILS.md)。开发前从 AGENTS.md 进入；违反 Accepted Contract 必须先经过 ADR，候选选型不得因局部 POC PASS 自动升格。
 
 ## 1. 一分钟读懂：为什么做、做什么、现在到哪一步
@@ -749,9 +751,11 @@ python -B poc/compatibility/verify_stack.py --profile cube_e2b_native
 
 ## 9. 下一阶段怎么集成？按门禁推进，而不是一次建设所有外围平台
 
+**实施输入已冻结（ADR-032）：** Run↔Hatchet Workflow Segment/Task、Outbox/Inbox 与 UNKNOWN 对账、Worker→ExecutionContext→Cube Lease/Fencing。现在按 [Development Backlog](docs/DEVELOPMENT_BACKLOG.md) 的 DEV-HC-01～03 进入集成开发；**旧 PDLC 实码盘点作为 DEV-PDLC-01～05 留给后续开发**。所有 LIVE POC 和生产 Gate 依然必须通过。
+
 | 顺序 | 交付重点 | 完成标准（必须用证据证明） | 状态 |
 |---|---|---|---|
-| **P0 / 029** | **现有 OpenCode PDLC 无感替换** | 真实现网功能/API/历史会话/项目/Agent与 Skill/MCP/Workspace 清单；原入口和权限兼容、灰度接管、禁止副作用双写，回退演练通过 | **业务目标确定；现网源码与数据迁移尚未验收** |
+| **P0 / 029** | **现有 OpenCode PDLC 无感替换（开发阶段 M0–M4）** | 真实现网功能/API/历史会话/项目/Agent与 Skill/MCP/Workspace 清单；原入口和权限兼容、灰度接管、禁止副作用双写，回退演练通过 | **业务目标确定；现网源码与数据迁移尚未验收** |
 | **P0 / 025** | **跨 Agent 串联 + AgentRuntime SPI + 执行 API** | 一个 Run 中至少两个不同 Runtime 按 Recipe/Step 串联，Artifact/Evidence 交接可追踪；失败阻断/重试/审批暂停和真正 Token SSE | **Tool 接力真机通过；统一业务串联待集成** |
 | **P0 / 025–027** | SandboxProvider/Execution Lease 集成 | 从可信 Scope 签发 Lease、绑定 Workspace、同 Sandbox 接力；未知/过期/跨 Scope 拒绝；无执行需求不申请 Sandbox | **原生 Cube 功能已过；平台授权集成未过** |
 | **P0 / 026** | E2B 版本兼容与原生 SDK 续连 | 固定 2.40 已验组合；补官方 `connect(same_id)`、Pydantic Harness E2B Coder 和生产 DNS/TLS 契约；2.53 明确不支持或升级 Cube | **2.40 最小 LIVE PASS / 后续 OPEN** |
