@@ -1,0 +1,100 @@
+name: OpenSpec minimal closed loop (real PG + Hatchet + Inspector)
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'poc/closed_loop/**'
+      - 'compose.yaml'
+      - 'openspec/changes/minimal-run-closed-loop/**'
+      - '.github/workflows/closed-loop-poc.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-hatchet-two-sdk-inspector:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: harness_poc
+          POSTGRES_PASSWORD: local_ci_disposable
+          POSTGRES_DB: hatchet_poc
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U harness_poc -d hatchet_poc"
+          --health-interval 2s --health-timeout 5s --health-retries 30
+    env:
+      PYTHONUNBUFFERED: '1'
+      HATCHET_CLIENT_EMBEDDED_VERSION: 'v0.110.5'
+      HATCHET_CLIENT_EMBEDDED_CHECKSUM: '18ddacae0005042bd982328bcb8d370cca6907352a1ab2a3c8406001d31e7dee'
+      HATCHET_POC_DATABASE_URL: 'postgres://harness_poc:local_ci_disposable@127.0.0.1:5432/hatchet_poc'
+      HARNESS_POC_DATABASE_URL: 'postgresql://harness_poc:local_ci_disposable@127.0.0.1:5432/harness_poc'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install exact public SDKs + Inspector test dependencies
+        run: |
+          python -m pip install 'hatchet-sdk==1.42.1' 'pydantic-ai-slim==2.54.0' 'openai-agents==0.23.1' 'psycopg[binary]>=3.2,<4' 'fastapi>=0.115,<1' 'uvicorn>=0.30,<1' 'httpx>=0.27,<1'
+      - name: Create independent Harness facts database
+        run: |
+          python - <<'PY'
+          import psycopg
+          with psycopg.connect("postgresql://harness_poc:local_ci_disposable@127.0.0.1:5432/hatchet_poc", autocommit=True) as c:
+              c.execute("CREATE DATABASE harness_poc")
+          print("Two independent databases ready")
+          PY
+      - name: Verify OpenSpec, architecture guards and PG/API TDD contracts
+        run: |
+          python -B -m unittest poc.closed_loop.test_facts_pg poc.closed_loop.test_inspector_pg -v
+          python -B -m unittest tests.test_architecture_guardrails -v
+          python -B poc/verify_repo_navigation.py
+      - name: Real Engine and two SDKs in one PG-backed business Run
+        run: python -B -m poc.closed_loop.hatchet_pg_live
+      - name: Real HTTP Inspector submit and persistent refresh / process restart
+        run: |
+          set -euo pipefail
+          python -B -m poc.closed_loop.serve > /tmp/harness-inspector.log 2>&1 &
+          APP_PID=$!
+          cleanup() { kill "$APP_PID" 2>/dev/null || true; }
+          trap cleanup EXIT
+          python - <<'PY'
+          import time, urllib.request
+          for i in range(100):
+              try:
+                  with urllib.request.urlopen('http://127.0.0.1:8765/', timeout=2) as r:
+                      assert r.status == 200
+                  break
+              except Exception:
+                  time.sleep(1)
+          else:
+              raise RuntimeError('Inspector failed to start')
+          PY
+          python -B -m poc.closed_loop.verify_inspector_live | tee /tmp/harness-inspector-e2e.json
+          RUN_ID="$(python -c 'import json;print(json.load(open("/tmp/harness-inspector-e2e.json"))["run_id"])')"
+          kill "$APP_PID" || true
+          wait "$APP_PID" || true
+          APP_PID=""
+          python -B -m poc.closed_loop.serve >> /tmp/harness-inspector.log 2>&1 &
+          APP_PID=$!
+          python - <<'PY'
+          import time, urllib.request
+          for i in range(100):
+              try:
+                  with urllib.request.urlopen('http://127.0.0.1:8765/', timeout=2) as r:
+                      assert r.status == 200
+                  break
+              except Exception:
+                  time.sleep(1)
+          else:
+              raise RuntimeError('Restarted Inspector failed to start')
+          PY
+          python -B -m poc.closed_loop.verify_inspector_live --run-id "$RUN_ID"
+      - name: Show bounded Inspector logs if failed
+        if: failure()
+        run: |
+          if [ -f /tmp/harness-inspector.log ]; then tail -80 /tmp/harness-inspector.log; fi
