@@ -32,7 +32,7 @@
 - [ ] 4.4 Refresh browser and restart Inspector HTTP process; confirm the Run history, Step outputs and events still load from PostgreSQL. Label local-only POC and NOT_TESTED gates visibly.
 - [ ] 4.5 Verify that missing DB/Engine generates an error rather than a successful animation, privileged outputs are text-escaped, and UI never allocates Session-specific Worker processes.
 
-## 5. CI, operational reproducibility and closeout## 4. CI, operational reproducibility and closeout
+## 5. CI, operational reproducibility and closeout
 
 - [ ] 5.1 Add CI Linux PostgreSQL service job and a local reproducible entry point that executes the actual Hatchet/SPI/PG closed loop, not SDK mocks.
 - [ ] 5.2 Run all new unit/negative/integration tests and existing architecture guard; record commands, outputs and authoritative CI run links.
