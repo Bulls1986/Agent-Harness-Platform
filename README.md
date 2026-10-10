@@ -576,6 +576,12 @@ Agent 能写文件，并不意味着它能在**Worker 异常退出后正确继�
 
 来源：[MAF 决策报告](poc/maf/POC_A_DECISION_CLOSEOUT.md)、[MAF vs Temporal 同口径比较](poc/temporal/C14_COMPARATIVE_DECISION.md)。
 
+### 4.5 Multica：只参考调度思路，独立实现
+
+**2026-10-10 已决定（ADR-030）：** Multica 仅作为 Scheduler、Run/Attempt、Worker 生命周期及任务持久化等**架构思想参考**；不直接复制、改写、提取或引入 Multica 源码/依赖，不采用其 CLI/Daemon 执行层。Harness 的 Scheduler、状态机与调度协议由项目独立实现，并继续严格遵循现有 Domain、Process/Durable、Runtime 与 Sandbox SPI 边界。
+
+这项决定只明确参考与源码使用边界，**不意味着 PG Worker、Temporal、MAF Durable 已完成技术选型**。见[Multica 设计参考与独立实现决策](docs/references/MULTICA_DESIGN_REFERENCE_DECISION_20261010.md)；技术验收继续跟踪 [ARCH-TODO-028](docs/ARCHITECTURE_BACKLOG.md)。
+
 ## 5. 平台最重要的设计契约
 
 ### 5.1 统一任务语义：Conversation / Turn / Run / Plan / Step / Attempt
