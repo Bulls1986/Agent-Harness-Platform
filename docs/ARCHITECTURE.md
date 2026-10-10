@@ -14,6 +14,8 @@
 
 **说明：本文件记录的是截至 2026-09-29 的技术事实与首轮架构决策。框架能力、许可和托管策略变化较快，进入采购或正式落地前必须重新核验。**
 
+> **2026-10-10 Control Plane 职责瘦身决议（ADR-031）：** [薄 Harness Control Plane / Hatchet 技术执行权威与业务状态投影边界](references/THIN_HARNESS_CONTROL_PLANE_DECISION_20261010.md)。控制层仍自研，但只负责业务 Run/Step/Attempt/Verification/Approval/Receipt/Policy/终态及最小状态投影；Hatchet 为 Workflow/Task 技术执行状态、队列、Dispatch、Retry/Wait/Worker 故障恢复的权威，**不再自建第二套通用调度器或独立技术执行状态机**。不修改已 Accepted Domain/Recovery/Receipt 合同；生产仍 NO-GO。
+>
 > **2026-10-10 当前 Process/Durable 目标架构（候选实施基线，非生产 Accepted ADR）：** [Hatchet 六层分工 / 执行拓扑 / PostgreSQL 独立 Schema / 生命周期与故障恢复](references/HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md) 为本轮实施依据；**Hatchet Embedded / 自托管 Engine + PostgreSQL 是唯一优先实现选择，DBOS 由于自托管 Conductor 多 Executor 许可证正式 REJECTED / OUT OF SCOPE，不再备选或验证**。原 Temporal/MAF/PG Worker 记录仅作历史事实。两项 Hatchet 真实 CI 分别证明 [双 SDK DAG](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38020725053) 与 [双 Engine 的 A 崩溃 B 接管安全步骤](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38021093089)，并非同一个 Run 全链。平台依然拥有 Run/Plan/Step/Attempt/Execution/Approval/Receipt/RecoveryPoint 领域事实；Hatchet 只承载队列、DAG、Worker Dispatch、History。非幂等 Receipt / WAITING_APPROVAL / Token SSE / Cube/Lease / 资源压测仍 NO-GO。 [许可和排除依据](references/DURABLE_ENGINE_LICENSE_GATE_20261010.md)。
 
 > **2026-10-10 真实集成 POC 增量（非 Accepted ADR）：** 已真实验证 Cube v0.7.2 与官方 `e2b==2.40.0` 在私有 DNS/`E2B_DOMAIN=cube.app`/可信 TLS CA 条件下的 Sandbox create/files/commands/kill、两 Sandbox 文件隔离与 `openai-agents==0.23.1` 的原生 E2BSandboxClient create/exec/aclose；`e2b==2.53.1` 与本版本 Cube 的 `POST /v2/sandboxes` 仍 405。
@@ -924,6 +926,7 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 | ADR-029 | POC-C C00–C16 阶段**技术评估**收口，Temporal 保留 Durable Adapter 优先候选；G2/G3/G6 完整硬门禁未过，生产主架构 NO-GO，后续归 ARCH-TODO-025。 | Accepted（仅评估处置；非生产 ADR） |
 
 | ADR-030 | Multica 仅作为调度/任务生命周期的设计思想参考，不复制/依赖其源码；本平台独立实现领域状态机与 Execution 授权/容量策略，不引入 Multica CLI/Daemon。Hatchet SPI 当前实现选择不改变这条源码使用边界，也不意味着生产准入。 | Accepted（源码使用边界；非生产选型） |
+| ADR-031 | **Harness Control Plane 保持轻量自研；Hatchet 负责技术执行状态、DAG/队列/Worker/Retry/Wait，Harness 保留必要业务事实与可重建投影、审批/Receipt/恢复准入裁决；禁止自建第二套技术执行状态机**。遵循 G01/G02 与 Domain Contract。 | Decided（实施职责边界；非生产选型） |
 
 # 19. MAF 扩展性验证要求
 
