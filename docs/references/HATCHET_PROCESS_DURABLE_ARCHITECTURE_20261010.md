@@ -2,6 +2,8 @@
 
 > 状态：**Architecture Candidate / Implementation Baseline（未 Accepted Production ADR）**。唯一对照与准入待办：[ARCH-TODO-028](../ARCHITECTURE_BACKLOG.md)。
 >
+> **Control Plane 具体自研边界以 [ADR-031 薄控制层决议](THIN_HARNESS_CONTROL_PLANE_DECISION_20261010.md) 为准：Hatchet 是技术执行状态权威，Harness 仅保存必要领域事实/状态投影，不重复实现完整技术执行状态机。**
+>
 > 本文规定当前代码与架构图应遵循的**候选实现方向**，不是宣称目标架构整体已完成生产验收。DBOS 因许可证不符合本平台要求，已由决策**正式排除（REJECTED）**；其历史验证可以留档，但不得再次列为备选、开发分支或验收对象。Temporal、MAF Durable、手写 PG Worker 仅留历史调研，不作为本阶段并行研发路线。
 
 ## 1. 当前明确的架构选择

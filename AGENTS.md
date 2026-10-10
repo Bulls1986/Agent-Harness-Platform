@@ -26,7 +26,7 @@
 3. `docs/ARCHITECTURE.md`
 4. `docs/ARCHITECTURE_BACKLOG.md`
 5. `docs/POC.md`
-6. 若涉及 Process/Durable、Agent 串联、持久执行或 Worker 恢复，先读 `docs/references/HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md`（当前实施候选基线）
+6. 若涉及 Process/Durable、Agent 串联、持久执行或 Worker 恢复，先读 `docs/references/HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md`（当前实施候选基线）及 `docs/references/THIN_HARNESS_CONTROL_PLANE_DECISION_20261010.md`（ADR-031：Hatchet 技术执行权威；Harness 薄领域控制和最小状态投影，不重造 Scheduler）
 7. 与当前任务直接相关的 `docs/references/*.md`
 
 如果任务涉及已经关闭的架构待办，必须先读取其 Accepted Contract。
