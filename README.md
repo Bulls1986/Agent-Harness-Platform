@@ -9,6 +9,10 @@
 
 > **架构阶段最终三合同（ADR-032 / ARCH-TODO-030：DECIDED）**：[HC-01 Workflow Mapping / Replan](docs/references/HATCHET_WORKFLOW_MAPPING_CONTRACT_20261010.md) · [HC-02 Outbox / 状态投影 / 非幂等 Receipt 一致性](docs/references/HARNESS_HATCHET_CONSISTENCY_CONTRACT_20261010.md) · [HC-03 Worker / ExecutionContext / Cube 可信绑定](docs/references/HATCHET_WORKER_SANDBOX_BINDING_CONTRACT_20261010.md)。**这三份冻结接口与安全语义，非真实集成验收 PASS。**第 4 项旧 PDLC API/会话/数据盘点已转 [Development Backlog](docs/DEVELOPMENT_BACKLOG.md) 中的 DEV-PDLC-01～05，不阻碍架构阶段收口。
 
+> **OpenSpec 工程实施入口**：[minimal-run-closed-loop：Proposal / 四项 Specs / Design / Tasks](openspec/changes/minimal-run-closed-loop/)（规格 4/4 校验通过；**Docker PG + 真 Hatchet + 双 SDK + Inspector 本地/CI 最小闭环 PASS，非完整生产准入**）。当前探索直接使用 [Docker PostgreSQL Compose](compose.yaml)，Hatchet 与 Harness 使用独立数据库；见 [开发任务清单](docs/DEVELOPMENT_BACKLOG.md)。
+
+> **POC 实测与复盘：** [最小闭环 POC README](poc/closed_loop/README.md) · [测试先行/故障复盘](docs/retrospectives/MINIMAL_CLOSED_LOOP_20261010.md) · [真实闭环 CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38037718378)。
+>
 > **开发架构护栏：** [G01–G20 架构原则、硬约束和 PR/CI 准入](docs/ARCHITECTURE_GUARDRAILS.md)。开发前从 AGENTS.md 进入；违反 Accepted Contract 必须先经过 ADR，候选选型不得因局部 POC PASS 自动升格。
 
 ## 1. 一分钟读懂：为什么做、做什么、现在到哪一步

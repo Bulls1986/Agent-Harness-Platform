@@ -1,0 +1,65 @@
+name: harness-closed-loop
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: harness_poc
+      POSTGRES_PASSWORD: local_poc_only
+      POSTGRES_DB: hatchet_poc
+    ports:
+      - "127.0.0.1:${HARNESS_POC_PG_PORT:-55447}:5432"
+    volumes:
+      - harness_poc_pg:/var/lib/postgresql/data
+      - ./poc/closed_loop/init_dbs.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U harness_poc -d hatchet_poc"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  loop:
+    build:
+      context: .
+      dockerfile: poc/closed_loop/Dockerfile
+      args:
+        PYTHON_BASE_IMAGE: ${HARNESS_POC_PYTHON_BASE:-python:3.12-slim}
+        PIP_INDEX_URL: ${HARNESS_POC_PIP_INDEX:-https://pypi.org/simple}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PYTHONUNBUFFERED: "1"
+      HATCHET_CLIENT_EMBEDDED_VERSION: "v0.110.5"
+      HATCHET_CLIENT_EMBEDDED_CHECKSUM: "18ddacae0005042bd982328bcb8d370cca6907352a1ab2a3c8406001d31e7dee"
+      HATCHET_POC_DATABASE_URL: "postgres://harness_poc:local_poc_only@postgres:5432/hatchet_poc"
+      HARNESS_POC_DATABASE_URL: "postgresql://harness_poc:local_poc_only@postgres:5432/harness_poc"
+    volumes:
+      - harness_hatchet_sidecar:/home/.hatchet/embedded
+    command: ["python", "-B", "-m", "poc.closed_loop.hatchet_pg_live"]
+    profiles: ["demo"]
+  inspector:
+    build:
+      context: .
+      dockerfile: poc/closed_loop/Dockerfile
+      args:
+        PYTHON_BASE_IMAGE: ${HARNESS_POC_PYTHON_BASE:-python:3.12-slim}
+        PIP_INDEX_URL: ${HARNESS_POC_PIP_INDEX:-https://pypi.org/simple}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PYTHONUNBUFFERED: "1"
+      HARNESS_INSPECTOR_HOST: 0.0.0.0
+      HARNESS_INSPECTOR_PORT: "8765"
+      HATCHET_CLIENT_EMBEDDED_VERSION: "v0.110.5"
+      HATCHET_CLIENT_EMBEDDED_CHECKSUM: "18ddacae0005042bd982328bcb8d370cca6907352a1ab2a3c8406001d31e7dee"
+      HATCHET_POC_DATABASE_URL: "postgres://harness_poc:local_poc_only@postgres:5432/hatchet_poc"
+      HARNESS_POC_DATABASE_URL: "postgresql://harness_poc:local_poc_only@postgres:5432/harness_poc"
+    ports:
+      - "127.0.0.1:${HARNESS_INSPECTOR_PORT:-8765}:8765"
+    volumes:
+      - harness_hatchet_sidecar:/home/.hatchet/embedded
+    command: ["python", "-B", "-m", "poc.closed_loop.serve"]
+    profiles: ["inspector"]
+volumes:
+  harness_poc_pg:
+  harness_hatchet_sidecar:

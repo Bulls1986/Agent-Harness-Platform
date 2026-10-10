@@ -1,0 +1,44 @@
+schema: spec-driven
+context: |
+  Platform: Agent Harness Platform, Python runtime adapters with Hatchet Process/Durable SPI.
+  Implement HC-01 Workflow Mapping, HC-02 Consistency and HC-03 Worker/Cube Binding without a second scheduler.
+  The first minimal closed loop MUST use PostgreSQL 16 in Docker, distinct Hatchet engine and Harness facts databases.
+  Protect platform Run/Plan/Step/Attempt semantics and UNKNOWN fail-closed; production is NOT Accepted.
+  Existing PDLC migration is later work (DEV-PDLC-01~05).
+rules:
+  proposal:
+    - Explicitly scope production exclusions and observed versus unverified results.
+  tasks:
+    - Each task must state observable verification; mark done only after evidence exists.
+
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+# Add your tech stack, conventions, style guides, domain knowledge, etc.
+# Example:
+#   context: |
+#     Tech stack: TypeScript, React, Node.js
+#     We use conventional commits
+#     Domain: e-commerce platform
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing
