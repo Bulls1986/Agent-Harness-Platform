@@ -4,6 +4,8 @@
 >
 > 本文件尤其承接此前架构收口中的 **第 4 项：旧 PDLC 现网 API/会话/数据与无感迁移实码盘点**，用户明确要求**留在后续开发工作中**，不再阻挡 HC-01/02/03 的架构收口。
 
+**首个实施变更（OpenSpec）**：[minimal-run-closed-loop](../openspec/changes/minimal-run-closed-loop/)：Proposal、三项 Specs、Design、Tasks 已建立，`openspec validate --strict` 通过；目标为 Docker PG 双库 + Hatchet + Pydantic/OpenAI 两 SDK 的一条真实业务 Run。**仅已建立规格与本地 PG，真正一体化端到端仍是 TODO；不得记入 ARCH-TODO-028 生产门禁通过。**
+
 ## 开发主线与依赖
 
 | ID | 阶段 | 交付及验收定义 | 所依赖的冻结合同 | 状态 |
