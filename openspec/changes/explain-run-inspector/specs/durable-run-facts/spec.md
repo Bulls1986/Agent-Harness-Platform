@@ -1,6 +1,6 @@
 # Durable Run Facts — explainable result
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: Local POC retains the original run input and final result for inspection
 The Harness PG business Run fact SHALL capture optional local-only `input_prompt` at creation and `result_json` atomically with its final business transition. The final result SHALL include the Step B output, the source Step, both Step outputs and a mode marker identifying deterministic local models. Hatchet engine tables are not used as business facts.
