@@ -8,7 +8,8 @@
 |---|---|---|
 | **总体架构、建设必要性、方案优劣势、真实 POC 证据与路线图** | **[根目录 README：架构设计方案](../README.md)** | **现行总入口：集成 POC LIMITED GO / 生产 NO-GO** |
 | **替换现有 OpenCode PDLC、保留存量能力及用户无感迁移** | [PDLC 替换与迁移方案](references/PDLC_REPLACEMENT_MIGRATION_20261010.md) | **业务目标已确认、迁移实码盘点未完成** |
-| 当前多 Harness 目标架构与分层 | [多 Harness 目标架构候选](references/MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md) | **CANDIDATE，不是 Accepted ADR** |
+| **当前 Process/Durable 目标架构、部署拓扑与安全恢复** | **[Hatchet 分层与架构设计（2026-10-10）](references/HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md)** | **Hatchet 唯一优先实施候选；DBOS REJECTED；生产 NO-GO** |
+| 多 Harness 原始目标评估快照 | [2026-10-09 多 Harness 候选](references/MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md) | 历史快照；其 Durable 默认已被上面新决策覆盖 |
 | 本轮技术准入 / GO-NO GO 和证据 | [准入评估](references/MULTI_HARNESS_ADMISSION_20261009.md) | POC 分级准入 |
 | **已验证技术版本 / 可兼容 SDK 组合 / OCI Digest / Cube Template** | [2026-10-10 实测版本基线](references/VERIFIED_STACK_BASELINE_20261010.md) | **POC 锁定版本，生产未 Accepted** |
 | **本轮主干分支整合与历史分支覆盖核查** | [2026-10-10 整合审计记录](BRANCH_INTEGRATION_20261010.md) | **已执行三方合并、待 CI/主干合并** |
@@ -26,7 +27,7 @@
 - [Cube / OpenCode 2 / OpenAI Agents SDK](../poc/opencode_sandbox/README.md)：真实 Cube OpenCode V2 / Git / SDK 接力 PASS；官方 E2B 2.40.0 + OpenAI Native 在指定 DNS/CA 下 PASS，2.53.1 405 仍为已知不兼容组合。
 - [Pydantic AI Harness](../poc/pydantic_harness/README.md)：共享 Agent Run、Linux 本地工具路由 PASS；真实 Cube 的默认 E2B Backend 尚未 PASS。
 - [MAF](../poc/maf/)：POC-A 归档。保留 Workflow、Recovery、协议结论，并作为可选 Runtime 比较。
-- [Temporal](../poc/temporal/)：POC-C 归档。保留任务级可靠性证据，并作为可选 Durable Backend 比较。
+- [Temporal](../poc/temporal/)：POC-C 历史归档。保留任务级可靠性证据，不再作为当前与 Hatchet 并行开发的 Durable Backend。
 - [架构候选与技术评估](references/README.md)：技术选型演变过程的**历史探索证据**，不能用早期“环境不可运行 / 尚无 Cube 实例”覆盖后续真机结果。
 
 ## 维护规则
