@@ -47,7 +47,7 @@
 37. [**已验证技术栈版本基线、E2B 兼容矩阵、Cube OCI Digest 与 Template（2026-10-10）**](VERIFIED_STACK_BASELINE_20261010.md)
 38. [**现有 OpenCode PDLC 替换、已有能力无感迁移与跨 Agent 串联方案（2026-10-10）**](PDLC_REPLACEMENT_MIGRATION_20261010.md)
 
-**架构视图：** [八类分层架构图（业务 / 逻辑 / 应用 / 技术 / 数据 / 部署 / 功能 / 运行）](../ARCHITECTURE_VIEWS.md) —— 从现有 Accepted Contract 和候选拓扑派生的统一视图，不是新的独立决策来源。
+**架构视图：** 八类分层架构图现已[直接嵌入根目录 README（第 3.1 节）](../../README.md#31-八类分层架构视图)，旧 [ARCHITECTURE_VIEWS.md](../ARCHITECTURE_VIEWS.md) 仅提供兼容导航，不重复维护图表。
 
 ## 阶段评估处置索引
 
