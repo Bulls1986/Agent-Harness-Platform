@@ -12,6 +12,7 @@
 | 本轮技术准入 / GO-NO GO 和证据 | [准入评估](references/MULTI_HARNESS_ADMISSION_20261009.md) | POC 分级准入 |
 | **已验证技术版本 / 可兼容 SDK 组合 / OCI Digest / Cube Template** | [2026-10-10 实测版本基线](references/VERIFIED_STACK_BASELINE_20261010.md) | **POC 锁定版本，生产未 Accepted** |
 | **本轮主干分支整合与历史分支覆盖核查** | [2026-10-10 整合审计记录](BRANCH_INTEGRATION_20261010.md) | **已执行三方合并、待 CI/主干合并** |
+| **Multica 设计参考与独立实现边界（ADR-030）** | [2026-10-10 决策记录](references/MULTICA_DESIGN_REFERENCE_DECISION_20261010.md) | **已决定不复用代码；调度/持久化技术选型仍开放** |
 | 唯一架构待办主清单 | [ARCHITECTURE_BACKLOG](ARCHITECTURE_BACKLOG.md)（024～029） | OPEN |
 | 平台既有架构总设计 | [ARCHITECTURE](ARCHITECTURE.md) | V1.0 及其 Accepted Contract 不被 POC 候选覆盖 |
 | POC 硬门禁、方案 A/C 历史范围 | [POC](POC.md) | 历史基线 + 新候选补充 |
