@@ -14,7 +14,7 @@
 
 **说明：本文件记录的是截至 2026-09-29 的技术事实与首轮架构决策。框架能力、许可和托管策略变化较快，进入采购或正式落地前必须重新核验。**
 
-> **2026-10-10 Process/Durable 候选调整（非 Accepted ADR）：** Hatchet Embedded 真实引擎 + 多 SDK DAG、外部 PostgreSQL 两独立 Engine 的 A 故障 B 自动接管均取得限定 PASS，且 Hatchet 与 Embedded Sidecar 均为 MIT；DBOS 自托管 Conductor 多 Executor 存在 G8 商业许可门槛。保留 Process/Durable SPI 和平台 Run/Step/Attempt 权威模型，**Hatchet 为本轮唯一优先实现候选；DBOS 因许可证约束正式排除，Temporal/MAF 仅保留历史结论**。真实 Tool Receipt、Approval、Token SSE、Cube/Sandbox/Lease 与资源门禁未完成，参见 [ARCH-TODO-028 对照和证据](references/DURABLE_ENGINE_LICENSE_GATE_20261010.md)；**不作生产准入**。
+> **2026-10-10 当前 Process/Durable 目标架构（候选实施基线，非生产 Accepted ADR）：** [Hatchet 六层分工 / 执行拓扑 / PostgreSQL 独立 Schema / 生命周期与故障恢复](references/HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md) 为本轮实施依据；**Hatchet Embedded / 自托管 Engine + PostgreSQL 是唯一优先实现选择，DBOS 由于自托管 Conductor 多 Executor 许可证正式 REJECTED / OUT OF SCOPE，不再备选或验证**。原 Temporal/MAF/PG Worker 记录仅作历史事实。两项 Hatchet 真实 CI 分别证明 [双 SDK DAG](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38020725053) 与 [双 Engine 的 A 崩溃 B 接管安全步骤](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38021093089)，并非同一个 Run 全链。平台依然拥有 Run/Plan/Step/Attempt/Execution/Approval/Receipt/RecoveryPoint 领域事实；Hatchet 只承载队列、DAG、Worker Dispatch、History。非幂等 Receipt / WAITING_APPROVAL / Token SSE / Cube/Lease / 资源压测仍 NO-GO。 [许可和排除依据](references/DURABLE_ENGINE_LICENSE_GATE_20261010.md)。
 
 > **2026-10-10 真实集成 POC 增量（非 Accepted ADR）：** 已真实验证 Cube v0.7.2 与官方 `e2b==2.40.0` 在私有 DNS/`E2B_DOMAIN=cube.app`/可信 TLS CA 条件下的 Sandbox create/files/commands/kill、两 Sandbox 文件隔离与 `openai-agents==0.23.1` 的原生 E2BSandboxClient create/exec/aclose；`e2b==2.53.1` 与本版本 Cube 的 `POST /v2/sandboxes` 仍 405。
 > 平台自有 [AgentRuntime SPI 最小代码](../poc/runtime_spi/README.md) 已具 Run/Execution/Scope/Owner/Fencing/Grant/Capabilities、Typed Event/SSE、Cancel/Unsupported 和 Pydantic/OpenAI 公共 Run Adapter 的真实 SDK 本地确定性模型 POC；OpenCode V2 的 SPI Session Factory 当前离线模拟。两项进度归 ARCH-TODO-025/026，**不修改 Accepted Contract、不关闭生产准入**。详见 [版本矩阵与原始真机证据](../poc/opencode_sandbox/E2B_PRIVATE_DNS_VERIFICATION_20261010.md)。
@@ -849,7 +849,7 @@ Capability 表示组件具备的技术能力；Policy 只负责 Harness 当前 E
 |---------------------|-----------------------------------------------------|----------------------|
 | Harness Platform Layer | Run/Policy/Recipe/Artifact Metadata/API             | 任务编排与执行控制；不拥有企业 IAM/治理产品 |
 | External Enterprise Services | IdP/IAM/Credential/Governance/Observability      | 外部能力；Harness 仅通过 Adapter/Reference/Decision 接入 |
-| Durable Control     | MAF Workflow / ADK orchestration / Temporal         | 由 POC 决定          |
+| Process/Durable SPI | **Hatchet Adapter + Embedded/自托管 Engine + PostgreSQL** | 2026-10-10 唯一优先候选；仅负责 DAG/Queue/Worker/History，不能接管 Harness Domain/Task Facts；生产尚未 Accepted |
 | Agent Runtime       | MAF / ADK / OpenAI Agents / Strands / Codex Adapter | 独立进程/容器        |
 | Sandbox / Execution | CubeSandbox 为生产默认候选；Docker/K8s 为 fallback/扩展 | Local/Remote Cube cluster 可替换，不绑定云服务 |
 | External Storage      | PostgreSQL + Object Storage                         | Harness 消费持久化能力；底层 HA/Backup/DR 由企业基础设施负责 |
@@ -874,6 +874,8 @@ Capability 表示组件具备的技术能力；Policy 只负责 Harness 当前 E
 | PydanticAI                | 类型安全 Agent Runtime        | 5              | 2           | 3                 | 观察                 | 观察/备选            |
 
 > 上述匹配比例为 2026-09-29 的 POC 前架构映射估算，建议按 ±5 个百分点理解，不作为最终选型结论。
+
+> **2026-10-10 生效范围说明：** 下方 2026-09-29～10-09 的 POC-A/POC-C 打分与建议是**历史选型截面**；当前 Durable 主选已调整为 Hatchet。旧评估不被删改，但不构成 Temporal/MAF Durable 与 Hatchet 并行选型或生产默认。
 
 ## 16.1 POC-C 阶段选型裁决（2026-10-09）
 
@@ -945,11 +947,11 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 未决架构问题统一维护在 [`docs/ARCHITECTURE_BACKLOG.md`](ARCHITECTURE_BACKLOG.md)。Backlog 中的条目在形成 Decision/ADR 并同步本文件后方可关闭。
 
 
-1. 完成三条 POC，以相同业务场景、相同测试集和相同部署约束进行对比。
-2. 确定 Durable Control Plane 的最终归属：框架内建还是 Temporal 独立承担。
-3. 确定 Agent Runtime SPI、Sandbox SPI、Conversation Event Protocol 的 V1 Schema。
-4. 完成 CubeSandbox、ExecutionScheduler、Environment Registry 专项 POC，验证 Local/Remote Cube cluster 切换、容量调度、环境一致性和故障恢复。
-5. 进入 Coding/Document 两个真实 Recipe 试点，验证是否真正避免框架耦合。
+1. **集中验证 Hatchet 目标架构**：以同一个业务 Run 完成跨 SDK Recipe、WAITING_APPROVAL、非幂等 UNKNOWN Receipt 对账、Cube Scope/Lease/Fencing、真实 Token SSE 与取消/超时；原 MAF/Temporal 仅保留历史 POC，不再同步重复选择。
+2. **明确并落实分权**：Harness 控制 Plane/领域状态仍是权威；Hatchet Process/Durable SPI 只管理持久 DAG、队列和 Worker 接管；分离 PostgreSQL Schema、Provider Binding、Event Bridge、故障重试安全门禁；严禁 DBOS 与自行重造通用 Scheduler。
+3. 验证并冻结 AgentRuntime SPI、SandboxProvider SPI、Process/Durable SPI（Hatchet Adapter）、Conversation Event Protocol 的 V1 契约。
+4. 完成 CubeSandbox/Execution Lease、Environment Registry 专项 POC；ExecutionScheduler 仅保留平台可信 Execution 授权/Owner/Fencing 语义，不重复实现 Hatchet 现成的持久通用调度器与 Queue。
+5. 将现有 PDLC 的产品 → 研发 → 测试及 Document 两类真实 Recipe 接入同一个 Hatchet 驱动的 Run，证明跨 SDK 的结构化输出/OSS Evidence 交接与原有产品功能等价。
 6. 最后再决定是否引入 Codex OSS、Strands、OpenAI Agents SDK 作为标准 Runtime Adapter。
 
 # 参考资料与事实基线
