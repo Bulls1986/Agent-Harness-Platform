@@ -7,7 +7,7 @@
 1. DBOS 开源 SDK 可以运行 PostgreSQL 持久工作流和队列，上一轮已实测两个真实 SDK（本地确定性模型）、硬进程退出后新进程恢复。但那**不是 Worker A 不重启、Worker B 自动接管**。
 2. DBOS 官方 [FAQ](https://docs.dbos.dev/faq) 明确：多个进程要实现正确工作流恢复需要 Conductor；**自托管 Conductor 免费许可证每应用仅一个 Executor，多 Executor 需要付费许可证**。其 [Self-hosting Guide](https://docs.dbos.dev/production/hosting-conductor/) 标注 Conductor 为 proprietary license。因此通用多 Worker 恢复存在 G8 License Cliff。DBOS 暂不能作为「无商业强依赖的 OSS 分布式恢复」正式选择，除非后续找到合规开源替代方案且完整实测。
 3. DBOS [Concurrent Executions](https://docs.dbos.dev/explanations/concurrent-executions) 中的 checkpoint ownership token 防止旧 Worker 持续提交历史，**不保证外部工具副作用 exactly-once**，平台保留 UNKNOWN → Reconciliation → Retry/Abort/Human 契约。
-4. Hatchet [主仓库 MIT](https://github.com/hatchet-dev/hatchet/blob/main/LICENSE)。官方 [Embedded Mode](https://docs.hatchet.run/v1/embedded) 支持 Python sidecar 与 checksum 验证，多个 Embedded Engine 可经同一外部 PostgreSQL 共享队列。Python 支持 [DAG](https://docs.hatchet.run/v1/from-temporal-to-hatchet) 与 [Durable Event Wait](https://docs.hatchet.run/reference/python/context)。它们是**公开能力**，不代表多 Worker 实测已通过。
+4. Hatchet [主仓库 MIT](https://github.com/hatchet-dev/hatchet/blob/main/LICENSE) 及 [hatchet-embedded Sidecar 源码仓库 MIT](https://github.com/hatchet-dev/hatchet-embedded/blob/main/LICENSE) 均已单独核实。官方 [Embedded Mode](https://docs.hatchet.run/v1/embedded) 支持 Python sidecar 与 checksum 验证，多个 Embedded Engine 可经同一外部 PostgreSQL 共享队列。Python 支持 [DAG](https://docs.hatchet.run/v1/from-temporal-to-hatchet) 与 [Durable Event Wait](https://docs.hatchet.run/reference/python/context)。它们是**公开能力**，不代表多 Worker 实测已通过。
 
 ## 二、验证路径与真实状态
 
