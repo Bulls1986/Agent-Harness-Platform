@@ -310,6 +310,8 @@ Agent Runtime 的 Session、Workflow、Context、模型 HTTP、MCP 和事件流�
 
 ExecutionScheduler 只决定 ExecutionRequest 进入哪个容量池，不直接执行 shell。建议至少区分 LIGHT / MEDIUM / HEAVY / SPECIAL 四类资源等级，并将 interactive、normal verification、heavy verification、background queue 隔离，避免长时间 full build/E2E 阻塞秒级交互任务。[R14]
 
+**外部设计参考/独立实现边界（2026-10-10，ADR-030）：** 可以借鉴 Multica 的通用调度理念，但**不复制/修改/提取/迁入 Multica 源码**，不引入其 CLI、Daemon 或依赖。平台独立设计的是 **Harness Domain State Machine、Execution 授权/Lease/Fencing、容量分级和 Process/Durable SPI 契约**，而不是从零重写 Hatchet 已提供的持久队列、通用 DAG、Worker 调度与恢复协调器；这与当前 Hatchet SPI 候选实施方向兼容。旧 PG Worker/Temporal/MAF Durable 并行候选已停；生产仍待 P0 验收。[ADR-030 决策原文](references/MULTICA_DESIGN_REFERENCE_DECISION_20261010.md) · [Hatchet 架构边界](references/HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md)。
+
 ## 6.5 Local CubeSandbox baseline + Remote CubeSandbox burst
 
 生产 Coding Execution 默认进入隔离 Sandbox。本地 CubeSandbox 承担 baseline capacity；当本地 CPU/内存、Sandbox slot 或 queue wait 达到阈值时，在 Policy 允许的前提下切换到 Remote CubeSandbox cluster。
@@ -920,6 +922,8 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 | ADR-027 | 冻结 MCP Trust 边界：MCP 准入与信任由外部 Governance 负责；Harness 对可调用 MCP 视为已准入，不建立 Trust Score/二次审核，只负责当前 Execution 的 Policy、Credential、SideEffect、Audit 与版本绑定。 | Accepted |
 | ADR-028 | 冻结 Cancellation/Timeout：Cancel Request 先进入 CANCELLING 并下传；ACK 不等于停止；Timeout 是 Failure Type；已 dispatch 副作用不确定时 UNKNOWN→Reconciliation；取消不隐式回滚。 | Accepted |
 | ADR-029 | POC-C C00–C16 阶段**技术评估**收口，Temporal 保留 Durable Adapter 优先候选；G2/G3/G6 完整硬门禁未过，生产主架构 NO-GO，后续归 ARCH-TODO-025。 | Accepted（仅评估处置；非生产 ADR） |
+
+| ADR-030 | Multica 仅作为调度/任务生命周期的设计思想参考，不复制/依赖其源码；本平台独立实现领域状态机与 Execution 授权/容量策略，不引入 Multica CLI/Daemon。Hatchet SPI 当前实现选择不改变这条源码使用边界，也不意味着生产准入。 | Accepted（源码使用边界；非生产选型） |
 
 # 19. MAF 扩展性验证要求
 
