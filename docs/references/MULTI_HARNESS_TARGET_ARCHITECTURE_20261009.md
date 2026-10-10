@@ -6,14 +6,16 @@
 > [现有技术比较](MULTI_HARNESS_TECH_SELECTION_20261009.md)；
 > [Cube 实测细节](../../poc/opencode_sandbox/CUBE_E2B_COMPATIBILITY_FINDINGS.md)。
 
-> **最新状态入口：** [分层准入报告](MULTI_HARNESS_ADMISSION_20261009.md)；准入开发/POC ≠ 生产 Accepted ADR。若后续增加真实接入证据，先更新该报告和对应专项 Findings，再决定是否更改目标架构候选。
+> **2026-10-10 当前架构权威增量（覆盖此 2026-10-09 快照的 Durable 部分）：** [Hatchet Process/Durable 候选目标架构](HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md)。**Hatchet 为唯一优先实施候选，DBOS 因许可证永久排除当前范围；原 Temporal/MAF/PG Worker 为历史 POC，不是本轮并行实施选项。** Hatchet 真 Embedded 双 SDK DAG 与外部 PG A→B Worker 接管分别 LIVE PASS，非同一 E2E/非生产 Accepted。
+>
+> **分层准入仍依照：** [分层准入报告](MULTI_HARNESS_ADMISSION_20261009.md) 和 [ARCH-TODO-028](../ARCHITECTURE_BACKLOG.md)；开发 POC GO ≠ Production Accepted。
 
 ## 1. 本轮选择与边界
 
 - **Pydantic AI Harness 优先成为通用专业 Agent 的默认 Runtime Adapter 候选**；不是平台 Kernel，也不是其他 Agent SDK 的宿主。选择依据为同 Agent 实例 20 并发 Run、Run-scoped Workspace/Tool 路由、可选 Sandbox 的已有局部 POC。
 - **OpenCode 2 保留专用 Coding Runtime Adapter**；已有 Skills/Subagents/Session/插件能力不强迫迁入 Pydantic；先验证 Harness-in-Cube，再根据全入口隔离证据讨论共享 Host。
 - **OpenAI Agents SDK 作为独立可选 Adapter**；MAF 为兼容既有工作流/Executor 的可选 Adapter，退出通用默认框架的首选。两者都应能通过统一 Runtime SPI 被选择，而不是在 Pydantic 内“切 SDK”。
-- **Temporal 不是 Agent SDK**；与 MAF Durable、轻量 PG/Worker 调度并列为 Process/Durable 候选实现。平台持久化自己的 Task Facts/RecoveryPoint；不以 Pydantic 的 Agent Loop 推断不需要 Durable，也不为同一 Run 随意叠多个 Durable 引擎。
+- **Process/Durable SPI 当前只优先落地 Hatchet Adapter → Hatchet Embedded/自托管 Engine**；平台持久化自己的 Task Facts/RecoveryPoint，Hatchet 只承载队列/DAG/Worker/History；不将其 Provider ID 当作平台 Run。DBOS 许可证硬排除；原 Temporal/MAF Durable/PG Worker 仅为历史结果，不再并行开发或同级选型。
 - **CubeSandbox 为自托管 SandboxProvider 候选**；消费其 Control/Data Plane，不承建 MicroVM、MCP 治理、数据库/对象存储备份、IAM。SDK / Volume 不兼容时经公开 API/REST 的薄适配处理；不 fork Agent SDK。
 - **按需隔离、节省资源**：非文件/Shell Agent 不分配 Sandbox；大量逻辑 Session 共享 Runtime Worker；需要执行时按授权 Isolation Scope 申请或复用 Sandbox Lease。不存在“一条历史 Session 永久一个 Agent 进程/VM”的强制映射。
 
@@ -23,12 +25,14 @@
 flowchart TB
   UI["Portal / PDLC / API"] --> ROUTER["Intent Router + Agent Catalog"]
   ROUTER --> CP["Platform Control Plane\nRun · Step · Attempt · Approval\nRecoveryPoint · Task Facts · Receipt"]
-  CP --> ARSPI["AgentRuntime SPI\nCapability / Version / Typed Events"]
-  ARSPI --> POOL["Shared Runtime Worker Pool"]
-  POOL --> PYD["Pydantic AI Harness Adapter\n通用 Agent 默认候选"]
-  POOL --> OAI["OpenAI Agents SDK Adapter\n可选"]
-  POOL --> OC["OpenCode 2 Adapter\nCoding"]
-  POOL --> MAF["MAF Adapter\n兼容可选"]
+  CP --> DUR["Process/Durable SPI / Hatchet Adapter\nPlatform ID ↔ Provider Workflow Binding"]
+  DUR --> HAT["Hatchet Engine / Durable DAG / Queue\nA→B Worker 安全恢复已分项实测"]
+  HAT --> POOL["Shared Hatchet Workers / AgentRuntime Dispatcher"]
+  POOL --> ARSPI["AgentRuntime SPI\nCapability / Version / Typed Events"]
+  ARSPI --> PYD["Pydantic AI Harness Adapter\n通用 Agent 默认候选"]
+  ARSPI --> OAI["OpenAI Agents SDK Adapter\n可选"]
+  ARSPI --> OC["OpenCode 2 Adapter\nCoding"]
+  ARSPI --> MAF["MAF Adapter\n兼容可选"]
   PYD --> EXE["Execution Capability / Policy / Lease Resolver"]
   OAI --> EXE
   OC --> EXE
@@ -36,7 +40,7 @@ flowchart TB
   EXE --> SB["SandboxProvider SPI\nLease · WorkspaceRef · IsolationScope"]
   SB --> CUBE["CubeSandbox MicroVM Pool\n自托管 / E2B-compatible subset"]
   SB -. "开发与对照" .-> DOCKER["Docker Provider"]
-  CP --> DUR["Process / Durable SPI\n按需：PG Worker / Temporal / MAF Durable"]
+  HAT -. "独立 Engine History/Queue Schema" .-> HPG["PostgreSQL Hatchet Schema"]
   CP --> PG["PostgreSQL Task Facts / Binding"]
   CP --> OSS["OSS / S3 Artifacts & Evidence"]
   CP --> EVT["Responses-compatible API\nTyped Events / Token SSE"]
@@ -92,6 +96,6 @@ Logical Run / Session (persisted, many)
 2. **Cube 兼容**：明确通过或明确标记不支持的 E2B SDK 与 Cube API 版本矩阵；同真实 Sandbox 的多 SDK 接力；优先验证公开 API 薄适配，不对 SDK 内部猴子补丁。
 3. **OpenCode 2**：专用 OCI 模板，真实 Cube 内 V2 Session/FS/Shell/至少一种 Git 操作；对共享 Host 全入口隔离严格保留 NO-GO 门禁。
 4. **资源/恢复**：无执行需求零 Sandbox；多 Session 共 Worker；异 Scope 不串租约；Task Crash/Worker B 接管/UNKNOWN Tool Receipt/HITL 恢复可核对。
-5. **Durable 选择**：仅依据任务级恢复与开发维护/运维成本的等价验证，在 Temporal、MAF Durable、平台 PG/Worker 最小实现之间做决定；并同步 Accepted ADR 后才改变基线。
+5. **Hatchet 准入**：基于已通过的两个分项真实 CI，进一步验证同业务 Run 的多 SDK/真实 Cube/审批持久等待、UNKNOWN ToolReceipt、SSE/Cursor/Cancel、100 活跃 Run 容量；全面验收后再单独更新生产 Accepted ADR。**DBOS 禁止重新进入本轮候选。**
 
 这些是 **POC 门禁与架构候选**，不是新增企业 IAM/Quota/Backup/治理产品的实现任务。
