@@ -22,14 +22,17 @@
 涉及架构、POC、接口、实现或测试前，至少阅读：
 
 1. `README.md`
-2. `docs/ARCHITECTURE.md`
-3. `docs/ARCHITECTURE_BACKLOG.md`
-4. `docs/POC.md`
-5. 与当前任务直接相关的 `docs/references/*.md`
+2. `docs/ARCHITECTURE_GUARDRAILS.md`（G01–G20 硬边界、设计 Review、PR 与 CI 准入）
+3. `docs/ARCHITECTURE.md`
+4. `docs/ARCHITECTURE_BACKLOG.md`
+5. `docs/POC.md`
+6. 与当前任务直接相关的 `docs/references/*.md`
 
 如果任务涉及已经关闭的架构待办，必须先读取其 Accepted Contract。
 
 禁止在不了解现有 Decision / ADR 的情况下重新发明同类模型。
+
+**开发前置护栏：** PR 必须指明受影响的 Gxx、变更 Owner、Accepted Contract 是否改变，以及成功/失败证据。违反 H 类约束时先完成对应 ADR/Contract 变更；R 类必须补 Review 证据；D 类选型须通过 Backlog/POC/Decision。自动 CI 只覆盖可静态判断的部分，不能代替真实副作用/恢复/隔离验收。
 
 # 3. 架构优先级
 
