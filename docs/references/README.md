@@ -46,8 +46,9 @@
 36. [多 Harness 集成 POC 与生产分级准入（2026-10-09）](MULTI_HARNESS_ADMISSION_20261009.md)
 37. [**已验证技术栈版本基线、E2B 兼容矩阵、Cube OCI Digest 与 Template（2026-10-10）**](VERIFIED_STACK_BASELINE_20261010.md)
 38. [**现有 OpenCode PDLC 替换、已有能力无感迁移与跨 Agent 串联方案（2026-10-10）**](PDLC_REPLACEMENT_MIGRATION_20261010.md)
-39. [**DBOS 因许可正式排除；Hatchet Embedded 两 SDK 与双 Worker 恢复 LIVE PASS（ARCH-TODO-028，未 Accepted）**](DURABLE_ENGINE_LICENSE_GATE_20261010.md)
-40. [**Hatchet Process/Durable 当前分层与技术／应用／部署／数据／运行架构（2026-10-10，Implementation Candidate）**](HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md)
+39. [**Multica 调度设计参考与独立实现决议（ADR-030；2026-10-10）**](MULTICA_DESIGN_REFERENCE_DECISION_20261010.md)：不复制其源码，不采用其 CLI/Daemon。
+40. [**DBOS 因许可正式排除；Hatchet Embedded 两 SDK 与双 Worker 恢复 LIVE PASS（ARCH-TODO-028，未 Accepted）**](DURABLE_ENGINE_LICENSE_GATE_20261010.md)
+41. [**Hatchet Process/Durable 当前分层与技术／应用／部署／数据／运行架构（2026-10-10，Implementation Candidate）**](HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md)
 
 **架构视图：** 八类分层架构图现已[直接嵌入根目录 README（第 3.1 节）](../../README.md#31-八类分层架构视图)，旧 [ARCHITECTURE_VIEWS.md](../ARCHITECTURE_VIEWS.md) 仅提供兼容导航，不重复维护图表。
 
