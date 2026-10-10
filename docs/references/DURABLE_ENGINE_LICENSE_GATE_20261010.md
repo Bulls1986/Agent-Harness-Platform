@@ -28,7 +28,7 @@
 | CubeSandbox / Session / WorkspaceRef / Scope / Fencing | NOT TESTED | NOT TESTED |
 | 生产准入 | **REJECTED / OUT OF SCOPE** | NO-GO（待验收） |
 
-> **2026-10-10 实际 CI 更新：** [Hatchet Embedded 真实引擎与双 SDK PASS](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38020725053)：Bundled PostgreSQL 完成 246 项迁移，真实启动 Engine/Worker、Pydantic task、OpenAI task，并以父任务输出作为子任务输入。`remote_model_calls=0`。停止进程出现 `resource_tracker` 信号量回收警告，需单独测 Worker 资源释放；此 PASS 不证明 A→B 自动接管。[外部 PostgreSQL + 双 Engine 强制故障专用测试](../../poc/durable_engine/hatchet_fleet_failover_live.py) 独立执行，未获得 PASS 前不得升级该 Gate。
+> **2026-10-10 实际 CI 更新：** [Hatchet Embedded 真实引擎与双 SDK PASS](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38020725053)：Bundled PostgreSQL 完成 246 项迁移，真实启动 Engine/Worker、Pydantic task、OpenAI task，并以父任务输出作为子任务输入。`remote_model_calls=0`。停止进程出现 `resource_tracker` 信号量回收警告，需单独测 Worker 资源释放；此 PASS 不证明 A→B 自动接管。[外部 PostgreSQL + 双 Engine 强制故障专用测试](../../poc/durable_engine/hatchet_fleet_failover_live.py) 独立执行，其 A→B 恢复结果以随后独立 CI 的真实 PASS 为准。
 
 > **2026-10-10 跨 Worker 实测 PASS：** [External PG Failover CI #38021093089](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38021093089) 实测 A/B 两独立 Engine 连接同一外部 PostgreSQL 16。A 完成准备步骤并进入第二个安全步骤；B 以独立 Engine 启动后 A 进程组 SIGKILL 且不重启。B 恢复原 Workflow，首步未重执行，正在执行的安全步骤由 B 完成，`hatchet.runs.get_run_ref(id).result()` 返回该原运行终态。实际输出 `worker_A_not_restarted=true`、`completed_stage_not_reexecuted=true`、`failed_inflight_safe_stage_recovered=true`、`authoritative_run_result=PASS`。**这不是不透明 SDK Agent Checkpoint，且完全未验证外部非幂等 Tool 自动恢复**。恢复耗时与资源效率尚未基准量测。
 
