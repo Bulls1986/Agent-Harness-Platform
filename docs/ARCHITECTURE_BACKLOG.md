@@ -671,9 +671,11 @@ OpenCode 2 / MAF；目前全部为候选，尚无完美零适配技术栈。
 
 **2026-10-09 新增有限真实 SDK 证据：** 已运行 1 个 Pydantic AI 基础 Agent 对真实 Cube Native Sandbox 的两个 Run、6 个 `@agent.tool` 读写/Shell 调用；OpenAI SDK `@function_tool` 成功读取同一个 Workspace。属于跨 Runtime 公共 **Tool Adapter 真机 PASS**，不等于已实现平台完整 AgentRuntime SPI、Pydantic Harness 内置 Coder/E2BSandbox 或真实 LLM 模型；本 TODO 保持 POC，不关闭。
 
+**2026-10-10 AgentRuntime SPI 新增代码：** [实现与证据](../poc/runtime_spi/README.md)，平台自有 `ExecutionContext / SandboxGrant / RunRequest / AgentRuntimeDispatcher`，在单一合同上提供 Run Started/Completed/Failed/Cancelled/Unsupported、缓冲 `response.output_text.delta` / SSE 编码、租约 Fencing/Owner/Scope/Capabilities Fail Closed。独立离线 Mock 覆盖 6 类无授权拒绝与 Cancel UNKNOWN；在真实安装的 `pydantic-ai-slim==2.54.0`、`openai-agents==0.23.1` 上分别实际调用了公共 `Agent.run` 与 `Runner.run`，通过本地确定性 Model 完成相同 Run 合同（**SDK RUN LIMITED PASS，0 托管模型调用**）；OpenCode 2 `session.prepare` SPI 目前仅在离线 Fake Session Factory 下 PASS，`model.run` 明确 UNSUPPORTED。**真正 Token SSE、外部 Receipt/ACK/DB、取消真实工具副作用、OpenCode 模型 Agent Loop/真实 Cube Lease SPI/Worker 接管尚未通过，025 保持 OPEN**。
+
 ## ARCH-TODO-026 Cube E2B 兼容矩阵与真实多 SDK 接力
 
-**状态：POC / ACTIVE BLOCKER（P0；未接受）**
+**状态：POC / E2B 2.40.0 + OpenAI Native LIVE LIMITED PASS；最新 E2B 2.53.1 仍协议不兼容（P0；未接受）**
 
 **方向：** CubeSandbox 由平台 SandboxProvider SPI 统一使用；先修复或隔离官方 E2B 兼容缺口，不能把 Cube Native SDK PASS 冒充原生 E2B SDK PASS。参考 [Cube 实测](../poc/opencode_sandbox/CUBE_E2B_COMPATIBILITY_FINDINGS.md)。
 
@@ -691,6 +693,8 @@ OpenCode 2 / MAF；目前全部为候选，尚无完美零适配技术栈。
 **2026-10-09 晚间兼容矩阵增量：** 已检查官方 SDK 1.0.5 / 2.0.0 / 2.40.0 对 `POST /sandboxes` 与连接配置的公开行为：1.0.5 无 `Sandbox.create`，2.0.0 的 debug 返回 synthetic `debug_sandbox_id`，2.40.0 支持 `E2B_API_URL` 但真实连接仍受到 Cube 冷启动健康门禁阻塞，**026 不可关闭**。具体原始证据在 [Cube专项](../poc/opencode_sandbox/CUBE_E2B_COMPATIBILITY_FINDINGS.md)。
 
 **2026-10-09 进一步真机验证：** `e2b==2.40.0` 在 3000/8090/9091 均健康时官方 `Sandbox.create` 已返回非 Debug 的真实 Cube Sandbox 句柄；`files.write` 阶段 `ConnectError`，未触发 `commands.run`。026 的 Control Plane 局部 PASS、Data Plane **BLOCKED/FAIL**，应重点查 E2B `*.cube.app` 域名解析、TLS/CA、CubeProxy，而不能提前关闭 CUBE-1。详见最新 [Findings](../poc/opencode_sandbox/CUBE_E2B_COMPATIBILITY_FINDINGS.md)。
+
+**2026-10-10 ARCH-TODO-026 原生 E2B/Cube 真机突破：** [官方 SDK / 独立 DNS 真实验收](../poc/opencode_sandbox/E2B_PRIVATE_DNS_VERIFICATION_20261010.md)。`e2b==2.40.0` 本身已能对 Cube v0.7.2 进行真实 `POST /sandboxes`，此前 `files.write ConnectError` 是 **WSL 默认 DNS 不走 Cube 已配置的 `~cube.app` 路由 + 官方 SDK `E2B_DOMAIN` 默认 `e2b.app`** 的客户端环境问题。使用独立 Linux mount namespace 的 resolver bind 和 `E2B_DOMAIN=cube.app`、本地可信 CA，不修改全局 DNS/TLS/SDK 私有字段，真实 `create → files.write/read → commands.run → kill` **PASS**；额外两真实 Sandbox 文件隔离和官方 `openai-agents==0.23.1` 的原生 `E2BSandboxClient.create/exec/aclose` **PASS**（零模型调用，`sdk_private_patches=false`）。**CUBE-1/CUBE-3 最小版本锁定的真机门禁已通过；`e2b==2.53.1` 对 `POST /v2/sandboxes` 仍 405，Pydantic 内置 E2BSandbox/跨 SDK 同一 Sandbox ID Native Connect、生产 Scope/Lease/恢复仍开放，因此 026 仍 OPEN，不是生产 Accepted**。此段优先于下方 2026-10-09 的 Data Plane ConnectError 历史结果。
 
 ## ARCH-TODO-027 OpenCode 2 Cube 专用 OCI Template / Session 真实绑定
 

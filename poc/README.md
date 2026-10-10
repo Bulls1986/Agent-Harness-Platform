@@ -56,6 +56,21 @@ python -B poc/pydantic_harness/verify_cube_live.py --live
 
 > **2026-10-09 晚间实测：** E2B 2.40.0 可在真实 Cube 健康控制面完成 Sandbox.create 并返回非 Debug 句柄，接着 `files.write` 经 Data Plane 发生 `ConnectError`；尚未验收 Commands/Kill/Native OpenAI，因此正式 E2B conformance 仍 FAIL。e2b 2.53.1 创建直接 HTTP 405。建议下一步检查 `E2B_DOMAIN` / `*.cube.app` Wildcard DNS、Proxy/证书；不得停用 TLS 证书校验。
 
+### 2026-10-10 官方 E2B 2.40 + OpenAI Native 真机通过（独立 WSL DNS）
+
+[真实版本矩阵、DNS/TLS 条件与可重复入口](opencode_sandbox/E2B_PRIVATE_DNS_VERIFICATION_20261010.md)。在隔离 WSL2 Python `e2b==2.40.0`、`openai-agents==0.23.1`、已 READY 的 Cube Template 和可信 CA 下：
+
+```sh
+python -B poc/opencode_sandbox/verify_cube_e2b_private_dns.py --live --openai-native
+# 仅本地 auth-disabled 的隔离演示环境，才可以加 --anonymous-local
+```
+
+此版本组合实际真实 `create/files/commands/kill`、两 Sandbox 文件隔离、OpenAI Native E2BSandboxClient create/exec/aclose 均 PASS；**2.53.1 仍 405**，不能外推。
+
+### 平台 AgentRuntime SPI POC
+
+[公开 SDK Adapter 与合同](runtime_spi/README.md)；`python -B poc/runtime_spi/verify_runtime_spi.py` 离线预检，以及在安装 Pydantic AI + OpenAI SDK 的 venv 中运行 `--sdk`。两个真实 SDK 的本地确定性 Model Run 均 PASS（零远程模型调用）；OpenCode V2 Session SPI 此阶段仅模拟，完整 Token SSE/Receipt 仍待推进。
+
 ## 四、OpenCode 2 与其他专项
 
 - [OpenCode 2 / OpenAI 对照](opencode_sandbox/README.md)：Docker V2 Server/Session/FS/Shell 双向接力 PASS；共享 Host 原生 Shell 不能按 Session ID 自动转到外部 Sandbox（负例）。

@@ -14,6 +14,9 @@
 
 **说明：本文件记录的是截至 2026-09-29 的技术事实与首轮架构决策。框架能力、许可和托管策略变化较快，进入采购或正式落地前必须重新核验。**
 
+> **2026-10-10 真实集成 POC 增量（非 Accepted ADR）：** 已真实验证 Cube v0.7.2 与官方 `e2b==2.40.0` 在私有 DNS/`E2B_DOMAIN=cube.app`/可信 TLS CA 条件下的 Sandbox create/files/commands/kill、两 Sandbox 文件隔离与 `openai-agents==0.23.1` 的原生 E2BSandboxClient create/exec/aclose；`e2b==2.53.1` 与本版本 Cube 的 `POST /v2/sandboxes` 仍 405。
+> 平台自有 [AgentRuntime SPI 最小代码](../poc/runtime_spi/README.md) 已具 Run/Execution/Scope/Owner/Fencing/Grant/Capabilities、Typed Event/SSE、Cancel/Unsupported 和 Pydantic/OpenAI 公共 Run Adapter 的真实 SDK 本地确定性模型 POC；OpenCode V2 的 SPI Session Factory 当前离线模拟。两项进度归 ARCH-TODO-025/026，**不修改 Accepted Contract、不关闭生产准入**。详见 [版本矩阵与原始真机证据](../poc/opencode_sandbox/E2B_PRIVATE_DNS_VERIFICATION_20261010.md)。
+
 > **2026-10-09 追加架构候选（尚未 Accepted）：** 针对 PDLC / AI 企业门户的
 > 多专业 Agent 和 OpenCode 2 / OpenAI Agents SDK / MAF 等多 Harness，
 > 已登记 [ARCH-TODO-024：按需共享 Sandbox 与高密度 Runtime 拓扑](references/MULTI_HARNESS_SANDBOX_RUNTIME_DENSITY_CANDIDATE.md)。

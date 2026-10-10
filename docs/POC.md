@@ -14,6 +14,8 @@
 
 **说明：本文件记录的是截至 2026-09-29 的技术事实与首轮架构决策。框架能力、许可和托管策略变化较快，进入采购或正式落地前必须重新核验。**
 
+> **2026-10-10 新增可复验 POC（不覆盖第一轮 Gate）：** [E2B/Cube 原生公开 SDK 真机专项](../poc/opencode_sandbox/E2B_PRIVATE_DNS_VERIFICATION_20261010.md) 对 Cube v0.7.2 使用官方 `e2b==2.40.0` + OpenAI Agents 0.23.1，在隔离 DNS/可信 CA 后完成真实文件/命令/两 Sandbox 隔离/原生 OpenAI Client **PASS**，2.53.1 的 405 仍保留负例。[AgentRuntime SPI POC](../poc/runtime_spi/README.md) 已实现严格绑定与 Typed Event/Cancel/Unsupported，两真实 SDK 的本地确定性 Model Run **PASS**，OpenCode Session SPI 仍 Mock；无 Token Streaming、Receipt/恢复/生产隔离完成证据。继续由 ARCH-TODO-025/026 逐项准入。
+
 > **2026-10-09 增量专项（不回写历史首轮 Gate）：** OpenCode 2 /
 > OpenAI Agents SDK / MAF 的共享 Sandbox 与高密度 Runtime 候选已登记
 > [ARCH-TODO-024](references/MULTI_HARNESS_SANDBOX_RUNTIME_DENSITY_CANDIDATE.md)。

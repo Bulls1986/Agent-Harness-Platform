@@ -5,6 +5,12 @@
 
 > **最新准入裁定（2026-10-09）：** [分级准入报告](../../docs/references/MULTI_HARNESS_ADMISSION_20261009.md)。本文按时间逆序保存原始证据；下面“Cube 未验证 / 未部署”的早期表述是历史状态，不是本轮最终结论。官方 E2B Python 2.53.1 原生创建 405、Cube 原生 SDK 真机已通过，这两项独立记录不得互相覆盖。
 
+## 2026-10-10：官方 E2B 2.40.0 + OpenAI Native Data Plane 真机通过
+
+**之前的 v2.40 `ConnectError` 已按环境问题定位并在真实 Cube 上修复**：WSL 默认 DNS 跳过已有 `~cube.app` CoreDNS 路由，E2B 默认 `E2B_DOMAIN=e2b.app`。在独立挂载命名空间（非全机 DNS 变更）使用既有 systemd-resolved 路由、`E2B_DOMAIN=cube.app` 和可信本地 CA，真实官方 `e2b==2.40.0` `Sandbox.create/files.write/files.read/commands.run/kill` **PASS**；另实测 2 Sandbox 不共享文件内容、`openai-agents==0.23.1` 原生 `E2BSandboxClient.create/exec/aclose` **PASS**。所有客户端均为公开 SDK 无私有 patch，零托管模型调用。
+
+完整准确证据、风险和 CLI：[E2B 2.40 真实验收](E2B_PRIVATE_DNS_VERIFICATION_20261010.md)。**官方 `e2b==2.53.1` `POST /v2/sandboxes` 405 仍不兼容；Pydantic Harness 内置 E2B、跨两个 SDK Native `connect(same_id)`、生产隔离及 TLS/DNS 运维尚未验收。** 以下 2026-10-09 关于 v2.40 Data Plane ConnectError 的描述仅为当时未配完整的历史负例。
+
 ## 2026-10-09 22:50：OpenCode 2 Cube Template 的 40% / 10 秒启动超时 RCA
 
 **本轮已完成真正的根因验证**，见 [独立事件 RCA 与稳定环境复测](opencode2_cube_template/INCIDENT_20261009.md)。首次 Job `ec70a828...` 在系统关闭时 CubeTemplateCenter 输出 `native export layer 11 ...: context canceled`，向 CubeMaster 发送 `FAILED` 的请求同样被取消，导致状态被保留为 `RUNNING/BUILDING_EXT4/40%`；`CAP_MKNOD/xattrs` 是通用错误 Hint 而非实测权限根因。持续 WSL 保活时同一个 OCI 镜像的新 Job `4be59892...` 通过 EXT4 RootFS Artifact READY / 1/1 分发 / 85% 创建阶段，证明镜像 layer 能正常导出。然而其 Cubelet/containerd-shim 在 VM 启动事件等待 10 秒后 `Receive event timeout after 10000ms`，最终 **FAILED / CREATING_TEMPLATE**；VMM 有 `Booting VM` / kernel & vCPU 启动记录，Guest Ready 链路原因仍未知。**Template READY 与 V2 Session 尚无通过证据，ARCH-TODO-027 仍 OPEN**。

@@ -5,6 +5,8 @@
 > 未完成事项仅登记 [架构 Backlog ARCH-TODO-024～028](../ARCHITECTURE_BACKLOG.md)。
 > [验证入口](../../poc/README.md) 提供可重复的最小测试。
 
+> **2026-10-10 ARCH-TODO-025/026 最新真机与 SDK 增量：** [E2B 2.40 + OpenAI Native 真机兼容修复](../../poc/opencode_sandbox/E2B_PRIVATE_DNS_VERIFICATION_20261010.md)：Cube v0.7.2 在受控私有 DNS + 有效本地 CA 下，官方 `e2b==2.40.0` 的真实 create/files/commands/kill、两 Sandbox 文件隔离、`openai-agents==0.23.1` 原生 `E2BSandboxClient.create/exec/aclose` **PASS**（SDK 未私有补丁）；而 e2b 2.53.1 **仍 405**。[平台 AgentRuntime SPI POC](../../poc/runtime_spi/README.md) 的 Pydantic `Agent.run` / OpenAI `Runner.run` 在真实安装 SDK + 本地确定性 Model 下映射 Run Typed Events，有限 PASS；OpenCode `session.prepare` 仍仅合同 Mock，Token SSE / Tool Receipt/Run 持久化/取消恢复尚无真实准入。**集成 POC 限定 GO，生产继续 NO-GO。** 2026-10-09 以及下文关于 E2B 2.40 文件 ConnectError 的旧数据仅代表当时未配置正确 DNS 的历史尝试。
+
 > **2026-10-10 Git 功能补验最终确认：** [Git-enabled Cube 实测记录](../../poc/opencode_sandbox/opencode2_cube_template/VERIFICATION_20261010.md) 已新增 Git OCI Template `tpl-363306ce3b21432cb1ae6536`，Job `c835c0cd-9cf6-4628-9e8e-c4730a3873c0` **READY**，20/20 Layer、225.8 MiB、1/1 分发；同一次真实 Cube MicroVM 测试 `git init/add/commit/log`、OpenCode V2 2 Session/FS/Shell、Pydantic/OpenAI 公共 Tool 跨 SDK 接力、同 ID reconnect、Kill **全部 LIVE PASS**。至此 **ARCH-TODO-027 的最小真实功能链路准入 GO（仅集成 POC）**，仍缺平台自身的 Scope/Lease/Fencing/Recovery、全 Host 执行路径系统性隔离、安全治理、真实模型执行等生产门禁。当前原生 E2B SDK HTTP405 / Data Plane ConnectError **没有因此被解决**；生产 **NO-GO**。本条覆盖下文较早的“Git 待验”历史记录。
 
 ## 2026-10-10 Cube OpenCode 2 真机突破（以本节为最新结论）
@@ -25,6 +27,7 @@
 | **A. 进入集成 POC / 可开始实现适配器** | **GO（限定）** | Cube 原生 SDK MicroVM/Shell/文件/同 ID reconnect 真机通过；Pydantic AI 公开 Agent Tool Loop（2 Run/6 Tool）→同一 Cube Sandbox→OpenAI FunctionTool 真机接力通过；Session Scope/Lease Fail Closed 离线通过 |
 | **B. 采用 Pydantic 作为通用 Agent Runtime 默认候选** | **CONDITIONAL GO（仅技术候选）** | 20 个并发 Run、Run-scoped Workspace、Linux 真实 Coder Tool，以及 Pydantic 基础 Agent 公共 Tool Adapter→Cube 真机通过；Harness 内置 E2BSandbox/Coder → Cube 原生路径、SDK 0.x 升级仍待验证 |
 | **C. 官方 E2B SDK / OpenAI 原生 E2B Client 即插即用 Cube** | **NO-GO（当前版本组合）** | `e2b==2.53.1` / `openai-agents==0.23.1` 原生 E2B Client 对 Cube v0.7.2 的 Sandbox.create 均返回 **405**，不等于 Pydantic/OpenAI FunctionTool 不能通过 Cube Native Provider 接入 |
+| **C2. 官方 E2B 2.40.0 + OpenAI E2BSandboxClient** | **GO（版本锁定的最小真机 POC）** | Cube v0.7.2 + `E2B_DOMAIN=cube.app` + 私有 resolver + 可信本地 CA：官方 SDK create/FS/Shell/kill、两沙箱隔离、OpenAI Native create/exec/aclose 全 PASS；不代表 2.53.1/生产 TLS/DNS/Security 已兼容 |
 | **D. OpenCode 2 原生 SDK Host Session 自动挂 Cube** | **NO-GO（当前拓扑）** | Docker 负例证明原生 Shell 留在共享 Host；已有 Harness-in-Cube 真机 PASS 不能证明共享 Host 的 FS/Shell/Git/PTY/LSP/Plugin 自动重定向 |
 | **D2. OpenCode 2 Harness-in-Cube 专用执行拓扑** | **GO（集成 POC 限定）** | 2026-10-10 Git-enabled 真实 Cube Template READY、OpenCode V2 2 Session/FS/Shell/Git、Pydantic/OpenAI 公共 Tool 同 Sandbox 接力 PASS；生产隔离/平台 SPI 尚待收口 |
 | **E. 进入生产 Accepted ADR / 上线** | **NO-GO** | 多 Runtime Agent Loop + 严格租约绑定、跨 Worker/HITL/非幂等 Receipt、Cube 生命周期、隔离与资源门禁没有整体通过 |
