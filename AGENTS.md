@@ -37,6 +37,20 @@
 
 **开发前置护栏：** PR 必须指明受影响的 Gxx、变更 Owner、Accepted Contract 是否改变，以及成功/失败证据。违反 H 类约束时先完成对应 ADR/Contract 变更；R 类必须补 Review 证据；D 类选型须通过 Backlog/POC/Decision。自动 CI 只覆盖可静态判断的部分，不能代替真实副作用/恢复/隔离验收。
 
+# 2.1 强制工程流程：测试先行、架构守护、事后复盘
+
+**这是所有开发和 POC 的默认准入与收口基线，不因任务紧急或代码规模小而跳过核心步骤。** 纯文档/格式调整可以用静态校验替代运行测试，但仍应记录结果；行为变更不得以“实现方便”为由跳过 Red/Green 证据。
+
+1. **Before coding：** 先读对应 OpenSpec Proposal/Specs/Design/Tasks 和 Accepted Contracts，识别 Gxx 硬约束、事实 Owner、正例/反例、失败/超时/重复投递窗口；新增功能先更新 Spec/Tasks。
+2. **Red（测试先行）：** 在改生产代码前，先写能证明目标行为缺失的失败测试、回归测试或真实场景测试；记录失败原因。至少覆盖一项安全负例/错误路径（例如 UNKNOWN 阻断、无权限拒绝、终态不可重开），不得只测 Happy Path。
+3. **Green（最小实现）：** 只实现让这些测试通过的最少职责，复用 Hatchet/AgentRuntime/SandboxProvider 公共能力，不扩大 Harness Kernel 或重造 Scheduler；不允许以 Mock SDK/内存数据库替代要求真实引擎/持久化的验收。
+4. **Refactor + Review：** 重构后复跑原始回归、架构 Guard、OpenSpec Strict Validation，检查 Vendor Neutral / Domain Boundary / 可信 ExecutionContext / 短期 Capability / SideEffect Receipt；PR 必须列明改变哪些 Gxx、Accepted Contract 是否变化。
+5. **Live acceptance：** 按所述 Gate 执行真实 PG/SDK/Worker/Cube/工具行为等测试；标注环境、命令、Run ID/Trace/Workflow ID、CI run URL。**Skipped、Mock、NOT_TESTED、还在排队或尚未完成的 CI 不得记为 PASS**；历史独立 POC 的 PASS 不等于新的一体化链路已通过。
+6. **Retrospective（事后复盘）：** 每次有意义的功能、架构改动或 POC 收口前，必须复盘「目标/证据/实际失败/根因/修复措施/新增回归/遗留风险/经验沉淀」。重要变更需提交 `docs/retrospectives/` 专题；轻量修复可以在 PR Summary 中复盘。**从问题中提炼可复用的编码、测试、环境或架构护栏，并更新 AGENTS/OpenSpec/CI/Backlog 的合适位置。**
+7. **Closeout：** 只有经过真实门禁、OpenSpec Tasks 勾选与 PR/CI 审核，才将当期任务标为 CLOSED；生产 Gate 与有限 POC Gate 必须区分。不可因为用户让“持续推进”就把未测试的工作标记完成，或绕过架构决议去赶进度。
+
+对于当前首个最小闭环，遵循 [OpenSpec](openspec/changes/minimal-run-closed-loop/proposal.md) 与 [测试先行复盘](docs/retrospectives/MINIMAL_CLOSED_LOOP_20261010.md)。今后将这一工作顺序视为默认行为，而不是一次性的专项要求。
+
 # 3. 架构优先级
 
 发生冲突时，按以下顺序处理：
