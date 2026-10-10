@@ -746,6 +746,8 @@ OpenCode 2 / MAF；目前全部为候选，尚无完美零适配技术栈。
 - 若引入 Pydantic TemporalDurability，需要定义与平台 Workflow/Durable 层的职责分界，防止同一 Agent Run 重复包两层 Durable 引擎。
 - MAF POC-A 与 Temporal POC-C 已有成果继续保留；形成等价验收结论后再决定生产默认并单独更新 Accepted ADR。
 
+**外部设计参考 ADR-030（2026-10-10）：** [Multica 架构思想参考与源码不复用决议](references/MULTICA_DESIGN_REFERENCE_DECISION_20261010.md) 仍然生效。本平台独立实现领域状态机、执行授权/Lease/Fencing、容量等级与 SPI 协议；**不复制 Multica 源码，不自行重造 Hatchet 通用 Durable DAG/Queue/Scheduler**。这不改变 Hatchet 为当前唯一优先实施候选。
+
 **未关闭原因：** Hatchet 的核心队列/双 SDK DAG 与两 Engine 接管已通过有限真实 POC；但审批等待、真实非幂等 Receipt UNKNOWN → Reconciliation、Token SSE、Cube Session/Scope/Lease/Fencing、100 Run 资源对照尚未验收，不能正式 Accepted。**DBOS 已被排除，许可证问题不是待解决事项，亦不阻挡 Hatchet 后续验证。**
 
 ---
