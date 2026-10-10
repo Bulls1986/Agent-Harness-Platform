@@ -14,7 +14,7 @@
 
 **说明：本文件记录的是截至 2026-09-29 的技术事实与首轮架构决策。框架能力、许可和托管策略变化较快，进入采购或正式落地前必须重新核验。**
 
-> **2026-10-10 Process/Durable 候选调整（非 Accepted ADR）：** Hatchet Embedded 真实引擎 + 多 SDK DAG、外部 PostgreSQL 两独立 Engine 的 A 故障 B 自动接管均取得限定 PASS，且 Hatchet 与 Embedded Sidecar 均为 MIT；DBOS 自托管 Conductor 多 Executor 存在 G8 商业许可门槛。保留 Process/Durable SPI 和平台 Run/Step/Attempt 权威模型，**Hatchet 暂为优先候选，DBOS/Temporal/MAF 未删除**。真实 Tool Receipt、Approval、Token SSE、Cube/Sandbox/Lease 与资源门禁未完成，参见 [ARCH-TODO-028 对照和证据](references/DURABLE_ENGINE_LICENSE_GATE_20261010.md)；**不作生产准入**。
+> **2026-10-10 Process/Durable 候选调整（非 Accepted ADR）：** Hatchet Embedded 真实引擎 + 多 SDK DAG、外部 PostgreSQL 两独立 Engine 的 A 故障 B 自动接管均取得限定 PASS，且 Hatchet 与 Embedded Sidecar 均为 MIT；DBOS 自托管 Conductor 多 Executor 存在 G8 商业许可门槛。保留 Process/Durable SPI 和平台 Run/Step/Attempt 权威模型，**Hatchet 为本轮唯一优先实现候选；DBOS 因许可证约束正式排除，Temporal/MAF 仅保留历史结论**。真实 Tool Receipt、Approval、Token SSE、Cube/Sandbox/Lease 与资源门禁未完成，参见 [ARCH-TODO-028 对照和证据](references/DURABLE_ENGINE_LICENSE_GATE_20261010.md)；**不作生产准入**。
 
 > **2026-10-10 真实集成 POC 增量（非 Accepted ADR）：** 已真实验证 Cube v0.7.2 与官方 `e2b==2.40.0` 在私有 DNS/`E2B_DOMAIN=cube.app`/可信 TLS CA 条件下的 Sandbox create/files/commands/kill、两 Sandbox 文件隔离与 `openai-agents==0.23.1` 的原生 E2BSandboxClient create/exec/aclose；`e2b==2.53.1` 与本版本 Cube 的 `POST /v2/sandboxes` 仍 405。
 > 平台自有 [AgentRuntime SPI 最小代码](../poc/runtime_spi/README.md) 已具 Run/Execution/Scope/Owner/Fencing/Grant/Capabilities、Typed Event/SSE、Cancel/Unsupported 和 Pydantic/OpenAI 公共 Run Adapter 的真实 SDK 本地确定性模型 POC；OpenCode V2 的 SPI Session Factory 当前离线模拟。两项进度归 ARCH-TODO-025/026，**不修改 Accepted Contract、不关闭生产准入**。详见 [版本矩阵与原始真机证据](../poc/opencode_sandbox/E2B_PRIVATE_DNS_VERIFICATION_20261010.md)。
