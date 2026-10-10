@@ -15,7 +15,7 @@
 |---|---|---|
 | PG 队列 / 两个真实 Agent SDK 顺序交接 | LIVE PASS（上一轮） | **LIVE PASS**：GitHub Actions run 38020725053，Hatchet Embedded v0.110.5 + 本地 PostgreSQL + 两 SDK DAG |
 | 单进程硬退出 → 新进程恢复 | LIVE PASS（上一轮） | NOT TESTED |
-| **多 Worker A 硬退出且不重启 → B 自动接管** | **G8 许可证阻断，无免许可方案实测** | NOT TESTED（下一 P0） |
+| **多 Worker A 硬退出且不重启 → B 自动接管** | **G8 许可证阻断，无免许可方案实测** | **LIVE PASS**：GitHub Actions run 38021093089，两独立 Engine/Worker + 真实 PostgreSQL，安全步骤接管 |
 | 持久 WAITING_APPROVAL 不常占 Worker | NOT TESTED | NOT TESTED |
 | 外部非幂等工具 ACK 丢失 / UNKNOWN 对账 | NOT TESTED | NOT TESTED |
 | 实时 Token SSE / 游标重放 | NOT TESTED | NOT TESTED |
@@ -24,11 +24,13 @@
 
 > **2026-10-10 实际 CI 更新：** [Hatchet Embedded 真实引擎与双 SDK PASS](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38020725053)：Bundled PostgreSQL 完成 246 项迁移，真实启动 Engine/Worker、Pydantic task、OpenAI task，并以父任务输出作为子任务输入。`remote_model_calls=0`。停止进程出现 `resource_tracker` 信号量回收警告，需单独测 Worker 资源释放；此 PASS 不证明 A→B 自动接管。[外部 PostgreSQL + 双 Engine 强制故障专用测试](../../poc/durable_engine/hatchet_fleet_failover_live.py) 独立执行，未获得 PASS 前不得升级该 Gate。
 
-**此分支新增：** [真实 Hatchet Embedded DAG + Pydantic/OpenAI 两 SDK 测试](../../poc/durable_engine/hatchet_embedded_live.py) 与 [独立 GitHub CI](../../.github/workflows/hatchet-embedded-poc.yml)。两 Agent SDK 使用本地确定性 Model，仍实际通过仓库既有 `AgentRuntimeDispatcher`；不能宣称真实 LLM/token stream。下载或启动引擎失败即 CI FAIL，不允许 Mock 回退。
+> **2026-10-10 跨 Worker 实测 PASS：** [External PG Failover CI #38021093089](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38021093089) 实测 A/B 两独立 Engine 连接同一外部 PostgreSQL 16。A 完成准备步骤并进入第二个安全步骤；B 以独立 Engine 启动后 A 进程组 SIGKILL 且不重启。B 恢复原 Workflow，首步未重执行，正在执行的安全步骤由 B 完成，`hatchet.runs.get_run_ref(id).result()` 返回该原运行终态。实际输出 `worker_A_not_restarted=true`、`completed_stage_not_reexecuted=true`、`failed_inflight_safe_stage_recovered=true`、`authoritative_run_result=PASS`。**这不是不透明 SDK Agent Checkpoint，且完全未验证外部非幂等 Tool 自动恢复**。恢复耗时与资源效率尚未基准量测。
+
+**此分支新增：** [真实 Hatchet Embedded DAG + Pydantic/OpenAI 两 SDK 测试](../../poc/durable_engine/hatchet_embedded_live.py) 与 [独立 GitHub CI](../../.github/workflows/hatchet-embedded-poc.yml)、[双 Engine 故障注入](../../poc/durable_engine/hatchet_fleet_failover_live.py) 和 [实际跨 Worker CI](../../.github/workflows/hatchet-fleet-failover-poc.yml)。两 Agent SDK 使用本地确定性 Model，仍实际通过仓库既有 `AgentRuntimeDispatcher`；不能宣称真实 LLM/token stream。下载或启动引擎失败即 CI FAIL，不允许 Mock 回退。
 
 ## 三、跨 Worker 下一阶段验收
 
-- 两个独立 Engine/Worker、同一 PostgreSQL；真实记录 Worker/PID 与 Run/Attempt/Execution/owner。
+- **已完成基础 POC：** 两个独立 Engine/Worker、同一 PostgreSQL；A 强杀、B 恢复旧 Workflow ID，已完成准备 Step 不重复。生产侧仍需要平台 Run/Attempt/Execution 的持久 Ownership / Fencing Contract 与真实负载压力。
 - A 领取安全可重复工作，确认第一步持久化后，强杀 A **且不重启**；B 在已运行状态下接管，已完成第一步不重做。
 - 对已成功但 ACK 丢失的非幂等 Tool，平台必须 UNKNOWN → Reconciliation，不允许自动重执行外部副作用。
 - WAITING_APPROVAL、取消/超时、真实 Cube Session 隔离、资源密度和 Token SSE 分开验收，不能以 Embedded DAG 正例取代整个 Gate。
