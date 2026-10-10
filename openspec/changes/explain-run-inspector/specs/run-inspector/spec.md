@@ -1,6 +1,6 @@
 # Run Inspector UI explanation contract
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: Inspector explains purpose and limitations before raw technical details
 The UI SHALL explain that it verifies a Hatchet-coordinated two-real-Agent-SDK handoff and PostgreSQL persistence, not a real business inference task. It SHALL explicitly explain the fixed local deterministic models and absence of real remote-LLM calls.
