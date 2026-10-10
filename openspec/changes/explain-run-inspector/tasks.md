@@ -7,4 +7,4 @@
 - [x] Live black-box: RunResult from real Docker PG, Step B.input=A.output, 14 events, one terminal; local Hatchet/SDK PASS Run run-2e0fa189e0b34d40b38d241384d0deb7; Inspector restart + same persisted Run PASS.
 - [x] OpenSpec strict validation PASS, 7 Docker PG/API tests PASS, 8 architecture guard tests PASS, real GitHub CI 38039434789 PASS, architecture CI 38039434810 PASS.
 - [x] Record root cause, Red/Green failures and lessons in [retrospective](../../../docs/retrospectives/INSPECTOR_EXECUTION_EXPLANATION_20261010.md); limitations remain explicit.
-- [ ] Merge PR #56 only after final head checks PASS; verify Main contains specs and implementation.
+- [x] PR #56 squash merged to Main at `e2289b7f0695ce2b8997e9f97f123ba385c57f31`; final head CI 38039672844 and architecture CI 38039672843 both SUCCESS; implementation and OpenSpec verified in Main.
