@@ -90,7 +90,7 @@ def worker_main() -> None:
     print(f"worker-{ROLE}-starting", flush=True)
     (marker_dir() / f"{ROLE}.ready").write_text("started", encoding="utf-8")
     if ROLE == "A":
-        ref = workflow.run_no_wait(PureInput(run_id=os.environ["HATCHET_FLEET_RUN_ID"]))
+        ref = workflow.run(PureInput(run_id=os.environ["HATCHET_FLEET_RUN_ID"]), wait_for_result=False)
         (marker_dir() / "workflow_id.txt").write_text(ref.workflow_run_id, encoding="utf-8")
         print(f"run_id={ref.workflow_run_id}", flush=True)
     else:
@@ -151,6 +151,7 @@ def orchestrate() -> None:
         raise RuntimeError("HATCHET_FLEET_DATABASE_URL is required: real external PG")
     with tempfile.TemporaryDirectory(prefix="harness-hatchet-fleet-") as temp:
         directory = Path(temp)
+        os.environ["HATCHET_FLEET_MARKERS"] = str(directory)
         run_id = f"hatchet-failover-{uuid4().hex}"
         children = []
         logs = {}
