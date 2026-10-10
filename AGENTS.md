@@ -26,7 +26,8 @@
 3. `docs/ARCHITECTURE.md`
 4. `docs/ARCHITECTURE_BACKLOG.md`
 5. `docs/POC.md`
-6. 与当前任务直接相关的 `docs/references/*.md`
+6. 若涉及 Process/Durable、Agent 串联、持久执行或 Worker 恢复，先读 `docs/references/HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md`（当前实施候选基线）
+7. 与当前任务直接相关的 `docs/references/*.md`
 
 如果任务涉及已经关闭的架构待办，必须先读取其 Accepted Contract。
 
@@ -54,7 +55,7 @@ POC 门禁 / Contract
 
 **不能因为某个 Framework 当前更容易实现，就反向改变平台领域模型。**
 
-MAF、Temporal、ADK、CubeSandbox、Codex、OpenAI Agents SDK 等都属于实现候选或 Adapter，不拥有平台核心语义。
+MAF、Temporal、ADK、CubeSandbox、Codex、OpenAI Agents SDK 等都属于历史 POC 或独立 Adapter，不拥有平台核心语义。**2026-10-10 有效的 Process/Durable 首选实现为 Hatchet Embedded/自托管 + PostgreSQL，经可替换 SPI 接入；DBOS 因多 Executor 商业许可证限制正式 REJECTED，不再列为候选、备选或 POC 目标。** 不得在 Kernel 重新实现 Hatchet 已提供的通用 Queue/DAG/Scheduler，也不能将 Hatchet Workflow History 作为平台 Run/Step/Attempt 权威。参见 [Hatchet 架构边界](docs/references/HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md)。
 
 # 4. 架构讨论工作流
 
