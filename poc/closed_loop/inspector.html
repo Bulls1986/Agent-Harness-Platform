@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Harness · Run Inspector</title>
+<style>
+:root {font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color-scheme:dark;background:#101621;color:#e2e8f0}
+*{box-sizing:border-box}body{margin:0 auto;padding:24px;max-width:1080px}
+h1{font-size:26px;margin:8px 0}p{color:#9caec3;margin:6px 0 22px}.notice{border:1px solid #6c5362;border-radius:8px;padding:10px;color:#dec4ce;font-size:13px}
+main{display:grid;grid-template-columns:270px minmax(0,1fr);gap:18px;margin-top:18px}
+.panel{background:#182233;border:1px solid #34455d;border-radius:12px;padding:17px}
+label{display:block;color:#b7c5d6;margin-bottom:8px}textarea{width:100%;resize:vertical;min-height:74px;background:#0f1724;border:1px solid #50617a;color:#e2e8f0;border-radius:8px;padding:10px;font:inherit}
+button{background:#2563eb;color:white;border:0;padding:11px 14px;border-radius:8px;cursor:pointer}
+button:disabled{opacity:.45;cursor:default}.muted{color:#9caec3;font-size:13px}.run{display:block;width:100%;margin-top:8px;text-align:left;background:#243348;border:1px solid #455671}
+.run:hover,.run.active{background:#344f77}.bar{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.card{background:#121b29;border:1px solid #354860;border-radius:8px;padding:13px;min-width:0}
+pre{white-space:pre-wrap;word-break:break-all;background:#111827;border-radius:7px;padding:10px;color:#bdd3e8;font-size:12px}
+ol{padding-left:22px}li{padding:6px 0;border-bottom:1px solid #334155;overflow-wrap:anywhere}
+.error{color:#fca5a5}.ok{color:#86efac}code{word-break:break-all}
+@media(max-width:700px){main{grid-template-columns:1fr}.cards{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="bar"><h1>Harness · Run Inspector</h1><span class="muted">Local POC · Docker PostgreSQL</span></div>
+<div class="notice">调试用途：仅模型级 Agent SDK 验证。真实 Token SSE、Cube 跨 Worker 恢复、Approval、非幂等 Receipt 均未验收。不会模拟任务成功。</div>
+<main>
+<aside class="panel">
+<h2>启动真实 Run</h2><label for="prompt">业务输入</label>
+<textarea id="prompt">Review a short product requirement</textarea>
+<div style="margin-top:12px"><button id="start">Start Run</button></div>
+<p id="message" role="status" aria-live="polite" class="muted"></p>
+<h3>PostgreSQL Run 历史</h3>
+<div id="history"></div>
+</aside>
+<section class="panel">
+<div class="bar"><h2>Execution Details</h2><span id="state" class="muted">尚未选择 Run</span></div>
+<div class="muted">Platform Run ID: <code id="run-id">—</code></div>
+<div class="muted">Hatchet WorkflowRun ID: <code id="provider-id">—</code></div>
+<div class="muted">Plan: <code id="plan">—</code> · Outbox: <code id="outbox">—</code></div>
+<h3>真实 Agent Steps</h3><div id="steps" class="cards"></div>
+<h3>PostgreSQL Event Timeline</h3><ol id="timeline"></ol>
+<div id="detail-error" class="error" role="alert"></div>
+</section>
+</main>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+let current = location.hash.startsWith("#run-") ? location.hash.slice(1) : null;
+let busy = false;
+async function api(path,options) {
+  const result=await fetch(path,options);
+  let data=await result.json().catch(()=>({detail:"Invalid HTTP response"}));
+  if(!result.ok) throw new Error(typeof data.detail==="string"?data.detail:JSON.stringify(data.detail));
+  return data;
+}
+function node(tag,text,css) {
+  const e=document.createElement(tag); e.textContent=String(text??"—");
+  if(css)e.className=css;return e;
+}
+function selectRun(runId) {current=runId;location.hash=runId;refresh();}
+async function history() {
+  const list=await api("/api/runs");
+  $("history").replaceChildren();
+  for(const item of list.runs) {
+    const b=node("button",item.run_id.slice(0,24)+" · "+item.state,"run");
+    if(item.run_id===current)b.classList.add("active");
+    b.addEventListener("click",()=>selectRun(item.run_id));
+    $("history").append(b);
+  }
+}
+function render(snapshot) {
+  $("state").textContent=snapshot.state;
+  $("run-id").textContent=snapshot.run_id;
+  $("provider-id").textContent=snapshot.provider_workflow_run_id??"—";
+  $("plan").textContent=snapshot.plan_version;
+  $("outbox").textContent=snapshot.outbox;
+  $("steps").replaceChildren();
+  for(const [name,step] of Object.entries(snapshot.steps)) {
+    const card=node("div","","card");
+    card.append(node("h4",name==="pydantic"?"Step A · Pydantic AI":"Step B · OpenAI Agents SDK"));
+    card.append(node("div","State: "+step.state));
+    card.append(node("div","Attempts: "+step.attempts,"muted"));
+    card.append(node("pre",step.output??"(waiting)"));
+    $("steps").append(card);
+  }
+  $("timeline").replaceChildren();
+  for(const event of snapshot.events) {
+    $("timeline").append(node("li",String(event.seq).padStart(3,"0")+" · "+event.type+" · "+JSON.stringify(event.data)));
+  }
+}
+async function refresh() {
+ if(busy) return;busy=true;
+ try {
+   await history();
+   if(current) {
+     const data=await api("/api/runs/"+encodeURIComponent(current));
+     render(data);
+     $("detail-error").textContent="";
+   }
+ } catch(error) {
+   $("detail-error").textContent=error.message;
+ } finally { busy=false; }
+}
+$("start").addEventListener("click",async()=>{
+  $("start").disabled=true;
+  $("message").textContent="请求已提交，等待真实服务响应…";
+  try {
+    const data=await api("/api/runs",{method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({prompt:$("prompt").value})});
+    $("message").textContent="已创建 "+data.run_id+"；从 PostgreSQL 读取进度";
+    selectRun(data.run_id);
+  } catch(e) { $("message").textContent="失败："+e.message; }
+  finally { $("start").disabled=false; }
+});
+refresh();
+setInterval(refresh,1500);
+</script>
+</body></html>
