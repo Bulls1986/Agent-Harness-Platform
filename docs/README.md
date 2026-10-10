@@ -7,6 +7,7 @@
 | 目的 | 权威入口 | 状态 |
 |---|---|---|
 | **总体架构、建设必要性、方案优劣势、真实 POC 证据与路线图** | **[根目录 README：架构设计方案](../README.md)** | **现行总入口：集成 POC LIMITED GO / 生产 NO-GO** |
+| **替换现有 OpenCode PDLC、保留存量能力及用户无感迁移** | [PDLC 替换与迁移方案](references/PDLC_REPLACEMENT_MIGRATION_20261010.md) | **业务目标已确认、迁移实码盘点未完成** |
 | 当前多 Harness 目标架构与分层 | [多 Harness 目标架构候选](references/MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md) | **CANDIDATE，不是 Accepted ADR** |
 | 本轮技术准入 / GO-NO GO 和证据 | [准入评估](references/MULTI_HARNESS_ADMISSION_20261009.md) | POC 分级准入 |
 | **已验证技术版本 / 可兼容 SDK 组合 / OCI Digest / Cube Template** | [2026-10-10 实测版本基线](references/VERIFIED_STACK_BASELINE_20261010.md) | **POC 锁定版本，生产未 Accepted** |

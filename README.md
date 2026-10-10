@@ -1,25 +1,40 @@
 # Agent Harness Platform
 
-**面向企业内部 AI Agent 的可组合执行、跨 Agent 串联与任务级恢复平台。** 让不同 Agent 框架在同一个任务中按步骤交接结果与验证证据，而不必把整个平台绑定到某一家 SDK。
+**现有 OpenCode PDLC 平台的下一代执行架构：保留已建能力、支持无感迁移，新增可组合的专业 Agent 与任务串联。** Coding 能力继续复用 OpenCode，平台层不再与单一 Agent SDK 绑定。
 
 > **架构状态：集成 POC 阶段（LIMITED GO），非生产准入。** 更新依据截至 **2026-10-10**。已证明关键技术路径可运行；统一平台的持久化、真实模型全链、跨 Worker 恢复、生产级隔离尚未整体验收。
 > **阅读说明：** 本 README 是项目的**总体方案与项目入口**。正式语义遵循已 Accepted 的 [Architecture Contracts](docs/references/README.md)；正在比较的技术方案、具体实现、历史实验和风险以所链接的专题及 [Backlog](docs/ARCHITECTURE_BACKLOG.md) 为准。本文不将候选方案擅自升级为正式 ADR。
 
 ## 1. 一分钟读懂：为什么做、做什么、现在到哪一步
 
-### 我们遇到的问题
+### 当前建设现状：从一个 Coding Agent 扩展到了多种业务场景
 
-企业内部逐渐出现产品、研发、测试、文档和业务 Agent。它们可能分别使用 Pydantic AI、OpenAI Agents SDK、OpenCode 或 Microsoft Agent Framework（MAF）。
+企业内部已建设基于 **OpenCode** 的 PDLC 平台，产品、研发、测试、文档及业务等 Agent **目前统一使用 OpenCode 实现**。这一选择有充分的起步价值：OpenCode 本身是 Coding Agent，在代码阅读、文件修改、Shell、Git、代码执行和研发工具集成方面有成熟能力，帮助现有 PDLC 快速形成可用的 Agent 体验。
 
-如果每个 Agent 都各自处理聊天历史、文件目录、Shell、审批和故障恢复，就会产生三个问题：
+但随着应用范围从研发编码扩展到需求分析、结构化文档处理、业务决策、系统协作和审批流程，**OpenCode 以 Coding 为中心的设计逐渐显现适配成本**：一些非 Coding Agent 并不需要完整的文件/Shell 执行环境，却要围绕 OpenCode 的交互和执行模型做额外补充；要实现跨 Agent 编排、持久任务状态及统一治理，还需要持续增强平台外围能力。这不是否定 OpenCode 的编码优势，而是说明**单一 Coding Agent 不适合承担所有业务 Agent 的平台底座职责**。
 
-1. **能力重复建设：** 每套 Agent 都重做执行环境、任务状态和 UI 事件。
-2. **协作割裂：** 产品 Agent 的结果难以安全地交给研发/测试 Agent；切换框架容易丢失上下文或执行证据。
-3. **成本与风险：** 如果每个历史会话长期占用独立 Agent 进程/沙箱，资源浪费；如果所有 Agent 共用宿主机 Shell，又缺少执行隔离与可恢复性。
+与此同时，不同 Agent SDK 各有适用领域，合理组合可能比强制统一获得更好的效果：
+
+| Agent 技术 | 相对擅长的方向 | 在新平台中的定位 |
+|---|---|---|
+| **OpenCode 2** | 代码库分析与修改、Shell/Git、Coding Skills 和研发工具链 | **继续保留**，作为现有 PDLC 的 Coding Runtime |
+| **Pydantic AI** | 类型化输入/输出、结构化数据校验、轻量业务 Agent 与工具调用 | 通用业务、文档抽取、规则化结果处理的候选 Runtime |
+| **OpenAI Agents SDK** | 工具调用、Agent Handoff、轻量多 Agent 协作与公开扩展接口 | 通用及协作类 Agent 的可选 Runtime |
+| **Microsoft Agent Framework（MAF）** | 显式 Workflow/Executor、复杂流程控制与既有 Microsoft 集成 | 工作流型 Agent 和已有系统接入的可选 Runtime |
+
+这里的“擅长”指**SDK 的设计侧重点与可复用能力**，不是已经证明某个 SDK 在所有对应业务的效果都优于其他 SDK；最终效果还取决于模型、Prompt、工具和具体业务验收。相关技术选型与 POC 见[候选技术对比](docs/references/MULTI_HARNESS_TECH_SELECTION_20261009.md)。
+
+### 由此产生的核心问题
+
+1. **单一底座与业务场景不匹配：** 使用 OpenCode 实现所有 Agent，使非编码场景需要越来越多的定制和补丁，长期演进成本上升。
+2. **难以发挥专业 SDK 的优势：** Agent 与 OpenCode 的运行模型绑定过深，即使另一套 SDK 更适合某种业务，也难以低成本接入、替换和升级。
+3. **缺少平台级任务串联：** 多个 Agent 不只是互相调用一下工具，还需要明确的任务步骤、输入输出交接、验证、审批、失败处理和恢复；这些不能只靠 Prompt/Skill 隐式约定。
+4. **执行资源与任务状态耦合：** 轻量业务 Agent 与需要 Shell/Git 的 Coding Agent 采用同样重的执行环境不经济；简单共享宿主机又难以实现工作空间和权限隔离。
+5. **已有建设不能丢：** 现有 PDLC 的界面、项目、Agent/Skill/MCP 配置、用户会话和业务资产必须平滑保留。新技术架构如果要求用户重新建立这些内容，就没有达到平台替换的业务目标。
 
 ### 我们的答案
 
-**不再自研一个包揽所有功能的 Agent SDK，而是建设各 Agent SDK 之上的“执行控制层”。**
+**以兼容现有 PDLC 为前提，将平台执行控制从 OpenCode 中解耦：保留其擅长的 Coding 能力，允许不同 Agent 选择合适的 SDK，并由统一 Harness 负责任务串联、状态、恢复和隔离。**
 
 可以把它理解为一套**任务调度台 + 执行记录簿 + 安全工作间租用系统**：
 
@@ -29,6 +44,8 @@
 - **记录簿（PostgreSQL + 对象存储引用）**：保留任务事实、版本、产物与证据；不以某个 SDK 的 Session/Checkpoint 充当唯一任务状态。
 
 **最终目标：** 平台可通过配置 Recipe **串联不同类型的 Agent，形成可验证、可暂停和可恢复的任务**；普通会话共享 Worker，重资源阶段才按需占用隔离沙箱，各 Agent 仅在授权范围内交接工作空间与证据。
+
+**第一期交付原则：存量 PDLC 功能、资产与用户体验不退化，同时提供平台级跨 Agent 串联。** 这是两项独立验收要求，不能仅凭 SDK/Cube 技术 POC 通过就宣布已完成迁移。详见[现有 PDLC 替换与无感迁移设计](docs/references/PDLC_REPLACEMENT_MIGRATION_20261010.md)。
 
 ### 当前实际结论
 
@@ -64,7 +81,7 @@
 
 ### 平台核心业务能力：跨 Agent 串联
 
-**业务目标已经明确：不同 Agent 能按步骤串起来完成一项任务。** 例如，需求分析 Agent → 代码实现 Agent → 验证 Agent；也可以是文档抽取 Agent → 数据核对 Agent → 业务提交 Agent。**PDLC 只是例子，平台不得把它写死成唯一流程。**
+**业务目标已经明确：在无感替换现有 PDLC 的同时，让不同专业 Agent 能按步骤串起来完成一项任务。** 首个真实验收应选择现有 PDLC 的需求分析 Agent → 代码实现 Agent → 验证 Agent；同样的机制也能支持文档抽取 → 数据核对 → 业务提交。**PDLC 是优先迁移与验收场景，但串联机制不能写死为 PDLC 专用流程。**
 
 ```mermaid
 flowchart LR
@@ -337,6 +354,7 @@ python -B poc/compatibility/verify_stack.py --profile cube_e2b_native
 
 | 顺序 | 交付重点 | 完成标准（必须用证据证明） | 状态 |
 |---|---|---|---|
+| **P0 / 029** | **现有 OpenCode PDLC 无感替换** | 真实现网功能/API/历史会话/项目/Agent与 Skill/MCP/Workspace 清单；原入口和权限兼容、灰度接管、禁止副作用双写，回退演练通过 | **业务目标确定；现网源码与数据迁移尚未验收** |
 | **P0 / 025** | **跨 Agent 串联 + AgentRuntime SPI + 执行 API** | 一个 Run 中至少两个不同 Runtime 按 Recipe/Step 串联，Artifact/Evidence 交接可追踪；失败阻断/重试/审批暂停和真正 Token SSE | **Tool 接力真机通过；统一业务串联待集成** |
 | **P0 / 025–027** | SandboxProvider/Execution Lease 集成 | 从可信 Scope 签发 Lease、绑定 Workspace、同 Sandbox 接力；未知/过期/跨 Scope 拒绝；无执行需求不申请 Sandbox | **原生 Cube 功能已过；平台授权集成未过** |
 | **P0 / 026** | E2B 版本兼容与原生 SDK 续连 | 固定 2.40 已验组合；补官方 `connect(same_id)`、Pydantic Harness E2B Coder 和生产 DNS/TLS 契约；2.53 明确不支持或升级 Cube | **2.40 最小 LIVE PASS / 后续 OPEN** |
@@ -356,7 +374,7 @@ python -B poc/compatibility/verify_stack.py --profile cube_e2b_native
 
 **需要业务方最终明确的取舍**（不阻断现有架构/POC 收口）：
 
-1. **业务目标已确认：通用跨 Agent 串联是第一期核心能力。** PDLC 仅是候选验收样例；待选定最小实际用例，以固定首个 Recipe 输入/输出及验收指标。
+1. **业务目标已确认：替换既有 OpenCode PDLC 并实现已有能力无感迁移，同时新增可复用的跨 Agent 串联。** 需要从旧 PDLC 的现网源码和正式功能盘点中确定迁移等价基线及第一个真实串联验收任务，不能只使用新建 Demo 证明成功。
 2. **恢复目标到什么粒度？** 当前 Accepted 定位为任务级恢复，但需要业务确认“从最近 Step/RecoveryPoint 继续”是否足够，还是某些交互式 Coding 场景必须做到更细粒度恢复。
 3. **100 人并发的含义？** 是同时保持 100 个逻辑 Session，还是同时有 100 个执行模型/代码/测试的活动任务？两者决定非常不同的资源与容量规划；未测之前不填容量结论。
 

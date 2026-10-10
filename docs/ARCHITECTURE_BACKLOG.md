@@ -746,6 +746,24 @@ OpenCode 2 / MAF；目前全部为候选，尚无完美零适配技术栈。
 
 ---
 
+## ARCH-TODO-029 存量 OpenCode PDLC 平台无感替换与跨 Agent 串联
+
+**状态：P0 / 业务目标已确认；旧平台实码盘点与迁移集成未完成（非 Accepted）**
+
+**业务目标：** 当前企业内产品、研发、测试、文档及业务 Agent **统一基于 OpenCode 实现**。新平台必须**替换其 PDLC 执行与控制架构，保留既有建设并实现用户侧平滑迁移**；同时新增能够将不同专业 Agent SDK 编排成一条任务的**跨 Agent 串联能力**。更换底层架构并不要求淘汰 OpenCode Coding Runtime，也不意味着在新平台复制既有 PDLC 需求/迭代/知识库等业务领域模型。
+
+**架构策略：** 保留既有 UI/业务资产/项目与会话读取能力，经 Legacy API Facade 与稳定 ID 映射逐步迁移新 Run；原活动会话由旧执行端安全继续或在经验证的恢复点切换；同一写操作只允许一个执行 Owner，不做有副作用的双写。新 Harness 负责 Recipe/Step/Attempt/任务事实、交接、审核与恢复；各 Agent SDK 由 AgentRuntime SPI 接入。
+
+**分阶段必过门禁：**
+
+1. **M0 旧平台只读事实盘点：** 获取现有 PDLC 源码、运行版本、API/事件、数据 Schema、OpenCode Session、Prompt/Skills/Subagents/Plugins/Hooks/MCP、Workspace/Git、对象存储、身份权限与启用功能清单；形成业务功能与迁移对象的一一对应表。**当前 Agent Harness 仓库无法独立证明旧 PDLC 每项现网能力。**
+2. **M1 原功能与数据兼容：** 既有 URL/页面/SSO、历史消息/附件、项目/工作区、已有 Agent 与 Skill 均可继续使用；旧 Session/新 Run ID 稳定关联，跨 Scope 请求拒绝。
+3. **M2 逐步灰度：** 新请求按确定性路由进入旧/新运行时；有副作用的执行禁止双写，失败和回退不导致重复 Tool/Git/外部业务操作。
+4. **M3 跨 Agent 串联：** 至少一条真实既有 PDLC 场景通过一个 Run 下 ≥2 个 Runtime 的 Recipe/Step 执行、受控 Artifact/Evidence 交接、验收阻断、审批、失败与任务级恢复；该机制必须能被非 PDLC Agent 复用。
+5. **M4 用户无感验收与回退：** 以真实用户/项目和活动会话分别检查原功能、行为、权限、数据、Workspace/历史、一致性及回退；新旧执行权威和副作用对账清晰，未经验收不宣告生产迁移成功。
+
+**专题及验收矩阵：** [现有 PDLC 平台替换与无感迁移方案](references/PDLC_REPLACEMENT_MIGRATION_20261010.md)。本项优先于单独实现通用 Harness Demo；与 ARCH-TODO-025～028 并行，但上述后续 Gate 不因现有 Cube/E2B/OpenCode 功能 POC 通过而自动关闭。
+
 # 5. 推荐讨论顺序
 
 按依赖关系建议：
