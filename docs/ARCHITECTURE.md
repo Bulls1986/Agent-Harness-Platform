@@ -918,7 +918,6 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 | ADR-027 | 冻结 MCP Trust 边界：MCP 准入与信任由外部 Governance 负责；Harness 对可调用 MCP 视为已准入，不建立 Trust Score/二次审核，只负责当前 Execution 的 Policy、Credential、SideEffect、Audit 与版本绑定。 | Accepted |
 | ADR-028 | 冻结 Cancellation/Timeout：Cancel Request 先进入 CANCELLING 并下传；ACK 不等于停止；Timeout 是 Failure Type；已 dispatch 副作用不确定时 UNKNOWN→Reconciliation；取消不隐式回滚。 | Accepted |
 | ADR-029 | POC-C C00–C16 阶段**技术评估**收口，Temporal 保留 Durable Adapter 优先候选；G2/G3/G6 完整硬门禁未过，生产主架构 NO-GO，后续归 ARCH-TODO-025。 | Accepted（仅评估处置；非生产 ADR） |
-
 | ADR-030 | Multica 仅作为调度/任务生命周期的架构思想参考；不复制或依赖其源码，平台独立实现，执行层不采用 Multica；不预先决定 Process/Durable 默认选型。 | Accepted（源码使用边界；非生产选型） |
 
 # 19. MAF 扩展性验证要求
