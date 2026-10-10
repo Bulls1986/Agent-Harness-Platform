@@ -735,6 +735,8 @@ OpenCode 2 / MAF；目前全部为候选，尚无完美零适配技术栈。
 
 **方向：** Hatchet 作为当前 Process/Durable SPI **唯一优先实现候选**（开源双 Engine 接管已实测）；Temporal、MAF Durable、PG + Worker/Scheduler 仅保留原有历史/条件性技术方案，不进入当前同等级重复验证。**DBOS 因自托管 Conductor 多 Executor 商业许可约束，正式排除（REJECTED / OUT OF SCOPE），不再作为备选、POC 或生产候选**。Pydantic 仅为 AgentRuntime Adapter 候选，不拥有跨 SDK Durable 语义。
 
+**2026-10-10 架构调整权威说明：** [Hatchet Process/Durable 六层职责、Provider ID Binding、数据/部署/运行架构及恢复门禁](references/HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md) 为当前实施基线；[根目录 README 八视图](../README.md#31-八类分层架构视图) 已联动更新。**实施方向已确定，不再把 DBOS 许可证问题视为待解决事项，不并行重造 PG Scheduler；但生产 Accepted ADR 仍等待端到端 Gate。**
+
 **2026-10-10 原始 POC 证据：** [DBOS/Hatchet G8 许可及 A→B 接管专项](references/DURABLE_ENGINE_LICENSE_GATE_20261010.md)。[Hatchet 实际双 SDK DAG CI PASS](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38020725053)；[Hatchet 双 Engine/外部 PostgreSQL 16、Worker A SIGKILL 不重启→B 接管原 Workflow CI PASS](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38021093089)。后者已完成安全可重试阶段，证明原 Run 能接管、已完成 Step 不重复，**但没有验证非幂等 Tool、WAITING_APPROVAL、SSE 或真实 Cube Session**。两个真实 Agent SDK 的调用与跨 Worker 故障是两个单独实验，不应声称同一任务端到端同时覆盖。
 
 **待办与完成标准：**
