@@ -47,6 +47,8 @@
 37. [**已验证技术栈版本基线、E2B 兼容矩阵、Cube OCI Digest 与 Template（2026-10-10）**](VERIFIED_STACK_BASELINE_20261010.md)
 38. [**现有 OpenCode PDLC 替换、已有能力无感迁移与跨 Agent 串联方案（2026-10-10）**](PDLC_REPLACEMENT_MIGRATION_20261010.md)
 
+**架构视图：** [八类分层架构图（业务 / 逻辑 / 应用 / 技术 / 数据 / 部署 / 功能 / 运行）](../ARCHITECTURE_VIEWS.md) —— 从现有 Accepted Contract 和候选拓扑派生的统一视图，不是新的独立决策来源。
+
 ## 阶段评估处置索引
 
 - [POC-C C00–C16 技术评估收口与生产 NO-GO](../POC_C_EVALUATION_CLOSEOUT.md)：保留主干已合并的阶段证据，后续行动由 [ARCH-TODO-025](../ARCHITECTURE_BACKLOG.md) 管理。
