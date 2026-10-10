@@ -1,6 +1,6 @@
 # Agent Harness Platform
 
-**面向企业内部 AI Agent 的统一执行与任务恢复平台。** 让不同 Agent 框架可以使用同一套任务记录、执行权限、工作空间、工具和沙箱，而不必把整个平台绑定到某一家 SDK。
+**面向企业内部 AI Agent 的可组合执行、跨 Agent 串联与任务级恢复平台。** 让不同 Agent 框架在同一个任务中按步骤交接结果与验证证据，而不必把整个平台绑定到某一家 SDK。
 
 > **架构状态：集成 POC 阶段（LIMITED GO），非生产准入。** 更新依据截至 **2026-10-10**。已证明关键技术路径可运行；统一平台的持久化、真实模型全链、跨 Worker 恢复、生产级隔离尚未整体验收。
 > **阅读说明：** 本 README 是项目的**总体方案与项目入口**。正式语义遵循已 Accepted 的 [Architecture Contracts](docs/references/README.md)；正在比较的技术方案、具体实现、历史实验和风险以所链接的专题及 [Backlog](docs/ARCHITECTURE_BACKLOG.md) 为准。本文不将候选方案擅自升级为正式 ADR。
@@ -28,7 +28,7 @@
 - **工作间（SandboxProvider）**：需要读写文件、运行命令、Git 或编译时才申请 Cube Sandbox；不需要时不占用沙箱。
 - **记录簿（PostgreSQL + 对象存储引用）**：保留任务事实、版本、产物与证据；不以某个 SDK 的 Session/Checkpoint 充当唯一任务状态。
 
-**最终目标：** 平台可以承载不同类型的 Agent，普通会话共享有限 Worker 资源，需要重资源执行的阶段才占用隔离沙箱；各 Agent 可以在授权范围内复用同一工作空间与证据。
+**最终目标：** 平台可通过配置 Recipe **串联不同类型的 Agent，形成可验证、可暂停和可恢复的任务**；普通会话共享 Worker，重资源阶段才按需占用隔离沙箱，各 Agent 仅在授权范围内交接工作空间与证据。
 
 ### 当前实际结论
 
@@ -62,6 +62,28 @@
 
 **一个直观例子：** 产品 Agent 产生需求说明后，研发 Agent 可以在同一**已授权**项目 Workspace 内修改代码，测试 Agent 从相同 Workspace 获取结果继续验证。平台记录“哪一次尝试修改了什么、验证依据是什么”，而不要求三个 Agent 共用一个进程或同一个框架。
 
+### 平台核心业务能力：跨 Agent 串联
+
+**业务目标已经明确：不同 Agent 能按步骤串起来完成一项任务。** 例如，需求分析 Agent → 代码实现 Agent → 验证 Agent；也可以是文档抽取 Agent → 数据核对 Agent → 业务提交 Agent。**PDLC 只是例子，平台不得把它写死成唯一流程。**
+
+```mermaid
+flowchart LR
+    A["Agent A：产生结果 / Evidence"]
+    B["Agent B：接收受控输入并执行"]
+    C{"验收通过？"}
+    D["Agent C：继续执行"]
+    E["重试 / 重规划 / 人工审批"]
+    A --> B --> C
+    C -- "是" --> D
+    C -- "否" --> E --> B
+```
+
+由平台的 **Recipe / Plan / Step** 表达执行依赖及每步的 Runtime 选择；跨 Agent 传递**结构化输出、Artifact/Evidence 引用、必要上下文和受控 WorkspaceRef**，而不是强制共享同一 SDK、OS 进程、完整聊天历史或直接交出 Sandbox ID。交接前需检查输入契约、Scope、权限及冻结版本。
+
+**第一期优先级：** 顺序串联 → 可靠结果交接 → 验收失败阻断/重试 → 审批暂停和任务级恢复。条件分支与独立步骤并行可依同一依赖模型演进；深度递归子 Agent、A2A、完整 BPMN 引擎不作为第一期前提。
+
+**证据边界：** 真实 Cube 上不同 SDK 的 Tool 已能读取同一授权 Workspace；**一个 Run 内由 Harness 按 Recipe 调度 A→B、保存交接事实并完成验收/失败恢复的端到端业务串联尚未实测**，应作为下一阶段 P0 门禁。
+
 > **实施状态提示：** 上表是目标端到端流程，不是声称所有阶段都已被一个统一服务串联。仓库目前包含若干真实专项 POC 和一个最小 Runtime SPI 原型；完整一体化 API/任务执行服务仍属于集成阶段。
 
 ## 3. 总体架构：控制平面和执行平面分开
@@ -70,7 +92,7 @@
 flowchart TB
     U["用户 / PDLC / AI 门户 / 企业 API"]
     API["API + Responses-compatible 事件协议\nConversation / Turn / Run"]
-    CP["Harness 控制平面\nPlan → Execute → Verify → Replan\nPolicy / Approval / Recovery / Version"]
+    CP["Harness 控制平面\nRecipe / Agent 串联 → Plan / Step / Verify\nPolicy / Approval / Recovery / Version"]
     SPI["AgentRuntime SPI\n能力匹配 · Adapter 选择 · Typed Events"]
     POOL["共享 Runtime Worker Pool\n按 Run 并发，不按历史 Session 常驻进程"]
     PY["Pydantic AI / Harness Adapter\n通用 Agent：默认候选"]
@@ -106,7 +128,7 @@ flowchart TB
 | 层 | 平台**拥有**的能力 | 不重复建设的能力 |
 |---|---|---|
 | API / 协议 | 平台 Run ID、统一事件与客户端进度、重连协议 | 完整聊天前端产品、模型内部推理 |
-| Harness Kernel | Plan/Step/Attempt 状态、Verify/Replan、Policy、审批事实、恢复裁决 | 各 SDK 的完整 Agent Loop |
+| Harness Kernel | **Recipe/Step 依赖与 Agent 串联**、Attempt、结果交接/验收、Policy、审批事实、恢复裁决 | 各 SDK 的完整 Agent Loop、重型 BPMN 引擎 |
 | AgentRuntime SPI | 能力装配、公开 SDK Adapter、工具执行授权绑定、运行时事件翻译 | 私有 SDK 内核与各 SDK 原生 Session |
 | SandboxProvider | 申请/绑定/释放 Sandbox、WorkspaceRef、Scope 和 Lease 检查 | MicroVM 内核、网络、镜像仓库、节点管理 |
 | Process / Durable SPI | 统一任务事实、恢复点引用、执行结果/副作用语义 | 重造 Temporal/MAF 的 History/Scheduler |
@@ -315,7 +337,7 @@ python -B poc/compatibility/verify_stack.py --profile cube_e2b_native
 
 | 顺序 | 交付重点 | 完成标准（必须用证据证明） | 状态 |
 |---|---|---|---|
-| **P0 / 025** | 统一 AgentRuntime SPI + 实际执行 API | Pydantic/OpenAI/OpenCode 三个 Runtime 真实进入同一平台 Run/Task Facts/Typed Event 合同；不支持能力显式拒绝；真正 Token SSE | **部分代码与 SDK-LOCAL PASS** |
+| **P0 / 025** | **跨 Agent 串联 + AgentRuntime SPI + 执行 API** | 一个 Run 中至少两个不同 Runtime 按 Recipe/Step 串联，Artifact/Evidence 交接可追踪；失败阻断/重试/审批暂停和真正 Token SSE | **Tool 接力真机通过；统一业务串联待集成** |
 | **P0 / 025–027** | SandboxProvider/Execution Lease 集成 | 从可信 Scope 签发 Lease、绑定 Workspace、同 Sandbox 接力；未知/过期/跨 Scope 拒绝；无执行需求不申请 Sandbox | **原生 Cube 功能已过；平台授权集成未过** |
 | **P0 / 026** | E2B 版本兼容与原生 SDK 续连 | 固定 2.40 已验组合；补官方 `connect(same_id)`、Pydantic Harness E2B Coder 和生产 DNS/TLS 契约；2.53 明确不支持或升级 Cube | **2.40 最小 LIVE PASS / 后续 OPEN** |
 | **P0 / 028** | Task Facts / RecoveryPoint / Receipt | Worker SIGKILL、跨 Worker 接管、HITL、非幂等 UNKNOWN Tool 对账；选择 PG Worker 或 Temporal/MAF Durable | **历史子项有实证，统一新链路未验** |
@@ -334,7 +356,7 @@ python -B poc/compatibility/verify_stack.py --profile cube_e2b_native
 
 **需要业务方最终明确的取舍**（不阻断现有架构/POC 收口）：
 
-1. **第一期主要交付给谁？** 产品/研发/测试一体化 PDLC，还是先只完成通用 Agent 平台基础能力？它决定第一个端到端真实验收用例及 UI/工作空间优先级。
+1. **业务目标已确认：通用跨 Agent 串联是第一期核心能力。** PDLC 仅是候选验收样例；待选定最小实际用例，以固定首个 Recipe 输入/输出及验收指标。
 2. **恢复目标到什么粒度？** 当前 Accepted 定位为任务级恢复，但需要业务确认“从最近 Step/RecoveryPoint 继续”是否足够，还是某些交互式 Coding 场景必须做到更细粒度恢复。
 3. **100 人并发的含义？** 是同时保持 100 个逻辑 Session，还是同时有 100 个执行模型/代码/测试的活动任务？两者决定非常不同的资源与容量规划；未测之前不填容量结论。
 

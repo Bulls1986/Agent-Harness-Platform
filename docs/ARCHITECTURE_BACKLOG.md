@@ -520,6 +520,8 @@ Harness 仍负责具体 Execution 的 Capability / Policy / Approval / Credentia
 
 **状态：DEFERRED**
 
+**范围澄清（2026-10-10）：** 此处延期的是深度递归子 Agent、A2A/动态 Multi-Agent Topology，**不是**第一期必须支持的跨 Agent 顺序串联。基础串联基于 Harness Recipe/Plan/Step 与 ARCH-TODO-025 Runtime SPI 的集成验收，不能因为本条 DEFERRED 而取消。
+
 当前不优先围绕 Multi-Agent 设计平台。
 
 后续需要讨论：
@@ -657,6 +659,8 @@ OpenCode 2 / MAF；目前全部为候选，尚无完美零适配技术栈。
 **状态：POC / ARCHITECTURE CANDIDATE（P1；未接受）**
 
 **方向：** Pydantic AI Harness 是新通用 Agent 的默认 Runtime Adapter 候选；OpenAI Agents SDK、OpenCode 2 和 MAF 分别作为独立适配器。SDK 切换由**平台 AgentRuntime SPI** 实现，不由 Pydantic 原生托管其他 SDK；模型 Provider 切换另行治理。关联 [目标架构候选](references/MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md)。
+
+**业务优先级 P0（2026-10-10）：** 单一 Run 下以 Recipe/Step 顺序调度至少两个异构 AgentRuntime；使用授权 WorkspaceRef 和受控 Artifact/Evidence 交接，失败阻断后继 Step，支持重试/重规划、审批暂停与任务级恢复。现有真实 Tool 接力不等于 Kernel 端到端串联完成。PDLC 是用例而非固定流程。
 **2026-10-10 版本冻结门禁：** [已验证 SDK/Runtime/OCI Digest/Template 快照](references/VERIFIED_STACK_BASELINE_20261010.md) 已单独存为机器可读基线，包含 E2B 2.40.0 限定 PASS / 2.53.1 HTTP405 负例及自动防漂移验证；后续集成必须依 [Accepted Registry & Versioning Contract](references/REGISTRY_AND_VERSIONING.md) **在 Run 创建时**记录确切 Runtime/Adapter/SDK/Environment/Digest，重试/恢复沿用冻结绑定。POC 快照不等于数据库层已实现此持久化。
 
 
