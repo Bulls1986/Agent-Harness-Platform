@@ -58,10 +58,20 @@ jobs:
       - name: Real HTTP Inspector submit and persistent refresh / process restart
         run: |
           set -euo pipefail
-          python -B -m poc.closed_loop.serve > /tmp/harness-inspector.log 2>&1 &
+          # The Hatchet embedded sidecar is a child process: use an isolated
+          # process group, not an unbounded wait on a signal-handling Python PID.
+          setsid python -B -m poc.closed_loop.serve > /tmp/harness-inspector.log 2>&1 &
           APP_PID=$!
-          cleanup() { kill "$APP_PID" 2>/dev/null || true; }
-          trap cleanup EXIT
+          stop_server() {
+            if [ -n "${APP_PID:-}" ]; then
+              kill -TERM -- "-$APP_PID" 2>/dev/null || true
+              sleep 3
+              kill -KILL -- "-$APP_PID" 2>/dev/null || true
+              wait "$APP_PID" 2>/dev/null || true
+              APP_PID=""
+            fi
+          }
+          trap stop_server EXIT
           python - <<'PY'
           import time, urllib.request
           for i in range(100):
@@ -76,10 +86,8 @@ jobs:
           PY
           python -B -m poc.closed_loop.verify_inspector_live | tee /tmp/harness-inspector-e2e.json
           RUN_ID="$(python -c 'import json;print(json.load(open("/tmp/harness-inspector-e2e.json"))["run_id"])')"
-          kill "$APP_PID" || true
-          wait "$APP_PID" || true
-          APP_PID=""
-          python -B -m poc.closed_loop.serve >> /tmp/harness-inspector.log 2>&1 &
+          stop_server
+          setsid python -B -m poc.closed_loop.serve >> /tmp/harness-inspector.log 2>&1 &
           APP_PID=$!
           python - <<'PY'
           import time, urllib.request
