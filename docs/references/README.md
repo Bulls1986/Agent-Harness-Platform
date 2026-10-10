@@ -51,6 +51,8 @@
 
 ## 阶段评估处置索引
 
+- [**架构原则与开发准入护栏（G01–G20）**](../ARCHITECTURE_GUARDRAILS.md)：Accepted Contract 对应的硬约束、PR 评审、异常恢复与 CI 静态门禁；不是新的选型 ADR。
+
 - [POC-C C00–C16 技术评估收口与生产 NO-GO](../POC_C_EVALUATION_CLOSEOUT.md)：保留主干已合并的阶段证据，后续行动由 [ARCH-TODO-025](../ARCHITECTURE_BACKLOG.md) 管理。
 
 ## 使用原则
