@@ -5,7 +5,7 @@
 > **架构状态：集成 POC 阶段（LIMITED GO），非生产准入。** 更新依据截至 **2026-10-10**。**当前 Process/Durable SPI 首选实现为 Hatchet Embedded / 私有化集群 + PostgreSQL；DBOS 因许可证约束正式排除（REJECTED），不作为候选或备选。** Hatchet 双 SDK DAG 与两个独立 Engine 的跨 Worker 安全步骤恢复已分别 LIVE PASS；统一平台的 Task Facts 对接、真实模型 SSE、审批、非幂等 Tool Receipt、Cube 恢复和生产隔离仍未整体验收。
 > **阅读说明：** 本 README 是项目的**总体方案与项目入口**。正式语义遵循已 Accepted 的 [Architecture Contracts](docs/references/README.md)；正在比较的技术方案、具体实现、历史实验和风险以所链接的专题及 [Backlog](docs/ARCHITECTURE_BACKLOG.md) 为准。本文不将候选方案擅自升级为正式 ADR。
 
-> **当前架构选型与分层图权威增量：** [Hatchet Process/Durable 架构与职责/恢复/部署边界](docs/references/HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md)（候选实施基线，非生产 Accepted ADR）。
+> **当前架构选型与分层图权威增量：** [Hatchet Process/Durable 架构与职责/恢复/部署边界](docs/references/HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md)（候选实施基线，非生产 Accepted ADR）。**Control Plane 自研边界已按 [ADR-031：薄应用/领域控制层](docs/references/THIN_HARNESS_CONTROL_PLANE_DECISION_20261010.md) 收敛**：Hatchet 是技术执行状态/队列/调度权威；Harness 保留必要 Run/Step/Attempt 业务事实、Approval/Receipt/授权/业务终态和状态投影，不再造第二套技术执行状态机。
 
 > **开发架构护栏：** [G01–G20 架构原则、硬约束和 PR/CI 准入](docs/ARCHITECTURE_GUARDRAILS.md)。开发前从 AGENTS.md 进入；违反 Accepted Contract 必须先经过 ADR，候选选型不得因局部 POC PASS 自动升格。
 
@@ -153,11 +153,11 @@ flowchart TB
 | 层 | 平台**拥有**的能力 | 不重复建设的能力 |
 |---|---|---|
 | API / 协议 | 平台 Run ID、统一事件与客户端进度、重连协议 | 完整聊天前端产品、模型内部推理 |
-| Harness Kernel | **Recipe/Step 依赖与 Agent 串联**、Attempt、结果交接/验收、Policy、审批事实、恢复裁决 | 各 SDK 的完整 Agent Loop、重型 BPMN 引擎 |
+| Harness Kernel | **薄领域控制层（ADR-031）**：Run/Plan/Step/Attempt 业务事实与版本、跨 Agent 交接、Verification/Approval/Policy、Receipt/UNKNOWN、可核对业务状态投影与终态裁决 | 不重建 Hatchet Workflow/DAG/Queue/Worker/Timer/Retry/技术状态机；不开发各 SDK Agent Loop |
 | AgentRuntime SPI | 能力装配、公开 SDK Adapter、工具执行授权绑定、运行时事件翻译 | 私有 SDK 内核与各 SDK 原生 Session |
 | SandboxProvider | 申请/绑定/释放 Sandbox、WorkspaceRef、Scope 和 Lease 检查 | MicroVM 内核、网络、镜像仓库、节点管理 |
-| Process / Durable SPI | **Hatchet Adapter（当前首选实现）**：Run/Step 与 Workflow/Task Binding、状态核对/错误映射、领域审批和 Receipt 恢复门禁 | 重造 Hatchet 已有的队列/DAG/重试/调度协调器；把 Hatchet History 当成领域 Task Facts |
-| State / Artifact | PostgreSQL 中的任务事实、版本与 Lineage；S3/OSS 引用 | PostgreSQL/OSS 产品本身、备份/DR |
+| Process / Durable SPI | **Hatchet Adapter（当前首选实现）**：Provider ID Binding、执行状态投影/核对、幂等 Workflow 提交、受控恢复门禁；**Hatchet 是技术执行状态权威** | 重造 Hatchet 的队列/DAG/重试/调度协调器；把 Hatchet History 直接作为平台业务事实 |
+| State / Artifact | PostgreSQL 中**最小必要的业务事实、可重建状态投影、版本、Approval/Receipt、Binding、Event**；S3/OSS Artifact/Evidence 引用 | 镜像 Hatchet 全部 Workflow/Task 内部技术状态；PostgreSQL/OSS 本身及备份/DR |
 | 外部治理 | 消费 IAM、Secret、MCP、观察性与策略输入 | 企业 IAM、MCP Marketplace、Secret Manager、APM/计费平台 |
 
 详细边界来源：[Control/Data Plane](docs/references/CONTROL_DATA_PLANE.md)、[Harness Scope 对齐](docs/references/HARNESS_SCOPE_ALIGNMENT_REVIEW.md)、[Domain Contract](docs/references/DOMAIN_MODEL_AND_STATE_CONTRACT.md)。
