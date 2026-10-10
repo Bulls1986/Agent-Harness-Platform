@@ -1,0 +1,26 @@
+name: Architecture guardrails
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  architecture-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Negative guardrail regression tests
+        run: python -B -m unittest discover -s tests -p "test_architecture_guardrails.py" -v
+      - name: Architecture docs and import boundaries
+        run: python -B scripts/check_architecture_guardrails.py
+      - name: Runtime SPI no-Sandbox and Fail-Closed offline contract
+        run: python -B poc/runtime_spi/verify_runtime_spi.py
