@@ -120,7 +120,7 @@ async def openai_step(input: LoopInput, ctx: Context) -> dict[str, str]:
 def execute(run_id: str, prompt: str, *, command: str | None = None) -> dict:
     db = PgFacts()
     # Inspector has already created the Run in a synchronous POST transaction.
-    command = command if command is not None else db.create(run_id)
+    command = command if command is not None else db.create(run_id, prompt=prompt)
     db.dispatch(command)
     try:
         # Returning the real Hatchet run reference before waiting allows an
