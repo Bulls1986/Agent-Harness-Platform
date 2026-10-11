@@ -10,7 +10,7 @@
 | DEV-HC-02 | DEV-M4 | Outbox/Inbox、丢 ACK 对账、非幂等 Tool Receipt UNKNOWN | 真实故障 Gate OPEN |
 | DEV-HC-03 | DEV-M5 | ExecutionContext、Cube Scope/Lease/Fencing/WorkspaceRef、Worker A→B 安全接管 | 授权负例已通过；真实 Cube Gate OPEN |
 | DEV-RECIPE-01 | DEV-M6 | Provider-neutral Recipe、Artifact/Evidence、Verifier 与 Approval | PLANNED |
-| DEV-API-01 | DEV-M7 | 稳定公共 Run/Conversation/SSE/Cancel/ArtifactRef API/SDK 与服务身份合同 | ACTIVE：PR #65 授权 Run 只读单测/CI PASS；真实 IAM/PG/SSE/Artifact/UI Gate OPEN |
+| DEV-API-01 | DEV-M7 | 稳定公共 Run/Conversation/SSE/Cancel/ArtifactRef API/SDK 与服务身份合同 | ACTIVE：PR #65 授权读取与 PR #67 PG 归属/不可变性集成子切片 PASS；真实 IAM/Policy+PG、SSE/Artifact/UI Gate OPEN |
 | DEV-CONSUMER-01 | DEV-M8 | 只使用**合成数据**的独立客户端与平台公共 API 联调 | PLANNED |
 | DEV-OPERATIONS-01 | DEV-M9 | 容量/中断/安全/运维/回退 GO/NO-GO | PLANNED |
 
@@ -18,7 +18,7 @@ HC-01：[Workflow Mapping](references/HATCHET_WORKFLOW_MAPPING_CONTRACT_20261010
 
 ## 已完成开发切片
 
-最小 Docker PG/Hatchet/双 SDK Run 和真实 LiteLLM Responses、SSE/持久游标/取消已有真实测试与 CI 证据；DEV-M7 的独立授权只读单测切片已由 PR #65 合并。详见归档 OpenSpec、各开发复盘。这不等于生产准入，完整 Replan、Receipt/Approval、Cube Worker 可信重连以及 M7 正式 Gateway/PG/授权 SSE 仍 OPEN。
+最小 Docker PG/Hatchet/双 SDK Run 和真实 LiteLLM Responses、SSE/持久游标/取消已有真实测试与 CI 证据；DEV-M7 的独立授权只读单测切片已由 PR #65 合并；PG 归属/不可变性子切片有独立真实 CI 证据（PR #67）。详见归档 OpenSpec、各开发复盘。这不等于生产准入，完整 Replan、Receipt/Approval、Cube Worker 可信重连以及 M7 正式 Gateway/PG/授权 SSE 仍 OPEN。
 
 ## 仓库保密边界
 
