@@ -1,24 +1,14 @@
-# DEV-M8 现有 PDLC 迁移 · Tasks
+# DEV-M8 · 外部消费者集成边界
 
-> 状态：**ACTIVE（仅 PDLC-M0 真实仓库源码只读基线）**。工期、Owner 和 Sprint 需要在真实代码/团队容量基线上评估；所有勾选项以运行证据为准。来源 DEV-PDLC-01～05；PDLC-M0～M4。
+> 状态：**EXTERNAL OWNER / NOT IMPLEMENTED IN HARNESS**。业务消费者拥有独立、受控的私有工程；本开源 Harness 仓库只维护通用服务合同。
 
-## 0. 前置与需求冻结
-- [ ] 0.1 审阅原有 Accepted ADR/HC 与 G01–G20，识别事实 Owner、安全边界和阻断依赖；OpenSpec 四类规划材料 Strict PASS。
-- [ ] 0.2 确认代表性真实业务/失败样本、环境及测试数据，记录本阶段交付与不做范围。
+## 分工与禁止事项
 
-## 当前只读盘点状态（完整 M0 Gate 尚未通过）
+- 私有应用源码、内部接口、数据结构、业务迁移映射、企业仓库地址、系统运行态及本地工作路径不得纳入 Agent Harness Platform 仓库。
+- 应用通过正式版本化 Harness Public Application API/SDK 单向依赖 Harness；Harness 不导入业务消费者代码或业务数据库表。
+- 外部应用实施/灰度/兼容/验收任务在独立私有项目中管理，不与 Harness 领域内核混合。
 
-- 已确认私有 GitLab 的两份实际工程，拉取到企业本地 E:\\workspace\\jusda\\ai-power；初步完成源码 Owner/Session/Tool/Artifact 映射，完整报告只保留在企业本地 PDLC_M0_SOURCE_BASELINE_20261011.md，不上传本公开仓库。
-- 现网部署版本、OpenAPI、生产会话/MinIO/权限样本及同 Group 的完整项目列表尚未有足够证据，**1.1 保持未勾选**；绝不据此创建 Facade 或生产写操作。
-
-## 1. TDD 与集成开发
-- [ ] 1.1 PDLC-M0 旧现网 API/数据/Session/OSS/Policy 只读基线与映射；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
-- [ ] 1.2 PDLC-M1 旧 UI/SSO/Legacy ID/资源兼容 Facade；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
-- [ ] 1.3 PDLC-M2 只读 Shadow + 单 Writer 灰度/回退演练；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
-- [ ] 1.4 PDLC-M3 真实产品→研发→测试 Recipe+审批恢复；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
-- [ ] 1.5 PDLC-M4 用户/项目渐进切流、历史/活动会话验收及退役 Gate；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
-
-## 2. 阶段 Gate 与复盘
-- [ ] 2.1 复验 防双写/回退 的拒绝/故障合同，正例、负例和真实集成全部 PASS；无 SKIPPED 冒充通过。
-- [ ] 2.2 记录故障根因、设计修正、测试覆盖、可复用护栏及风险，完成复盘与 Backlog 状态更新。
-- [ ] 2.3 代码 PR/CI、架构审查通过，确认无后续生产门禁被错误关闭后，勾选 Tasks 并归档该 OpenSpec。
+## 本仓库仅追踪通用接入合同
+- [ ] 1.1 按 DEV-M7 明确公共 Conversation/Turn/Run/Event API 的版本化边界及鉴权条件。
+- [ ] 1.2 对消费者协议进行抽象契约测试：隔离、幂等、SSE 续传、取消、ArtifactRef，不引入任何私有业务数据。
+- [ ] 1.3 公共服务支持通用外部消费者后，完成架构 CI 与合同测试复盘；外部消费者的实际迁移在其私有仓库另行验收。

@@ -5,7 +5,7 @@
 | 编号 | AHP-DEV-ROADMAP-001 |
 | 版本 | v1.0 · 2026-10-11 |
 | 阶段 | **正式开发实施（Implementation）**，不是架构选型/POC 阶段 |
-| 计划范围 | DEV-M0～DEV-M9；平台研发、沙箱、安全可靠性、PDLC 迁移、生产交付 |
+| 计划范围 | DEV-M0～DEV-M9；平台研发、隔离执行、可靠性、通用外部接入、生产交付。外部业务应用的迁移计划在独立私有工程 |
 | 规划原则 | Accepted ADR / G01–G20 / HC-01～03 优先；Red→Green→Refactor→真实验收→复盘；技术局部 PASS 不等于生产准入 |
 | 权威参考 | [Development Backlog](DEVELOPMENT_BACKLOG.md) · [HC-01](references/HATCHET_WORKFLOW_MAPPING_CONTRACT_20261010.md) · [HC-02](references/HARNESS_HATCHET_CONSISTENCY_CONTRACT_20261010.md) · [HC-03](references/HATCHET_WORKER_SANDBOX_BINDING_CONTRACT_20261010.md) · [PDLC 迁移](references/PDLC_REPLACEMENT_MIGRATION_20261010.md) |
 
@@ -27,7 +27,7 @@
 | **DEV-M5 Cube 可信执行** | SandboxProvider/WorkspaceRef/Session Scope、Lease/Fencing、跨 Worker 重连、OpenCode Coding Guest | DEV-HC-03 / HC-03 | **ACTIVE：可信 Execution Gate 负例已通过；真实 Cube A→B Gate OPEN** | Worker A→B 同受控 Workspace、旧 Owner/跨 Scope 拒绝、model-only 无沙箱 |
 | **DEV-M6 可配置 Agent 工作流** | Recipe A→B→C、异构 SDK、Artifact/Evidence、Verifier、Approval/任务级恢复 | DEV-HC-01～03 / DEV-PDLC-04 | **待开发** | 真正产品→Coding→测试、审批/失败/恢复与可回溯交接 |
 | **DEV-M7 产品/API 接入** | Conversation/Turn/Run/Typed SSE、文件/Artifact 引用、Agent 选型、业务可读交互与外部授权输入 | M2/M3；PDLC-M1 前置 | **Inspector 有交付，其余待开发** | 统一 API/身份鉴权/历史/跨 Scope 拒绝；不重新做企业 IAM |
-| **DEV-M8 PDLC 迁移** | 存量只读盘点→兼容 Facade→影子/灰度→真实 Recipe→分批切流及回退 | DEV-PDLC-01～05，详见 §5 | **ACTIVE：PDLC-M0 私有源码只读基线完成第一版，现网与资产核验仍 OPEN** | 旧入口/数据/资产/会话等价、单 Writer、实际 PDLC E2E 与回退 |
+| **DEV-M8 外部消费者接入合同** | 版本化公共 API/SDK、可信身份/Scope、Consumer Adapter 协议兼容与负例 | DEV-M7 + 业务消费者独立工程 | **仅通用服务合同：消费者的源码/迁移不在本仓库** | 公共 Run/Artifact/SSE/取消合同可供授权消费者使用，私有业务迁移另行验收 |
 | **DEV-M9 集成与上线** | 私有部署、性能/容量/恢复/权限/监控、100 Active Runs 实测、上线/回退手册 | M3～M8 与外部 Owner | **待开发** | PDLC 不退化 + Recipe 可用 + 生产隔离/可靠性/容量全 Gate PASS 后才 GO |
 
 **命名约定**：项目统一用 `DEV-M0…DEV-M9`；`PDLC-M0…PDLC-M4` 只代表 **DEV-M8 内部迁移阶段**；历史 OpenSpec 的 `M1` 是已归档的“真实模型变更名”，不再用来代表整个正式项目。保留 `DEV-HC-01～03`、`DEV-PDLC-01～05` 原始追踪 ID，不重复制造一套任务权威。
@@ -58,7 +58,7 @@ flowchart LR
   M8 --> M9
 ```
 
-**第一波（立即可启动）**：DEV-M3（领域/Segment）、DEV-M5（Cube 可信绑定）、PDLC-M0（存量只读盘点）三条线并行；DEV-M4 的负例/事务设计可与 M3 并行，但最终并发/ACK/Receipt 集成以 M3 业务事实合同为前置。**第二波**：DEV-M4 集成、DEV-M7 统一入口并行推进；DEV-M6 以 M3/M4/M5 最小可用 Gate 为约束，选现网 PDLC 一条真实 Recipe。**第三波**：DEV-M8 的兼容 Facade/影子/灰度及 DEV-M9 系统 Gate 随模块成熟滚动验收，不安排未经核实的“全量切换日”。
+**第一波（立即可启动）**：DEV-M3（领域/Segment）、DEV-M5（Cube 可信绑定）、外部消费者独立开发（不纳入本仓库）三条线并行；DEV-M4 的负例/事务设计可与 M3 并行，但最终并发/ACK/Receipt 集成以 M3 业务事实合同为前置。**第二波**：DEV-M4 集成、DEV-M7 统一入口并行推进；DEV-M6 以 M3/M4/M5 最小可用 Gate 为约束，选现网 PDLC 一条真实 Recipe。**第三波**：DEV-M8 的兼容 Facade/影子/灰度及 DEV-M9 系统 Gate 随模块成熟滚动验收，不安排未经核实的“全量切换日”。
 
 **计划周期与人员**：当前仅承诺**先后依赖及 Gate**，不虚构具体交付日期、团队人数、点数或预计工时。每个阶段启动前由负责人与产品/测试确认实际容量、代表性用例、Sprint 边界、风险/回退，形成有依据的迭代排期。若须固定目标日期，先依据真实代码量与 PDLC-M0 现网盘点做估算后再基线化。
 
@@ -76,17 +76,9 @@ flowchart LR
 
 **OpenSpec 建档并非开发完成**：新阶段的 4/4 表示规划文件齐全，Tasks 全部保持未勾选。开始实施时以阶段 Change 为需求合同，建议每个可独立上线的代码切片再按该阶段的已验证 Delta 建子 Change/PR；避免一个长期 PR 把多个领域、沙箱、PDLC 写侧的变更混在一起。每个 Sprint 应更新 Tasks / 设计 / 测试证据 / 阻断及下一步；完成门禁→合并→归档，未通过的留 OPEN。
 
-## 5. DEV-M8 内部 PDLC-M0～M4 迁移计划
+## 5. 外部业务消费者与 Harness 的边界
 
-| 迁移阶段 | 对应任务 | 必要输入 | 可检验交付 / 退出 Gate |
-|---|---|---|---|
-| **PDLC-M0 只读现网基线** | DEV-PDLC-01 | 旧源码、部署版本、OpenAPI、DB/OSS、UI/SSO、OpenCode Session/Agent/Skill/MCP 资产 | Legacy Feature/API/Data/Session→New Owner/Adapter/Mapping→Test/Backout 矩阵；真实样本，清晰区分历史与活动会话 |
-| **PDLC-M1 兼容外壳** | DEV-PDLC-02 | M0 基线，DEV-M7 访问合同 | 旧页面/URL/SSO/历史与项目、稳定 ID Mapping、授权等价回归 |
-| **PDLC-M2 影子与单 Writer 灰度** | DEV-PDLC-03 | M1、HC-02 可靠性门禁 | 单权威写入、只读 Shadow、不重复 Tool/Git/审批，白名单可回退 |
-| **PDLC-M3 真实新能力** | DEV-PDLC-04 | DEV-M3/4/5/6、M0 真实业务样本 | 产品→Coding→测试至少跨两 SDK，有 Artifact/Evidence、审批、失败/任务级恢复 |
-| **PDLC-M4 迁移上线** | DEV-PDLC-05 | M1～M3 与 DEV-M9 部署安全门禁 | 按用户/项目灰度，历史/活动会话、审计/权限/数据核对及回退实测，确认 GO 才退休旧执行端 |
-
-迁移不等于一次性替换 OpenCode：Coding Runtime 可继续使用 OpenCode，旧会话可按安全策略留原服务执行。禁止双写、禁止凭历史 Session 自行制造新 Run 的执行记录、禁止未经核对的副作用重放。
+Agent Harness 是厂商无关的执行基础设施，不拥有任何业务消费者的私有源代码、历史业务数据、接口映射或迁移任务。消费者通过 DEV-M7 提供的版本化、受鉴权公共 API/SDK **单向依赖 Harness**；本仓库仅验收泛化的执行、事件、取消、引用与授权协议。外部业务项目、迁移路径和验收证据由各自的**私有工程**维护。本仓库不提交、引用或追踪它们的内部实现细节。
 
 ## 6. 每阶段强制准入和收口清单
 
