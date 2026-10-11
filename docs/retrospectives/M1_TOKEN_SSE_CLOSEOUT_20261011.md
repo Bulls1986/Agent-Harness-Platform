@@ -1,6 +1,6 @@
 # M1 Token SSE 最终收口复盘（2026-10-11）
 
-> **范围：** model-only PURE Agent POC，真实 LiteLLM Responses 模型 → Pydantic AI / OpenAI Agents SDK 公开流式接口 → Harness PG Event → Run-scoped SSE/Last-Event-ID/主动取消。通过 M1 LIMITED LIVE POC 并不代表企业生产准入；IAM、审计保留、PII/DLP、Backpressure、Cube、Receipt 和 PDLC 迁移仍单独 OPEN。
+> **范围：** model-only PURE Agent POC，真实 LiteLLM Responses 模型 → Pydantic AI / OpenAI Agents SDK 公开流式接口 → Harness PG Event → Run-scoped SSE/Last-Event-ID/主动取消。通过 M1 LIMITED LIVE POC 并不代表企业生产准入；IAM、审计保留、PII/DLP、Backpressure、Cube、Receipt 和 外部业务应用 迁移仍单独 OPEN。
 
 ## 一、真实验证结果
 

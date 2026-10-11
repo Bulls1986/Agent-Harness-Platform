@@ -9,8 +9,8 @@
 ## 1. TDD 与集成开发
 - [ ] 1.1 整理生产验收矩阵、环境/Owner/容量与回退前置；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
 - [ ] 1.2 部署/资源与 100 Active Runs 真负载+故障注入；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
-- [ ] 1.3 IAM/Scope/Receipt/审批/审计/安全与 PDLC 数据核对；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
-- [ ] 1.4 PDLC 等价+Recipe+运维三 Gate、发布/回滚演练、GO/NO-GO 决议；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
+- [ ] 1.3 IAM/Scope/Receipt/审批/审计/安全与 外部业务应用 数据核对；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
+- [ ] 1.4 外部业务应用 等价+Recipe+运维三 Gate、发布/回滚演练、GO/NO-GO 决议；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
 - [ ] 1.5 最终 CI、复盘、运行手册与验收证据归档；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
 
 ## 2. 阶段 Gate 与复盘

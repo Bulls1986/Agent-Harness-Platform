@@ -33,7 +33,7 @@
 
 ## 1. 需求基线（不是选某一个框架的理由）
 
-1. 面向 PDLC、企业门户等不同场景；业务入口可通过 Jev 一类的快速决策模型
+1. 面向 外部业务应用、企业门户等不同场景；业务入口可通过 Jev 一类的快速决策模型
    选逻辑 Agent/Process，复杂流程走硬门禁与必要的人类审批。
 2. Product / Coding / Test / Knowledge / Business 专业 Agent 不强求同一个
    Harness；OpenCode 现有 Skills、Subagents、Prompts 资产继续复用。
@@ -51,7 +51,7 @@
 | **Pydantic AI Harness + Temporal + Cube(E2B)** | Pydantic AI 有 Jev/TypeSafeModel 决策模型、标准 Agent/Tools；Harness 的 Coder、Skills、Subagents、E2BSandbox、WorkspaceRef 按需绑定；原生 TemporalDurability | Harness 当前 0.x，接口升级成本；E2BSandbox→Cube 真机、模型链、外部沙箱重连、安全/恢复尚未跑；不能直接替换已经成熟的 OpenCode 编码体验 | **0.54.0 离线 20 并发 Run、两种 WorkspaceRef、零 E2B 创建/连接 PASS**；Cube 未测 |
 | **OpenAI Agents SDK + Temporal + Cube(E2B)** | 官方 SandboxAgent + E2BSandboxClient；Temporal 官方独立集成（含 Sandbox），能在共享应用 Worker 中调用多个 Run；丰富 handoff/tool/审批机制 | Cube 官方案例有兼容修补；单独支持 Jev 必须做决策模型 Adapter；无法无代价复用 OpenCode 的 Coding 能力 | Docker 原生 SandboxClient、FunctionTool 已实测；Cube 真机未跑 |
 | **MAF + MAF Durable 或 Temporal + Cube Tool Adapter** | 强 Workflow/Executor + Checkpoint；业务型专业 Agent、SDK Runtime Pool 可行；已有 POC-A | SDK 没有可直接视作本项目全面通过的 Cube/E2B 原生 Sandbox Client；SQL Durable 许可/运行与跨 Harness 不确定窗口仍有待闭合 | MAF POC-A 相关 Gate 局部通过；Cube 路径未实测 |
-| **OpenCode 2 + Cube(E2B)** | 完整 Coding Harness、Skills、Session、Plugin；共享 V2 Server/嵌入 Host 为高密度候选；既有 PDLC 资产可直接继承 | 原生 Shell/FS/PTY 等**不会**因 Session 绑定自动远程执行；不能宣称共享 Host + 每 Session Cube 完全透明可用 | V2 Docker Sandbox 内 Session + SDK 文件接力通过；原生 Shell 路由的反向实验已确认 |
+| **OpenCode 2 + Cube(E2B)** | 完整 Coding Harness、Skills、Session、Plugin；共享 V2 Server/嵌入 Host 为高密度候选；既有 外部业务应用 资产可直接继承 | 原生 Shell/FS/PTY 等**不会**因 Session 绑定自动远程执行；不能宣称共享 Host + 每 Session Cube 完全透明可用 | V2 Docker Sandbox 内 Session + SDK 文件接力通过；原生 Shell 路由的反向实验已确认 |
 
 **不存在一个已验证的“完全零适配、一次满足所有需求”的单品。**
 当前比较的单位是**可组合技术栈**，不是用 Temporal 替换 Harness SDK、

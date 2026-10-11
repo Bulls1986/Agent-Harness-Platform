@@ -20,4 +20,4 @@ DEV-M3～M8 核心 Gate；外部 IAM/运维/安全协作。映射 DEV-M9 / Produ
 
 ## Exit gate
 
-PDLC 等价、新 Recipe 业务和生产安全/容量三类 Gate 分别全部 PASS，才允许生产 GO。。测试 Red/Green/Refactor、真实端到端、CI/架构、OpenSpec 完整核对及复盘均须留下可检索证据。阶段与生产 GO 明确区分。
+外部业务应用 等价、新 Recipe 业务和生产安全/容量三类 Gate 分别全部 PASS，才允许生产 GO。。测试 Red/Green/Refactor、真实端到端、CI/架构、OpenSpec 完整核对及复盘均须留下可检索证据。阶段与生产 GO 明确区分。

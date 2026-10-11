@@ -668,3 +668,10 @@ Correctness
 - 没有把“讨论建议”描述成“正式架构决策”。
 
 如果无法完全完成，应明确说明已完成部分、剩余风险与阻塞点，不得伪造收口。
+
+## Business-consumer repository and confidentiality boundary (MANDATORY)
+
+- Agent Harness Platform is an independent, reusable execution product. Private vertical applications depend on its published API/SDK, never the reverse.
+- **Do not add any private business consumer's source code, actual internal API inventory, schemas, database/OSS/session samples, group/repository addresses, deployment details, credentials or migration plans to this repository, including docs, OpenSpec, issues, PR descriptions or commit messages.**
+- External consumer integration tests use synthetic data and a generic test client only. Actual business migration is managed and versioned solely in the consumer's authorized private repository.
+- Before publishing, inspect staged changes and CI artifacts for consumer data leaks. A clean working tree is not proof that old Git history or PR caches are clean; historical disclosure needs explicit repository-owner remediation.

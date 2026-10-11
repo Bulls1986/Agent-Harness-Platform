@@ -28,7 +28,7 @@ The baseline Docker PostgreSQL + Hatchet + Pydantic AI → OpenAI Agents SDK + R
 - Preserve G01–G20 and ADR-031/032 / HC-01/02/03. Hatchet remains the only technical schedule/state authority; Harness owns Domain Run/Step/Receipt/Verification and terminal state; SDKs execute only model calls in this slice (0 Cube).
 - Docker PostgreSQL remains the mandatory persistence backend; Hatchet DB and Harness DB remain separate.
 - Runtime model Key is environment injected; no hard-coded gateway host, key, sensitive prompt or model metadata in Agent payload/OSS/CI artifacts.
-- Full Cube/Receipt/Approval/100 concurrency/PDLC migration are out of scope and remain OPEN.
+- Full Cube/Receipt/Approval/100 concurrency/外部业务应用 migration are out of scope and remain OPEN.
 
 ## Definition of Done
 

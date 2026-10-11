@@ -22,7 +22,7 @@
 
 | 能力 | Owner / 落地要求 |
 |---|---|
-| PDLC UI/会话/用户/项目/Agent/Skill 历史资产 | **复用现有 PDLC**；通过 Legacy Facade/ID Mapping 平滑迁移 |
+| 外部业务应用 UI/会话/用户/项目/Agent/Skill 历史资产 | **复用现有 外部业务应用**；通过 Legacy Facade/ID Mapping 平滑迁移 |
 | Chat/Run API、Responses-compatible SSE/Event Cursor | **Harness 薄 Facade + Event Bridge**；真实 Token 不以 Hatchet Log 冒充 |
 | Run/Plan/Step/Attempt 领域 ID、版本冻结、Verification、业务终态 | **Harness 最小领域模型/事实及状态投影**；保留 Accepted Contract |
 | Workflow/DAG、Task Queue/Dispatch、Timer/Retry、Engine Wait、Worker 接管 | **Hatchet Engine**；不再造通用 Scheduler/History/Queue |

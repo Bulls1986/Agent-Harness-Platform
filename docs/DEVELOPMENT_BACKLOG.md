@@ -1,24 +1,25 @@
-# Development Backlog · Agent Harness Platform（2026-10-11）
+# Development Backlog · Agent Harness Platform
 
-> **状态：实施任务清单，不是新的架构选型或生产准入。** 以 [架构待办](ARCHITECTURE_BACKLOG.md) 的 Accepted/Decided Contract 为开发依据；实施完成度需按真实环境/CI 验收，不能因文档 DECIDED 直接宣称功能 PASS。
->
-> 外部业务消费者的迁移与兼容工作由独立私有工程负责；Harness 本仓库只实现通用平台合同。
+**只维护通用平台交付任务。** 项目当前处于正式开发实施阶段；[里程碑 DEV-M0～M9](DEVELOPMENT_MILESTONES.md) 是统一计划入口。业务应用独立开发，业务私有资料与迁移计划不进入本仓库。
 
-**首个实施变更（OpenSpec）**：[minimal-run-closed-loop](../openspec/changes/minimal-run-closed-loop/)：Proposal、四项 Specs（含 Run Inspector）、Design、Tasks 已建立，`openspec validate --strict` 通过；目标为 Docker PG 双库 + Hatchet + Pydantic/OpenAI 两 SDK 的一条真实业务 Run。**Docker PG + 实际 Hatchet/DAG + Pydantic/OpenAI 两 SDK + Run Inspector 的模型级 POC 本地及 CI PASS**（[运行与复盘证据](retrospectives/MINIMAL_CLOSED_LOOP_20261010.md)；[CI 38037718378](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38037718378)）。但这只关闭最小模型闭环，DEV-HC-01～03 和 ARCH-TODO-028 的完整 Receipt/Approval/Cube/高并发门禁仍 OPEN，**不等于生产准入**。
+## 主要任务
 
-**M1 真实模型 Agent 链路阶段结论（2026-10-11）：** [OpenSpec real-model-agent-closed-loop](../openspec/changes/archive/2026-10-11-real-model-agent-closed-loop/) · [复盘](retrospectives/REAL_MODEL_AGENT_CLOSED_LOOP_20261011.md)。实际 LiteLLM Responses + Pydantic AI → OpenAI Agents SDK + Docker PG + Run Inspector 的结构化需求分析/审核、PG 回放成功（LIMITED LIVE PASS）；故障发现 Worker 定义混用与 1m Task 超时，已版本化、冻结并补负例。**M1 两 SDK 真实 Token SSE → PG 游标续传、Inspector 重启回放和模型-only Worker 确认取消已 LIMITED LIVE PASS**（详见 [SSE 收口复盘](retrospectives/M1_TOKEN_SSE_CLOSEOUT_20261011.md)）；Receipt UNKNOWN/Cube/审批/生产仍 OPEN，不表示 DEV-HC-01～03 完整关闭。
+| 任务编号 | 里程碑 | 交付 | 验收状态 |
+|---|---|---|---|
+| DEV-HC-01 | DEV-M3 | Run/Plan/Step/Attempt、Workflow Segment/Replan v2 与旧 Attempt 保护 | Plan v1 保护已实测；完整动态 Replan Gate OPEN |
+| DEV-HC-02 | DEV-M4 | Outbox/Inbox、丢 ACK 对账、非幂等 Tool Receipt UNKNOWN | 真实故障 Gate OPEN |
+| DEV-HC-03 | DEV-M5 | ExecutionContext、Cube Scope/Lease/Fencing/WorkspaceRef、Worker A→B 安全接管 | 授权负例已通过；真实 Cube Gate OPEN |
+| DEV-RECIPE-01 | DEV-M6 | Provider-neutral Recipe、Artifact/Evidence、Verifier 与 Approval | PLANNED |
+| DEV-API-01 | DEV-M7 | 稳定公共 Run/Conversation/SSE/Cancel/ArtifactRef API/SDK 与服务身份合同 | PLANNED |
+| DEV-CONSUMER-01 | DEV-M8 | 只使用**合成数据**的独立客户端与平台公共 API 联调 | PLANNED |
+| DEV-OPERATIONS-01 | DEV-M9 | 容量/中断/安全/运维/回退 GO/NO-GO | PLANNED |
 
-**正式开发路线：** [DEV-M0～M9 总里程碑](DEVELOPMENT_MILESTONES.md)。通用 Harness Runtime/Domain/Cube/Run API 任务在本仓库独立 OpenSpec 管理；业务消费者各自在私有工程中维护迁移实施与验收任务。
+HC-01：[Workflow Mapping](references/HATCHET_WORKFLOW_MAPPING_CONTRACT_20261010.md) · HC-02：[Consistency](references/HARNESS_HATCHET_CONSISTENCY_CONTRACT_20261010.md) · HC-03：[Trusted Sandbox](references/HATCHET_WORKER_SANDBOX_BINDING_CONTRACT_20261010.md)。
 
-## 开发主线与依赖
+## 已完成开发切片
 
-| ID | 阶段 | 交付及验收定义 | 所依赖的冻结合同 | 状态 |
-|---|---|---|---|---|
-| DEV-HC-01 | P0 / DEV-M3 | 将 Platform Run/Plan/Step/Attempt + Workflow Segment/Binding 接入真实 Hatchet；失败阻断、可核对 A→B、Replan 新 Plan 与 Segment | [HC-01](references/HATCHET_WORKFLOW_MAPPING_CONTRACT_20261010.md) | **PLANNED；基础 Run 局部已实现，完整 Gate OPEN** |
-| DEV-HC-02 | P0 / DEV-M4 | PG Task Facts + Outbox/Inbox + Provider Binding 查询 + Receipt UNKNOWN 对账；SIGKILL/ACK 丢失/乱序与并发重投负例通过 | [HC-02](references/HARNESS_HATCHET_CONSISTENCY_CONTRACT_20261010.md) | **PLANNED；基础 PG/Outbox 局部已实现，完整 Gate OPEN** |
-| DEV-HC-03 | P0 / DEV-M5 | Hatchet Worker→ExecutionContext→AgentRuntime/Cube：Scope/Lease/Fencing/WorkspaceRef 重连，跨 Scope Fail Closed | [HC-03](references/HATCHET_WORKER_SANDBOX_BINDING_CONTRACT_20261010.md) | **PLANNED；Cube 专项有技术证据，完整集成 Gate OPEN** |
+最小 Docker PG/Hatchet/双 SDK Run 和真实 LiteLLM Responses、SSE/持久游标/取消已有真实测试与 CI 证据；详见归档 OpenSpec、各开发复盘。这不等于生产准入，完整 Replan、Receipt/Approval、Cube Worker 可信重连仍 OPEN。
 
-## 外部消费者的工程边界
+## 仓库保密边界
 
-外部业务应用及其独立私有仓库负责实际兼容、迁移与产品交付。本 Harness 仅交付版本化公共 API、Agent Runtime/Sandbox/Run/Receipt 通用能力，不保留任何业务消费者的私有仓库地址、代码、内部 Schema、接口清单或源系统资产。
-
+本公开仓库**禁止包含**任何业务消费者的私有源码、数据库 Schema、实际系统地址、内部 API/资产清单、迁移报告和身份数据。业务消费者通过版本化公共 API/SDK 单向依赖 Harness；与具体应用相关的工作只存在于其独立私有工程。

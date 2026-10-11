@@ -33,7 +33,7 @@ Agent Harness Platform 已冻结 HC-01/HC-02/HC-03，但当前仅有相互独立
 - 本地: `compose.yaml`、`poc/closed_loop/Dockerfile`；不触碰/清理已有 Docker 容器或卷。
 - 规范: `openspec/config.yaml`、本变更 `proposal.md/specs/design.md/tasks.md`。
 - 自动化: 针对此闭环的 PG 集成 CI/回归，必要时增量更新 `docs/DEVELOPMENT_BACKLOG.md`。
-- **非目标**：生产 PG Schema/HA、真实云模型或 Token SSE、Cube 真实跨 Worker Lease、Approval/Durable Wait、非幂等外部副作用、100 并发、PDLC 存量迁移（仍属于 DEV-PDLC-01～05）。
+- **非目标**：生产 PG Schema/HA、真实云模型或 Token SSE、Cube 真实跨 Worker Lease、Approval/Durable Wait、非幂等外部副作用、100 并发、外部业务应用 存量迁移（仍属于 DEV-CONSUMER-01～05）。
 
 ## Acceptance
 
