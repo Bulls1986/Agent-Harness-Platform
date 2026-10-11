@@ -264,10 +264,18 @@ class PgFacts:
     def start_step(self, rid: str, name: str, value: str) -> str | None:
         with self.tx() as c:
             # Acquire the parent Run serialization lock before Step locks.
-            run = c.execute("SELECT state,input_prompt FROM harness_run WHERE id=%s FOR UPDATE",
+            run = c.execute("SELECT state,input_prompt,plan_version FROM harness_run WHERE id=%s FOR UPDATE",
                             (rid,)).fetchone()
-            if not run or run[0] not in ("CREATED", "RUNNING"):
-                raise UnsafeDispatch("Run is missing or terminal")
+            if not run or run[0] not in ("CREATED", "RUNNING") or run[2] != 1:
+                raise UnsafeDispatch("Run is missing, terminal or an old Plan version")
+            # Old workflow cannot launch NEW work after a frozen Replan intent.
+            if c.execute("SELECT 1 FROM information_schema.tables "
+                         "WHERE table_schema=current_schema() AND table_name='harness_replan_intent'"
+                         ).fetchone() and c.execute(
+                "SELECT 1 FROM harness_replan_intent WHERE run_id=%s AND from_version=1",
+                (rid,),
+            ).fetchone():
+                raise UnsafeDispatch("Old Plan cannot start a Step after Replan request")
             if name == "pydantic" and run[1] is not None and run[1] != value:
                 raise UnsafeDispatch("Step A input differs from frozen original Prompt")
             row = c.execute(
@@ -298,7 +306,10 @@ class PgFacts:
         if not events or events[-1].type != "run.completed":
             raise UnsafeDispatch("AgentRuntime did not complete successfully")
         with self.tx() as c:
-            c.execute("SELECT id FROM harness_run WHERE id=%s FOR UPDATE", (rid,))
+            active = c.execute("SELECT plan_version FROM harness_run "
+                               "WHERE id=%s FOR UPDATE", (rid,)).fetchone()
+            if active != (1,):
+                raise UnsafeDispatch("Stale Plan/Attempt cannot commit after Replan")
             state = c.execute(
                 "SELECT state FROM harness_step WHERE run_id=%s AND id=%s FOR UPDATE",
                 (rid, name),
@@ -318,14 +329,14 @@ class PgFacts:
     def complete(self, rid: str, *, verified_outputs: dict[str, str] | None = None) -> dict[str, str]:
         with self.tx() as c:
             run = c.execute(
-                "SELECT state,provider_workflow_id,model_mode,model_id FROM harness_run "
+                "SELECT state,provider_workflow_id,model_mode,model_id,plan_version FROM harness_run "
                 "WHERE id=%s FOR UPDATE", (rid,),
             ).fetchone()
             steps = c.execute(
                 "SELECT id,state,output FROM harness_step WHERE run_id=%s",
                 (rid,),
             ).fetchall()
-            if (not run or run[0] != "RUNNING" or not run[1]
+            if (not run or run[0] != "RUNNING" or not run[1] or run[4] != 1
                     or len(steps) != 2
                     or any(s[1] != "COMPLETED" for s in steps)):
                 raise UnsafeDispatch("Unverified Steps or missing Workflow binding")
