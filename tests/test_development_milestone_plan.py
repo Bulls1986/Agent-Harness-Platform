@@ -137,8 +137,8 @@ class MilestonePlanTests(unittest.TestCase):
         milestones = (ROOT / "docs/DEVELOPMENT_MILESTONES.md").read_text(encoding="utf-8")
         backlog = (ROOT / "docs/DEVELOPMENT_BACKLOG.md").read_text(encoding="utf-8")
         tasks = (ROOT / "openspec/changes/dev-m7-platform-access-contract/tasks.md").read_text(encoding="utf-8")
-        self.assertRegex(milestones, r"(?m)^\\| DEV-M7 公共 API/SDK \\|[^\\n]+\\| ACTIVE：")
-        self.assertRegex(backlog, r"(?m)^\\| DEV-API-01 \\| DEV-M7 \\|[^\\n]+\\| ACTIVE：")
+        self.assertIn("| ACTIVE：", next(line for line in milestones.splitlines() if line.startswith("| DEV-M7 公共 API/SDK |")))
+        self.assertIn("| ACTIVE：", next(line for line in backlog.splitlines() if line.startswith("| DEV-API-01 | DEV-M7 |")))
         self.assertIn("ACTIVE", tasks)
         self.assertIn("仍 OPEN", tasks)
 
@@ -147,7 +147,7 @@ class MilestonePlanTests(unittest.TestCase):
         m7 = base / "dev-m7-platform-access-contract"
         for filename in ("proposal.md", "design.md", "tasks.md"):
             content = (m7 / filename).read_text(encoding="utf-8")
-            self.assertNotRegex(content, r"DEV-CONSUMER-0[2-9]\\s*前置", filename)
+            self.assertNotRegex(content, r"DEV-CONSUMER-0[2-9]\s*前置", filename)
             self.assertIn("DEV-M8" if filename != "tasks.md" else "M8", content)
         m6 = base / "dev-m6-agent-recipe-execution"
         for filename in ("proposal.md", "design.md", "tasks.md"):
