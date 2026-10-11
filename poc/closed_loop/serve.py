@@ -52,6 +52,9 @@ def launch_server() -> FastAPI:
             try:
                 execute(run_id, prompt, command=key)
             except Exception as exc:
+                if PgFacts().run_state(run_id) == 'CANCELLED':
+                    LOG.info('Run %s cancelled by operator; no execution error',run_id)
+                    return
                 LOG.exception("Run %s could not be confirmed", run_id)
                 try:
                     PgFacts().report_execution_error(run_id, type(exc).__name__)
