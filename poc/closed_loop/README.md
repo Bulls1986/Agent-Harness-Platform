@@ -51,16 +51,41 @@ The first screen explains **what is being verified**, its scope and the exact tw
 - Distinguish `runtime.run.completed` (SDK-level) from the **sole** `run.completed` business terminal event.
 - No fake success if engine is unavailable. An unresolved workflow submission ACK becomes `BLOCKED_UNKNOWN` rather than replaying an unknown duplicate.
 
+## M1: Real LiteLLM Responses model (explicit opt-in)
+
+[OpenSpec M1](../../openspec/changes/real-model-agent-closed-loop/) introduces an **actual LLM requirement-analysis → independent review** chain. This is a limited POC, **not** a production-ready business agent. The default remains `local` for deterministic clean CI.
+
+When a trusted LiteLLM-compatible **Responses API** and key are available in the operator's environment, select mode `live`. Never commit the key, endpoint credentials or real sensitive input to source/CI:
+
+```powershell
+$env:HARNESS_MODEL_MODE = "live"
+$env:HARNESS_MODEL_BASE_URL = "<your-Responses-compatible-base-url-ending-in-/v1>"
+$env:HARNESS_MODEL_NAME = "<your-approved-model-id>"
+# Inject JUSDA_LITELLM_API_KEY (or HARNESS_MODEL_API_KEY) from an approved local secret source.
+docker compose --profile demo run --rm --no-deps -e HARNESS_MODEL_MODE -e HARNESS_MODEL_BASE_URL -e HARNESS_MODEL_NAME -e JUSDA_LITELLM_API_KEY loop
+```
+
+To run a separate localhost-only **Live Inspector** while the deterministic Inspector remains at port 8765:
+
+```powershell
+docker compose --profile inspector run -d --rm --no-deps --name harness-real-inspector-m1 -p 127.0.0.1:8766:8765 -e HARNESS_MODEL_MODE -e HARNESS_MODEL_BASE_URL -e HARNESS_MODEL_NAME -e JUSDA_LITELLM_API_KEY inspector
+python -B -m poc.closed_loop.verify_inspector_live --url http://127.0.0.1:8766 --expect-live
+```
+
+On an existing Docker image install/rebuild with current source before running, or for local development bind-mount your current checkout to `/app`. Do **not** combine Live and Local workers on the same unversioned Hatchet Workflow name. The current POC uses distinct workflow definitions `harness-pg-real-responses-v1` / `harness-pg-minimal-run-v1`, and validates model-mode/ID bindings and business evidence before marking a Run COMPLETED.
+
+A returns validated JSON with feature, summary, capabilities, rules and acceptance criteria; B reviews the **persisted A JSON**, then produces a readable business report containing acceptance criteria and audit issues. Both run real SDKs through the existing AgentRuntime SPI, with **zero Sandbox**. Native Token SSE/replay/cancel, Cube, Approval, external Tool Receipts and production IAM/OSS large-artifact retention still require their own gates. The Inspector UI loads `GET /api/config` with nonsecret model metadata and never shows the API key.
+
 ## Tests and limitations
 
 ```sh
 openspec validate minimal-run-closed-loop --strict
-python -B -m unittest poc.closed_loop.test_facts_pg poc.closed_loop.test_inspector_pg -v
+python -B -m unittest poc.closed_loop.test_facts_pg poc.closed_loop.test_inspector_pg poc.closed_loop.test_real_model -v
 python -B -m poc.closed_loop.verify_inspector_live
 ```
 
 Note: PG contract tests require `HARNESS_POC_DATABASE_URL`; otherwise they skip and **must not be counted PASS**. End-to-end test requires the real application dependencies and actual Engine. Independent legacy Hatchet SDK POCs are insufficient proof for this combined path.
 
-**Not yet tested here:** CubeSandbox authorization/lease/fencing and cross-Worker recovery, non-idempotent Tool Receipts/UNKNOWN reconciliation, durable Approval/Wait, true model Token SSE, live LiteLLM model, 100 concurrent Runs, production authentication or PDLC migration.
+**Not yet tested here:** CubeSandbox authorization/lease/fencing and cross-Worker recovery, non-idempotent Tool Receipts/UNKNOWN reconciliation, durable Approval/Wait, true model Token SSE and cursor/cancellation (independent gate), 100 concurrent Runs, production authentication or PDLC migration.
 
 **Safety:** localhost-only published ports, local disposable passwords (never use in production). No input is executed as Host Shell, and browser rendering uses `textContent`, never `innerHTML`.

@@ -19,10 +19,12 @@ def request(url: str, method: str = "GET", data: dict | None = None) -> dict:
         return json.loads(raw)
 
 
-def verify(base: str, *, run_id: str | None = None) -> dict:
+def verify(base: str, *, run_id: str | None = None,
+           expect_live: bool = False) -> dict:
     if run_id is None:
         created = request(base + "/api/runs", "POST",
-                          {"prompt": "inspect a real two sdk process"})
+                          {"prompt": ("设计企业注册、企业认证以及权限和失败处理" if expect_live
+                                      else "inspect a real two sdk process")})
         run_id = created["run_id"]
         deadline = time.monotonic() + 220
         while time.monotonic() < deadline:
@@ -45,10 +47,20 @@ def verify(base: str, *, run_id: str | None = None) -> dict:
     assert status["provider_workflow_run_id"]
     assert all(s["state"] == "COMPLETED" and s["attempts"] == 1
                for s in status["steps"].values()), status
-    assert status["steps"]["pydantic"]["output"] == "pydantic-sdk-real-run"
-    assert status["steps"]["openai"]["output"] == "openai-sdk-real-run"
-    assert status["result"]["final_output"] == "openai-sdk-real-run"
-    assert status["result"]["mode"] == "deterministic_local_model"
+    if expect_live:
+        from poc.closed_loop.real_model import parse_requirements
+        assert status['result']['mode'] == 'live'
+        assert status['model_mode'] == 'live'
+        assert status['model_id'] == status['result']['model_id']
+        draft = parse_requirements(status['steps']['pydantic']['output'])
+        assert draft.capabilities and draft.acceptance_criteria
+        assert status['steps']['openai']['output'].startswith('【需求分析】')
+        assert '【独立审核】' in status['result']['final_output']
+    else:
+        assert status['steps']['pydantic']['output'] == 'pydantic-sdk-real-run'
+        assert status['steps']['openai']['output'] == 'openai-sdk-real-run'
+        assert status['result']['final_output'] == 'openai-sdk-real-run'
+        assert status['result']['mode'] == 'deterministic_local_model'
     assert status["result"]["result_source_step"] == "openai"
     assert status["steps"]["openai"]["input"] == status["steps"]["pydantic"]["output"]
     if status["input_prompt"] is not None:
@@ -63,7 +75,9 @@ def verify(base: str, *, run_id: str | None = None) -> dict:
         "docker_pg": True, "run_id": run_id,
         "workflow_id": status["provider_workflow_run_id"], "events": len(events),
         "inspector_refresh": "PASS", "final_result_visibility": "PASS",
-        "result_source": "openai", "final_output": status["result"]["final_output"],
+        "result_source": "openai", "mode": status['result']['mode'],
+        "model_id": status.get('model_id'),
+        "final_output_preview": status['result']['final_output'][:140],
         "cube": "NOT_TESTED", "real_token_sse": "NOT_TESTED",
         "side_effect_receipt": "NOT_TESTED"
     }
@@ -75,8 +89,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--url", default="http://127.0.0.1:8765")
     parser.add_argument("--run-id")
+    parser.add_argument("--expect-live", action='store_true')
     args = parser.parse_args()
-    verify(args.url.rstrip("/"), run_id=args.run_id)
+    verify(args.url.rstrip('/'), run_id=args.run_id, expect_live=args.expect_live)
 
 
 if __name__ == "__main__":

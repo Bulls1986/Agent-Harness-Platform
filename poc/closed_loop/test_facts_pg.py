@@ -42,6 +42,32 @@ class PostgreSQLFactsTests(unittest.TestCase):
             self.db.dispatch(self.command)
         self.assertIsNone(self.db.snapshot(self.run_id)["provider_workflow_run_id"])
 
+    def test_live_binding_freeze_and_verification_are_required(self):
+        live_id = 'live-' + uuid4().hex
+        command = self.db.create(live_id, prompt='业务需求',
+                                 model_mode='live', model_id='gateway-model-v1')
+        self.db.assert_model_binding(live_id, 'live', 'gateway-model-v1')
+        with self.assertRaises(UnsafeDispatch):
+            self.db.assert_model_binding(live_id, 'deterministic_local_model', None)
+        with self.assertRaises(UnsafeDispatch):
+            self.db.assert_model_binding(live_id, 'live', 'other-model')
+        self.db.dispatch(command)
+        self.db.bind(command, 'provider-' + live_id)
+        self.db.start_step(live_id, 'pydantic', '业务需求')
+        self.db.finish_step(live_id, 'pydantic', 'validated-draft',
+                            [TypedEvent(live_id, 1, 'run.completed', 'pydantic', {'result':'validated-draft'})])
+        self.db.start_step(live_id, 'openai', 'validated-draft')
+        self.db.finish_step(live_id, 'openai', 'verified-report',
+                            [TypedEvent(live_id, 1, 'run.completed', 'openai-agents', {'result':'verified-report'})])
+        with self.assertRaises(UnsafeDispatch):
+            self.db.complete(live_id)
+        self.assertEqual(self.db.snapshot(live_id)['state'], 'RUNNING')
+        output = self.db.complete(live_id, verified_outputs={'pydantic':'validated-draft','openai':'verified-report'})
+        self.assertEqual(output['openai'],'verified-report')
+        result = self.db.snapshot(live_id)['result']
+        self.assertEqual(result['mode'],'live')
+        self.assertEqual(result['model_id'],'gateway-model-v1')
+
     def test_verified_parent_gate_and_terminal_immutability(self):
         self.db.dispatch(self.command)
         self.db.bind(self.command, "provider-" + self.run_id)

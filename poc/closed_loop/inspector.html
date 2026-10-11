@@ -53,7 +53,7 @@ code{overflow-wrap:anywhere;font-size:12px}#message{min-height:2.4em}
 <p><strong>输入 → 节点 A（Pydantic AI）→ 节点 B（OpenAI Agents SDK）→ Harness 最终结果。</strong>
 Hatchet 负责两个节点的调度；Harness 保存业务 Run、每步输入输出、技术关联和最终状态。</p>
 <div class="pipeline"><span class="chip">提交输入</span><span class="arrow">→</span><span class="chip">节点 A · SDK 调用</span><span class="arrow">→</span><span class="chip">节点 B · 结果接力</span><span class="arrow">→</span><span class="chip">Run 结果</span></div>
-<p class="notice" style="margin-top:14px"><strong>重要：</strong>当前调用的是真实公开 Agent SDK，但模型是<strong>确定性本地模型</strong>，固定返回测试文本，不会真正理解、总结或分析你的输入，也不会调用远程 LLM。这次验证的是执行链路，不是 AI 业务能力。Cube、真 Token SSE、审批与非幂等工具未验收。</p>
+<p class="notice" id="mode-notice" style="margin-top:14px"><strong>重要：</strong>默认模式使用确定性本地模型，只有显式启用 Live 后才会调用真实 LiteLLM。真实 Token SSE、Cube、审批与非幂等工具未验收。</p>
 </section>
 <div class="layout">
 <aside>
@@ -61,7 +61,7 @@ Hatchet 负责两个节点的调度；Harness 保存业务 Run、每步输入输
 <h2>开始一次演示</h2>
 <label for="prompt">提交给节点 A 的输入</label>
 <textarea id="prompt">Review a short product requirement</textarea>
-<p class="caption">输入会保存到本地 POC PostgreSQL 用于执行回看；请勿填写密码或敏感资料。确定性模型的返回内容不会随输入语义变化。</p>
+<p class="caption" id="prompt-note">输入会保存到本地 POC PostgreSQL 用于执行回看；请勿填写密码或敏感资料。默认确定性模型的返回内容不会随输入语义变化。</p>
 <button id="start" type="button">执行完整链路</button>
 <p id="message" class="muted" role="status" aria-live="polite"></p>
 </section>
@@ -151,16 +151,21 @@ function render(s){
     :"Run 尚未完成；最终结果只在所有必需节点完成后产生。";
   const result=s.result;
   $("final-output").textContent=result?.final_output??"等待节点 B 执行完成…";
+  const live=(s.model_mode==="live" || result?.mode==="live");
   $("result-explanation").textContent=result
-    ?(result.provenance==="derived_legacy_step"?"历史 Run：最终输出从数据库中已完成的节点 B 结果推导，原始汇总字段未保存。":
-      "最终输出确实取自节点 B，并作为本次 Run 的结果保存到 PostgreSQL。")+" 注意：确定性本地模型返回测试文本，不代表真实的业务分析报告。"
+    ?(result.provenance==="derived_legacy_step"?"历史 Run：最终输出从已持久化节点 B 派生。":
+      "最终输出来自节点 B，已保存到 PostgreSQL。")+
+      (live?" 已通过 LiteLLM 真实模型调用；模型："+(s.model_id||result.model_id||"未记录")+"。结构验证通过，但业务正确性仍需人工验收。":
+        " 本 Run 使用确定性本地模型，仅验证 SDK 接力链路。")
     :"尚无最终返回值。节点 A 或 B 的单独成功不等于整个 Run 完成。";
   $("steps").replaceChildren();
   for(const id of ["pydantic","openai"]){
     const step=s.steps[id];if(!step)continue;
     const info=stageInfo[id],card=node("article","","step");
     const head=node("div","","headrow");head.append(node("h3",info.name),node("span",stateLabels[step.state]||step.state,"status"));
-    card.append(head,node("p",info.role));
+    card.append(head,node("p",live?(id==="pydantic"?
+      "使用真实 LiteLLM 模型生成需求分析 JSON，通过结构校验并持久化后交给节点 B。":
+      "读取 A 的结构化结果，使用真实 LiteLLM 模型独立审核并生成最终业务报告。"):info.role));
     field(card,"输入",step.input??(id==="pydantic"?"历史 Run 没有记录原始输入":"等待节点 A 产生输出"));
     field(card,"实际输出",step.output??"尚未生成");
     card.append(node("p","执行尝试："+step.attempts+" 次。"+(id==="pydantic"?"输出被持久化后才允许节点 B 执行。":"节点 B 的输出是最终 Run Result 的来源。"),"caption"));
@@ -201,6 +206,13 @@ $("start").addEventListener("click",async()=>{
   }catch(err){$("message").textContent="未能提交："+err.message}
   finally{$("start").disabled=false}
 });
+api('/api/config').then(cfg=>{
+  const live=cfg.mode==='live';
+  $('mode-notice').textContent=live?
+    '当前模式：真实模型 Live（'+cfg.model_id+'）。节点 A 负责需求分析，节点 B 负责独立审核；仍未验收真正的 Token SSE、Cube 和审批。':
+    '当前模式：确定性本地模型（不会产生真实业务分析）。如需真实模型，请在服务端配置 Live 模式。';
+  $('prompt-note').textContent='演示输入将保存在本地 PostgreSQL，请勿输入密码或敏感信息。'+(live?'当前会调用真实模型。':'当前只验证技术执行链路。');
+}).catch(err=>{$('mode-notice').textContent='模型配置读取失败：'+err.message;});
 refresh();
 setInterval(refresh,1500);
 </script>

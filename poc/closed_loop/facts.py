@@ -42,7 +42,9 @@ class PgFacts:
                     state TEXT NOT NULL, provider_workflow_id TEXT UNIQUE,
                     event_seq BIGINT NOT NULL DEFAULT 0,
                     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                    input_prompt TEXT, result_json JSONB
+                    input_prompt TEXT, result_json JSONB,
+                    model_mode TEXT NOT NULL DEFAULT 'deterministic_local_model',
+                    model_id TEXT
                 )
             """)
             c.execute("ALTER TABLE harness_run ADD COLUMN IF NOT EXISTS "
@@ -50,6 +52,9 @@ class PgFacts:
             # Backward-compatible POC migration for persisted existing Runs.
             c.execute("ALTER TABLE harness_run ADD COLUMN IF NOT EXISTS input_prompt TEXT")
             c.execute("ALTER TABLE harness_run ADD COLUMN IF NOT EXISTS result_json JSONB")
+            c.execute("ALTER TABLE harness_run ADD COLUMN IF NOT EXISTS model_mode "
+                      "TEXT NOT NULL DEFAULT 'deterministic_local_model'")
+            c.execute("ALTER TABLE harness_run ADD COLUMN IF NOT EXISTS model_id TEXT")
             c.execute("""
                 CREATE TABLE IF NOT EXISTS harness_step (
                     run_id TEXT NOT NULL REFERENCES harness_run(id), id TEXT NOT NULL,
@@ -85,13 +90,20 @@ class PgFacts:
             (rid, seq, kind, json.dumps(data, sort_keys=True)),
         )
 
-    def create(self, rid: str, prompt: str | None = None) -> str:
+    def create(self, rid: str, prompt: str | None = None,
+               model_mode: str = 'deterministic_local_model',
+               model_id: str | None = None) -> str:
         # Prompt is only kept for local Inspector diagnosis; never forward
         # this POC plain-text input storage practice to production secrets.
         key = f"{rid}:segment-0:create:v1"
         with self.tx() as c:
-            c.execute("INSERT INTO harness_run(id,plan_version,state,input_prompt) "
-                      "VALUES (%s,1,'CREATED',%s)", (rid, prompt))
+            if model_mode not in ('deterministic_local_model', 'live'):
+                raise ValueError('Unsupported POC model mode')
+            if model_mode == 'live' and not model_id:
+                raise ValueError('Live Run requires pinned model')
+            c.execute("INSERT INTO harness_run(id,plan_version,state,input_prompt,model_mode,model_id) "
+                      "VALUES (%s,1,'CREATED',%s,%s,%s)",
+                      (rid, prompt, model_mode, model_id))
             for name in ("pydantic", "openai"):
                 c.execute("INSERT INTO harness_step(run_id,id,state) "
                           "VALUES (%s,%s,'PENDING')", (rid, name))
@@ -99,6 +111,12 @@ class PgFacts:
                       (key, rid))
             self.event(c, rid, "run.created", {"plan_version": 1})
         return key
+
+    def assert_model_binding(self, rid: str, mode: str, model_id: str | None):
+        with self.tx() as c:
+            row = c.execute("SELECT model_mode,model_id FROM harness_run WHERE id=%s", (rid,)).fetchone()
+        if row != (mode, model_id):
+            raise UnsafeDispatch('Model mode/name changed during frozen Run')
 
     def dispatch(self, key: str):
         with self.tx() as c:
@@ -194,10 +212,10 @@ class PgFacts:
             self.event(c, rid, "step.completed",
                        {"step_id": name, "output_digest": sha(output)})
 
-    def complete(self, rid: str) -> dict[str, str]:
+    def complete(self, rid: str, *, verified_outputs: dict[str, str] | None = None) -> dict[str, str]:
         with self.tx() as c:
             run = c.execute(
-                "SELECT state,provider_workflow_id FROM harness_run "
+                "SELECT state,provider_workflow_id,model_mode,model_id FROM harness_run "
                 "WHERE id=%s FOR UPDATE", (rid,),
             ).fetchone()
             steps = c.execute(
@@ -209,11 +227,18 @@ class PgFacts:
                     or any(s[1] != "COMPLETED" for s in steps)):
                 raise UnsafeDispatch("Unverified Steps or missing Workflow binding")
             output_by_step = {name: output for name, _, output in steps}
+            # The Model/Verifier owns the business schema, but Harness must
+            # still demand an explicit, matching Verification evidence for
+            # every step in a Live Run before making a domain terminal fact.
+            if run[2] == 'live' and (
+                verified_outputs is None or verified_outputs != output_by_step
+            ):
+                raise UnsafeDispatch('Live Run missing verified Step outputs')
             result = {
                 "final_output": output_by_step["openai"],
                 "result_source_step": "openai",
                 "step_outputs": output_by_step,
-                "mode": "deterministic_local_model",
+                "mode": run[2], "model_id": run[3],
             }
             c.execute("UPDATE harness_run SET state='COMPLETED',result_json=%s::jsonb "
                       "WHERE id=%s", (json.dumps(result), rid))
@@ -243,7 +268,7 @@ class PgFacts:
     def snapshot(self, rid: str) -> dict:
         with self.tx() as c:
             run = c.execute(
-                "SELECT plan_version,state,provider_workflow_id,input_prompt,result_json "
+                "SELECT plan_version,state,provider_workflow_id,input_prompt,result_json,model_mode,model_id "
                 "FROM harness_run WHERE id=%s", (rid,),
             ).fetchone()
             steps = c.execute(
@@ -279,7 +304,8 @@ class PgFacts:
         return {
             "run_id": rid, "plan_version": run[0], "state": run[1],
             "provider_workflow_run_id": run[2], "outbox": outbox[0],
-            "input_prompt": run[3], "result": result,
+            "input_prompt": run[3], "model_mode": run[5],
+            "model_id": run[6], "result": result,
             "steps": step_values,
             "events": [
                 {"seq": seq, "type": kind, "data": data}
