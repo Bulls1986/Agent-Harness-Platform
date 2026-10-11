@@ -6,6 +6,8 @@
 
 **首个实施变更（OpenSpec）**：[minimal-run-closed-loop](../openspec/changes/minimal-run-closed-loop/)：Proposal、四项 Specs（含 Run Inspector）、Design、Tasks 已建立，`openspec validate --strict` 通过；目标为 Docker PG 双库 + Hatchet + Pydantic/OpenAI 两 SDK 的一条真实业务 Run。**Docker PG + 实际 Hatchet/DAG + Pydantic/OpenAI 两 SDK + Run Inspector 的模型级 POC 本地及 CI PASS**（[运行与复盘证据](retrospectives/MINIMAL_CLOSED_LOOP_20261010.md)；[CI 38037718378](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38037718378)）。但这只关闭最小模型闭环，DEV-HC-01～03 和 ARCH-TODO-028 的完整 Receipt/Approval/Cube/高并发门禁仍 OPEN，**不等于生产准入**。
 
+**M1 真实模型 Agent 链路阶段结论（2026-10-11）：** [OpenSpec real-model-agent-closed-loop](../openspec/changes/real-model-agent-closed-loop/) · [复盘](retrospectives/REAL_MODEL_AGENT_CLOSED_LOOP_20261011.md)。实际 LiteLLM Responses + Pydantic AI → OpenAI Agents SDK + Docker PG + Run Inspector 的结构化需求分析/审核、PG 回放成功（LIMITED LIVE PASS）；故障发现 Worker 定义混用与 1m Task 超时，已版本化、冻结并补负例。**真实 Token SSE/Last-Event-ID/cancel、Receipt UNKNOWN/Cube 等仍 OPEN；不表示 DEV-HC-01～03 完整关闭。**
+
 ## 开发主线与依赖
 
 | ID | 阶段 | 交付及验收定义 | 所依赖的冻结合同 | 状态 |
