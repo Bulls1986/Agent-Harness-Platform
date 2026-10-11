@@ -11,6 +11,8 @@
 
 > **OpenSpec 工程实施入口**：[minimal-run-closed-loop：Proposal / 四项 Specs / Design / Tasks](openspec/changes/minimal-run-closed-loop/)（规格 4/4 校验通过；**Docker PG + 真 Hatchet + 双 SDK + Inspector 本地/CI 最小闭环 PASS，非完整生产准入**）。当前探索直接使用 [Docker PostgreSQL Compose](compose.yaml)，Hatchet 与 Harness 使用独立数据库；见 [开发任务清单](docs/DEVELOPMENT_BACKLOG.md)。
 
+> **M1 真实模型业务 Agent（LIMITED LIVE PASS）**：[OpenSpec 需求和任务](openspec/changes/real-model-agent-closed-loop/) · [真实模型与 Run Inspector 使用方法](poc/closed_loop/README.md#m1-real-litellm-responses-model-explicit-opt-in) · [测试与失败复盘](docs/retrospectives/REAL_MODEL_AGENT_CLOSED_LOOP_20261011.md)。Pydantic AI → OpenAI Agents SDK 已通过真实 LiteLLM Responses + PG 端到端，**Token SSE/Cancel/Last-Event-ID 等尚未验收、生产 NO-GO**。
+
 > **POC 实测与复盘：** [最小闭环 POC README](poc/closed_loop/README.md) · [测试先行/故障复盘](docs/retrospectives/MINIMAL_CLOSED_LOOP_20261010.md) · [真实闭环 CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38037718378)。
 >
 > **开发架构护栏：** [G01–G20 架构原则、硬约束和 PR/CI 准入](docs/ARCHITECTURE_GUARDRAILS.md)。开发前从 AGENTS.md 进入；违反 Accepted Contract 必须先经过 ADR，候选选型不得因局部 POC PASS 自动升格。
