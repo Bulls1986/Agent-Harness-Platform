@@ -42,8 +42,17 @@ def validate_milestones(root: Path) -> list[str]:
             body = tasks.read_text(encoding="utf-8")
             if not re.search(r"(?m)^- \[ \] ", body):
                 errors.append(f"{code} missing open implementation tasks")
-            if re.search(r"(?m)^- \[[xX]\] ", body):
-                errors.append(f"{code} incorrectly claims implemented tasks are done")
+            for line in body.splitlines():
+                if not re.match(r"^- \[[xX]\] ", line):
+                    continue
+                refs = re.findall(
+                    r"docs/retrospectives/[A-Za-z0-9_-]+\.md", line
+                )
+                if not refs or not all((root / ref).is_file() for ref in refs):
+                    errors.append(
+                        f"{code} incorrectly claims implemented tasks are done "
+                        "without locally verifiable evidence"
+                    )
         if change_name not in text:
             errors.append(f"{code} missing OpenSpec plan navigation")
     readme = root / "README.md"
@@ -90,6 +99,38 @@ class MilestonePlanTests(unittest.TestCase):
             victim.write_text("- [x] unverified work\n", encoding="utf-8")
             errors = validate_milestones(root)
             self.assertTrue(any("incorrectly claims implemented" in e for e in errors))
+
+
+    def test_evidenced_task_completion_can_progress(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "docs" / "retrospectives").mkdir(parents=True)
+            (root / "docs/retrospectives/proof.md").write_text(
+                "Red/Green/CI evidence", encoding="utf-8"
+            )
+            content = " ".join(f"DEV-M{i}" for i in range(10)) + " " + " ".join(
+                n for n, _ in PHASES.values()
+            )
+            (root / "docs/DEVELOPMENT_MILESTONES.md").write_text(
+                content, encoding="utf-8"
+            )
+            (root / "README.md").write_text(
+                "正式研发实施 docs/DEVELOPMENT_MILESTONES.md", encoding="utf-8"
+            )
+            for name, cap in PHASES.values():
+                base = root / "openspec" / "changes" / name
+                for rel in (".openspec.yaml", "proposal.md", "design.md",
+                            "tasks.md", f"specs/{cap}/spec.md"):
+                    f = base / rel
+                    f.parent.mkdir(parents=True, exist_ok=True)
+                    f.write_text("- [ ] remaining work\n", encoding="utf-8")
+            target = root / "openspec/changes/dev-m3-run-plan-domain/tasks.md"
+            target.write_text(
+                "- [x] verified slice; **证据**：docs/retrospectives/proof.md\n"
+                "- [ ] subsequent live integration\n", encoding="utf-8"
+            )
+            self.assertEqual(validate_milestones(root), [])
+
 
 
 if __name__ == "__main__":
