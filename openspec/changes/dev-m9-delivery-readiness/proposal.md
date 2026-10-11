@@ -10,7 +10,7 @@
 
 ## Deliverable
 
-Harness 平台自身安全隔离、可靠恢复、真实容量、部署与回滚门禁全部 PASS，方可决定 Production GO；不以任何特定外部业务应用的功能等价或迁移上线为前置。
+Harness 平台自身安全隔离、可靠恢复、真实容量、部署与回滚门禁全部 PASS，方可决定 Production GO；不以任何特定私有应用的功能等价或迁移上线为前置。
 
 ## Dependencies / traceability
 
