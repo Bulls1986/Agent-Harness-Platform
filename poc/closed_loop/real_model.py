@@ -119,8 +119,11 @@ def make_pydantic_agent(config: ModelConfiguration):
     from pydantic_ai import Agent
     from pydantic_ai.models.openai import OpenAIResponsesModel
     from pydantic_ai.providers.openai import OpenAIProvider
+    from openai import AsyncOpenAI
+    client = AsyncOpenAI(base_url=config.base_url, api_key=config.api_key,
+                         timeout=150.0, max_retries=0)
     model = OpenAIResponsesModel(config.model_id, provider=OpenAIProvider(
-        base_url=config.base_url, api_key=config.api_key
+        openai_client=client
     ))
     return Agent(model, instructions=DRAFT_INSTRUCTIONS)
 
@@ -138,5 +141,6 @@ def make_openai_agent(config: ModelConfiguration):
                  model=OpenAIResponsesModel(
                      model=config.model_id,
                      openai_client=AsyncOpenAI(base_url=config.base_url,
-                                               api_key=config.api_key),
+                                               api_key=config.api_key,
+                                               timeout=150.0, max_retries=0),
                  ))
