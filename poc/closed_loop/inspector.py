@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Callable
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, field_validator
 
@@ -107,6 +107,53 @@ def create_app(
         except Exception:
             raise HTTPException(503, "Unable to read Run facts") from None
 
+    @app.post('/api/runs/{run_id}/cancel',status_code=202)
+    def cancel_run(run_id: str):
+        from .facts import UnsafeDispatch
+        try:
+            state=facts().request_cancel(run_id)
+        except KeyError: raise HTTPException(404,'Unknown Run') from None
+        except UnsafeDispatch as exc: raise HTTPException(409,str(exc)) from None
+        return {'run_id':run_id,'state':state,'acknowledged':False}
+
+    @app.get('/api/runs/{run_id}/stream')
+    async def sse_stream(run_id: str, request: Request,
+                         after: int = Query(0,ge=0)):
+        import asyncio
+        import json
+        import time
+        from fastapi.responses import StreamingResponse
+        db=facts()
+        try: db.run_state(run_id)
+        except KeyError: raise HTTPException(404,'Unknown Run') from None
+        cursor=request.headers.get('last-event-id')
+        if cursor is not None:
+            prefix=run_id+':'
+            num=cursor[len(prefix):] if cursor.startswith(prefix) else ''
+            if not num.isdigit():
+                raise HTTPException(422,'Invalid or cross-Run Last-Event-ID')
+            after=int(num)
+        async def generate():
+            pos=after
+            deadline=time.monotonic()+30
+            while time.monotonic()<deadline:
+                if await request.is_disconnected(): break
+                batch=await asyncio.to_thread(db.events_since,run_id,pos)
+                for evt in batch:
+                    pos=evt['seq']
+                    body=json.dumps({'run_id':run_id,'seq':pos,'type':evt['type'],
+                                     'data':evt['data']},ensure_ascii=False)
+                    yield ('id: '+run_id+':'+str(pos)+'\n' +
+                           'event: '+evt['type']+'\n'+'data: '+body+'\n\n')
+                state=await asyncio.to_thread(db.run_state,run_id)
+                if state in ('COMPLETED','CANCELLED') or any(
+                    x['type']=='workflow.observation_error' for x in batch
+                ): break
+                if not batch: yield ': keepalive\n\n'
+                await asyncio.sleep(0.35)
+        return StreamingResponse(generate(),media_type='text/event-stream',
+                                 headers={'Cache-Control':'no-store',
+                                          'X-Accel-Buffering':'no'})
     @app.get("/api/runs/{run_id}/events")
     def events(run_id: str, after: int = Query(0, ge=0)):
         snapshot = get_run(run_id)
