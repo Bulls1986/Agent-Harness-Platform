@@ -6,11 +6,13 @@ on:
       - 'poc/closed_loop/external_ledger_demo.py'
       - 'poc/closed_loop/nonidempotent_fault_worker.py'
       - 'poc/closed_loop/test_tool_receipt_fault_pg.py'
+      - 'poc/closed_loop/verify_hatchet_tool_receipt_retry.py'
       - 'openspec/changes/dev-m4-reliable-task-facts/**'
       - '.github/workflows/dev-m4-tool-receipt.yml'
   push:
     branches: [main]
     paths:
+      - 'poc/closed_loop/verify_hatchet_tool_receipt_retry.py'
       - 'poc/closed_loop/tool_receipt.py'
       - 'poc/closed_loop/external_ledger_demo.py'
       - 'poc/closed_loop/nonidempotent_fault_worker.py'
@@ -41,6 +43,9 @@ jobs:
           --health-timeout 3s
           --health-retries 15
     env:
+      HATCHET_CLIENT_EMBEDDED_VERSION: 'v0.110.5'
+      HATCHET_CLIENT_EMBEDDED_CHECKSUM: '18ddacae0005042bd982328bcb8d370cca6907352a1ab2a3c8406001d31e7dee'
+      HATCHET_POC_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/hatchet_poc
       HARNESS_POC_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/harness_poc
       HARNESS_LEDGER_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/ledger_poc
     steps:
@@ -49,7 +54,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install real PostgreSQL client
-        run: python -m pip install 'psycopg[binary]>=3.2,<4'
+        run: python -m pip install 'psycopg[binary]>=3.2,<4' 'hatchet-sdk==1.42.1'
       - name: Strict OpenSpec DEV-M4 contract validation
         run: npx --yes @fission-ai/openspec@1.12.0 validate dev-m4-reliable-task-facts --strict
       - name: Create isolated Harness and non-idempotent external databases
@@ -59,7 +64,10 @@ jobs:
           with psycopg.connect("postgresql://postgres:postgres@127.0.0.1:5432/postgres",autocommit=True) as c:
               c.execute("CREATE DATABASE harness_poc")
               c.execute("CREATE DATABASE ledger_poc")
+              c.execute("CREATE DATABASE hatchet_poc")
           print("Harness DB and a separate unprotected external ledger DB created")
           PY
       - name: Real external ledger write then SIGKILL and Receipt reconciliation
         run: python -B -m unittest poc.closed_loop.test_tool_receipt_fault_pg -v
+      - name: Real Hatchet-native Task retry reconciles Receipt without Tool replay
+        run: python -B -m poc.closed_loop.verify_hatchet_tool_receipt_retry
