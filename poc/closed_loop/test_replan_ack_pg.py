@@ -100,6 +100,37 @@ class SegmentAckReconcilePgTests(unittest.TestCase):
                 outbox,lambda _: [ProviderMatch("id",outbox,new_rid,2)])
         self.assertEqual(ReplanV2(self.db).segment(new_rid)["state"],"PENDING")
 
+    def test_parallel_reconcilers_cannot_bind_different_provider_runs(self):
+        from concurrent.futures import ThreadPoolExecutor
+        from threading import Barrier
+
+        gate = Barrier(2)
+        providers = ("native-A-" + self.rid, "native-B-" + self.rid)
+
+        def reconcile(provider):
+            def native(_):
+                gate.wait(timeout=15)
+                return [self.match(provider_id=provider)]
+            return SegmentReconciler(PgFacts()).reconcile_unknown(self.key, native)
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            futures = [pool.submit(reconcile, p) for p in providers]
+            successes = []
+            rejected = []
+            for item in futures:
+                try:
+                    successes.append(item.result(timeout=30))
+                except UnsafeDispatch as exc:
+                    rejected.append(str(exc))
+        self.assertEqual(len(successes), 1)
+        self.assertEqual(len(rejected), 1)
+        self.assertIn(successes[0], providers)
+        state = ReplanV2(PgFacts()).segment(self.rid)
+        self.assertEqual(state["state"], "CONFIRMED")
+        self.assertEqual(state["provider_workflow_id"], successes[0])
+        events = self.db.snapshot(self.rid)["events"]
+        self.assertEqual(sum(e["type"] == "workflow.segment.reconciled" for e in events), 1)
+
     def test_idempotent_ledger_persists_after_reconnect(self):
         self.reconciler.reconcile_unknown(self.key,lambda _:[self.match()])
         second=SegmentReconciler(PgFacts())
