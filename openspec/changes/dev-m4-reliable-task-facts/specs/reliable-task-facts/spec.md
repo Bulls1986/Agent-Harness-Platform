@@ -23,6 +23,16 @@ PG transactional Outbox/Inbox、Provider 查询/ACK-loss Reconciliation、Tool I
 - **WHEN** Provider 接受携带稳定 Command Key / Run / Plan Version 的 Workflow，但原生按元数据过滤的列表包含其他 Run、多个符合项或分页不完整
 - **THEN** Harness MUST 在受信任适配层逐行核验全部元数据和 Provider ID；只有完整、唯一、精确一致的结果才可对账原有 Binding；否则维持 BLOCKED_UNKNOWN，不重发创建请求
 
+#### Scenario: 外部账本不支持幂等且在提交后进程崩溃
+
+- **WHEN** Harness 在独立 PG 中提交 NON_RETRYABLE Tool Intent/Dispatch，外部系统的另一数据库完成不可幂等的实际写入，但执行进程在记录 Harness Receipt 前被 SIGKILL
+- **THEN** 平台 SHALL 维持或显式转入 UNKNOWN、禁止同 Execution 盲重派，只有可信外部查询返回唯一且 Operation/Target/Execution/Intent Key 精确匹配的 Effect 才能幂等记录 CONFIRMED_SUCCESS；无记录不得自动推断 CONFIRMED_NOT_EXECUTED，多记录不得假定恰好执行一次
+
+#### Scenario: 非 PURE 不能越过 PURE Replan/终态门禁
+
+- **WHEN** Run 已登记 Tool Intent，或已经冻结旧 Plan 的 Replan Intent
+- **THEN** 该 Run MUST NOT 经由 PURE Replan/Model-only Completion/Cancel ACK 忽略外部副作用；旧 Plan 已冻结 Replan 时 MUST NOT 新注册/派发非 PURE Tool；任务级安全恢复需等待专用 HC-02/HC-03 证据
+
 #### Scenario: 副作用 UNKNOWN
 - **WHEN** 外部工具已经写入，Worker 在返回 Receipt 前 SIGKILL
 - **THEN** 核对实际副作用；未知则人工介入或保持阻断，绝不自动重放
