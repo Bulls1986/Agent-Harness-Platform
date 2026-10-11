@@ -119,6 +119,29 @@ class ToolReceiptFaultTests(unittest.TestCase):
             self.journal.dispatch(self.execution,"worker-A",7)
         self.assertEqual(self.journal.inspect(self.execution)["state"],"RECORDED")
 
+    def test_existing_non_pure_intent_blocks_pure_plan_promotion(self):
+        from enum import Enum
+        from poc.closed_loop.plan_guard import PlanGuard
+        from poc.closed_loop.replan_v2 import ReplanV2
+        class ProviderStatus(Enum):
+            COMPLETED="COMPLETED"
+        plan=PlanGuard(self.db)
+        plan.freeze_initial(self.rid,"sha256:pure-v1")
+        plan.request_replan(self.rid,1,"sha256:pure-v2","verification changed")
+        with self.assertRaises(UnsafeDispatch):
+            ReplanV2(self.db).promote(self.rid,lambda _:ProviderStatus.COMPLETED)
+        self.assertEqual(self.db.snapshot(self.rid)["plan_version"],1)
+
+    def test_replan_intent_blocks_new_tool_intent(self):
+        from poc.closed_loop.plan_guard import PlanGuard
+        plan=PlanGuard(self.db)
+        plan.freeze_initial(self.rid,"sha256:pure-v1")
+        plan.request_replan(self.rid,1,"sha256:pure-v2","verification changed")
+        with self.assertRaises(UnsafeDispatch):
+            self.journal.register_intent(self.rid,1,"new-step","attempt-new",
+                "execution-new-"+self.rid,"worker-A",7,
+                "ledger.debit","synthetic-account","intent-new-"+self.rid)
+
     def test_concurrent_recovery_one_receipt_event_and_no_extra_external_effect(self):
         self.journal.dispatch(self.execution,"worker-A",7)
         self.ledger.debit(self.execution,"ledger.debit","synthetic-account",self.key)
