@@ -69,9 +69,9 @@ def physical_tool_task(input: Input, ctx: Context) -> dict:
                 ).fetchone()
             if (run==("RUNNING",1,ctx.workflow_run_id) and owner):
                 break
-        except (KeyError,Exception) as exc:
-            # Retry only the read from a concurrently initialized PG Run.
-            # Never use this loop to repeat a Tool invocation.
+        except KeyError:
+            # Concurrent controller initialization has not registered its
+            # durable Intent yet. Never retry a Tool write from this loop.
             pass
         time.sleep(0.1)
     else:
