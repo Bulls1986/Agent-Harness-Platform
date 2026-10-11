@@ -1,0 +1,32 @@
+name: DEV-M7 authorized Run read contract
+
+on:
+  pull_request:
+    paths:
+      - 'poc/platform_access/**'
+      - 'openspec/changes/dev-m7-platform-access-contract/**'
+      - '.github/workflows/dev-m7-access.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'poc/platform_access/**'
+      - 'openspec/changes/dev-m7-platform-access-contract/**'
+      - '.github/workflows/dev-m7-access.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  read-access-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install HTTP contract dependencies (no model or database)
+        run: python -m pip install 'fastapi>=0.115,<1' 'httpx>=0.27,<1'
+      - name: Cross-project and revoked Run read contract
+        run: python -B -m unittest poc.platform_access.test_authorized_reads -v
