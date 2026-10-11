@@ -1,7 +1,7 @@
 # token-streaming Specification
 
 ## Purpose
-TBD - created by archiving change real-model-agent-closed-loop. Update Purpose after archive.
+Specify how genuine upstream model-text deltas reach PostgreSQL-backed ordered events and run-scoped resumable SSE, and how a durable cancellation command is acknowledged by the Worker before Harness records business cancellation.
 
 ## Requirements
 
