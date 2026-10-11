@@ -22,4 +22,4 @@ DEV-M3 Domain/Segment；HC-02；任务编号：DEV-HC-02 / HC-02。严格遵守�
 
 ## Status
 
-**PLANNED · 只有规划产物，全部实现/真实验收 Tasks 尚未启动。**
+**ACTIVE · PURE v2 Segment ACK-loss 原生 Provider 查询与 PostgreSQL 受控补绑的独立开发子切片已真实验证；完整 HC-02/DEV-M4 Gate 仍 OPEN。** 不具备通用 Outbox/Inbox、非幂等 Tool Receipt、SIGKILL 和跨 Worker 执行结果对账的通过证据。
