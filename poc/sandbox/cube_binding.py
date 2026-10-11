@@ -86,7 +86,9 @@ class CubeBinding:
             "harness_scope":row.scope,
             "harness_workspace_ref":row.workspace,
             "harness_environment_digest":row.environment_digest,
-            "harness_generation":str(row.generation),
+            # Allocation identity remains immutable while binding_generation
+            # advances with A -> B fencing. No second create is permitted.
+            "harness_generation":"1",
         }
 
     def correlation(self,execution_id)->dict[str,str]:
@@ -200,7 +202,10 @@ class CubeBinding:
             row=c.execute("SELECT "+",".join(self.FIELDS)+",lease_expires_at<=now() "
                           "FROM harness_cube_binding WHERE execution_id=%s FOR UPDATE",
                           (execution_id,)).fetchone()
-            if (not row or row[9]!="ACTIVE" or row[10] is not True
+            # An UNKNOWN creation ACK can be reconciled by B after
+            # the expired A lease; it is NEVER permission to create again.
+            if (not row or row[9] not in ("ACTIVE","BLOCKED_UNKNOWN")
+                    or row[10] is not True
                     or row[6]!=expected_epoch or row[5]==new_owner
                     or row[2:5]!=(scope,workspace,environment_digest)
                     or not row[7]):
