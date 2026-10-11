@@ -12,6 +12,14 @@ DEV-M3 Domain/Segment；HC-02。映射 DEV-HC-02 / HC-02。对外仅使用已授
 
 PG transactional Outbox/Inbox、Provider 查询/ACK-loss Reconciliation、Tool Intent/Receipt/UNKNOWN、故障注入后的任务级恢复；不能以跨库 2PC 或自行重建 Scheduler 解决。
 
+### 第一开发切片：PURE v2 Segment 创建 ACK 丢失后原生对账
+
+- 在 `ReplanV2.claim` 已持久写为 `DISPATCHING` 后，Hatchet 可能已经创建 Workflow，但客户端创建调用或 PG Binding ACK 丢失；转为 `BLOCKED_UNKNOWN`，**不得**自动重新创建 Workflow。
+- `SegmentReconciler` 根据冻结的 `(run_id,plan_version=2,command_key)` 请求受信任的 Hatchet Adapter 查询已存在 Provider Run；只有 **唯一且元数据精确匹配**的本机 Workflow ID 可原子补入冻结的 Segment/Plan Binding，写一次 `workflow.segment.reconciled` 领域事件并幂等重验。
+- 在固定版本 Python SDK 1.42.1 / Engine v0.110.5 的实际测试中，`list_runs(additional_metadata=...)` 曾返回不符合 Filter 的其他 Run。因此 `HatchetSegmentLookup` 必须逐项本地核验 Provider 返回的 `additional_metadata`、Provider 实际 `metadata.id`，执行有上限的**完整分页**；过滤被忽略不算成功，不完整或多匹配继续 UNKNOWN。
+- 单元与真实 PG 负例包括缺/多候选、错误 Run/Command/Version、复用旧 Workflow、Provider 异常、分页不完整、重复对账；真实 Hatchet 验证 `additional_metadata` 的查询兼容，以及故意丢失应用层创建 ACK 后无需重新创建就能恢复新 Segment 准入。
+- 本切片只覆盖 **PURE、可观察的本地 Hatchet v2 Segment**，不是任意副作用的 Exactly Once 执行证明；不涉及非幂等 Tool/Receipt、真实 SIGKILL、跨 Worker、全量 Outbox/Inbox、Provider 全局唯一性/可见性与生产准入。
+
 ## Test-first and failure injection
 
 正常验收：Provider Workflow 已接受而 Harness 创建调用超时 → 进入 BLOCKED_UNKNOWN，查询 Provider 并对账，不盲目重复创建。
