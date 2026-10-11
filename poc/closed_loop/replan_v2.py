@@ -127,11 +127,11 @@ class ReplanV2:
             raise UnsafeDispatch("Real new Provider WorkflowRun ID required")
         with self.facts.tx() as c:
             row = c.execute(
-                "SELECT run_id,state FROM harness_replan_segment_v2 "
+                "SELECT run_id,state,from_provider_workflow_id FROM harness_replan_segment_v2 "
                 "WHERE command_key=%s FOR UPDATE", (key,),
             ).fetchone()
-            if not row or row[1] != "DISPATCHING":
-                raise UnsafeDispatch("No matching dispatch claim; never overwrite binding")
+            if not row or row[1] != "DISPATCHING" or provider_workflow_id == row[2]:
+                raise UnsafeDispatch("New Segment needs a distinct confirmed Provider WorkflowRun")
             c.execute("UPDATE harness_replan_segment_v2 SET state='CONFIRMED',"
                       "provider_workflow_id=%s WHERE command_key=%s",
                       (provider_workflow_id,key))
