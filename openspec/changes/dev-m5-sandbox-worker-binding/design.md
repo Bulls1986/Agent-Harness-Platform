@@ -24,6 +24,13 @@ SandboxProvider→Cube Scope/Lease/Fencing/WorkspaceRef 绑定、按需分配释
 - 此路径使用受控的外部 synthetic ledger，**不分配 Cube Sandbox**；成功只能证明物理 Worker Crash/Replacement 与 Receipt 接管，不等同 Cubes WorkspaceRef/Git/Shell 权限、Sandbox connect/fencing 和 guest 内核隔离。
 - 新 Worker 只有查询/补录已有 UNKNOWN Receipt 的权限，不得重发非幂等操作或使用默认 Host Shell 兜底；原 Worker A 恢复后的新写请求必须受当前授权与 Fencing 约束。
 
+### 第四开发切片：Native Cube SDK / Harness PG Binding（合同 PASS 不代表真 MicroVM）
+
+- PG 为 Execution 保存冻结 Run/IsolationScope/WorkspaceRef/EnvironmentDigest、Owner/Fencing/Lease（PG Server-clock）、Cube Sandbox Locator/Generation/生命周期 `ALLOCATING/ACTIVE/BLOCKED_UNKNOWN/RELEASING/RELEASED`；创建未知不得盲重建，释放未知不得伪造 ACK。
+- 真实 Native `cubesandbox` Python SDK Adapter 仅负责 Cube 自身 Create/Connect/Files/Destroy，Cube Master/let 内部调度由其实现；调用前后的 Harness 可信 Binding/Fencing 校验在 Gateway 中完成，旧 Owner、错误 Scope/Workspace/Environment、过期 Lease 必须拒绝，不退回 Host Shell 或本地文件目录。
+- SDK 绑定测试以真实 PG + Fake Transport 验证控制平面逻辑；假 Transport 不等于真实 Cube MicroVM、跨宿主隔离、Guest Tool 完整授权，也无法阻止已经进入真实 Guest 的 in-flight 调用。真实验收必须由 `dev-m5-cube-live.yml` 显式使用实际 Cube API/Template/Proxy，创建真实 Sandbox、保存文件、经另一 Native SDK 实例重新连接同一 Sandbox ID、确认文件保留、destroy；未配置必须 FAIL CLOSED，不得 SKIP。
+- 本轮没有可用真实 Cube Endpoint/Template，因此真实 M5 1.2/1.3 仍 OPEN、Production NO-GO。
+
 ## Test-first and failure injection
 
 正常验收：Worker A 在授权 Cube 中工作后中断 → Worker B 持有新 Lease 绑定同一 Workspace，恢复操作和已有文件。

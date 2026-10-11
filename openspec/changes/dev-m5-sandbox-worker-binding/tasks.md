@@ -13,6 +13,8 @@
 
 - [x] A.3 真实 Hatchet 多进程 Fleet 下，Worker A 进程组 SIGKILL（退出码 -9）后，独立 OS Worker B 接管同一 Native Workflow Task；对应 Harness PG Fencing Epoch A/7→B/8，B 只对账已有非幂等 UNKNOWN、旧 Owner 拒绝、外部效果只提交一次。**证据**：docs/retrospectives/DEV_M4_M5_PHYSICAL_WORKER_TAKEOVER_20261011.md。本切片**未使用 Cube**，Scope/WorkspaceRef/真实 Guest/OCI/跨宿主仍 OPEN，不能据此关闭 1.2/1.3 或 DEV-M5 Gate。
 
+- [x] A.4 Native Cube SDK 适配与 Harness PostgreSQL Sandbox Binding 的**控制层开发切片**：真实 PG 保存 Scope/WorkspaceRef/Environment/Owner/Lease/Fencing/Sandbox Locator/Generation/生命周期；跨 Owner 过期接管、旧 Owner 拒绝、同 Workspace 语义和 Fail Closed；测试使用 Fake Cube Transport **仅验证适配合同**。红→绿及 CI 证据：docs/retrospectives/DEV_M5_CUBE_PG_BINDING_20261011.md（真实 PG 5/5 PASS、官方 Cube SDK 方法检查）。**真实 Cube MicroVM 尚未验收，不得勾选 1.2/1.3/2.x**；`dev-m5-cube-live.yml` 配置真实 Cube 后才可执行明确实机 Gate。
+
 ## 1. TDD 与集成开发
 - [ ] 1.1 先写无 ExecutionContext、越权、旧 Lease/Fencing 的拒绝测试；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
 - [ ] 1.2 完成真实 Cube Provider Allocate/Bind/Release 与 WorkspaceRef；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。

@@ -1,0 +1,53 @@
+name: DEV-M5 Cube Provider binding and workspace gate
+on:
+  pull_request:
+    paths:
+      - 'poc/sandbox/**'
+      - 'openspec/changes/dev-m5-sandbox-worker-binding/**'
+      - '.github/workflows/dev-m5-cube-binding.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'poc/sandbox/**'
+      - 'openspec/changes/dev-m5-sandbox-worker-binding/**'
+      - '.github/workflows/dev-m5-cube-binding.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pg-binding-sdk-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 15
+    env:
+      HARNESS_POC_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install PostgreSQL client and native Cube SDK
+        run: python -m pip install 'psycopg[binary]>=3.2,<4' 'cubesandbox>=0.6,<1'
+      - name: Strict DEV-M5 OpenSpec
+        run: npx --yes @fission-ai/openspec@1.12.0 validate dev-m5-sandbox-worker-binding --strict
+      - name: Real PG binding and native Cube SDK contract negative tests
+        run: python -B -m unittest poc.sandbox.test_cube_binding_pg -v
+      - name: Native SDK method availability (NOT real MicroVM evidence)
+        run: |
+          python - <<'PY'
+          from cubesandbox import Sandbox
+          assert all(hasattr(Sandbox,name) for name in ('create','connect'))
+          print('CUBE_SDK_METHODS_AVAILABLE; REAL_CUBE_MICROVM_NOT_TESTED')
+          PY

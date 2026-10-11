@@ -1,0 +1,42 @@
+name: DEV-M5 REAL Cube MicroVM gate (explicit)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-cube-microvm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 15
+    env:
+      HARNESS_POC_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+      CUBE_API_URL: ${{ vars.CUBE_API_URL }}
+      CUBE_TEMPLATE_ID: ${{ vars.CUBE_TEMPLATE_ID }}
+      CUBE_PROXY_NODE_IP: ${{ vars.CUBE_PROXY_NODE_IP }}
+      CUBE_API_KEY: ${{ secrets.CUBE_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned SDK major and real PG client
+        run: python -m pip install 'psycopg[binary]>=3.2,<4' 'cubesandbox>=0.6,<1'
+      - name: Fail closed if real Cube endpoint and template unavailable
+        shell: bash
+        run: |
+          test -n "$CUBE_API_URL" || { echo 'REAL_CUBE_GATE_NOT_RUN: CUBE_API_URL unavailable'; exit 2; }
+          test -n "$CUBE_TEMPLATE_ID" || { echo 'REAL_CUBE_GATE_NOT_RUN: CUBE_TEMPLATE_ID unavailable'; exit 2; }
+      - name: Allocate genuine Cube MicroVM / persist / reconnect / fencing / destroy
+        run: python -B -m poc.sandbox.verify_cube_live
