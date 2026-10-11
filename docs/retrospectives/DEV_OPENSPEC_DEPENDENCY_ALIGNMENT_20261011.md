@@ -27,6 +27,13 @@
 
 先在旧基线上执行断言“里程碑已反映 M7 ACTIVE、OpenSpec config 无旧消费者前置”得到 Red（断言 `RED: DEV-M7 status is stale`）；已修复对应文件，并在 `tests/test_development_milestone_plan.py` 新增 M7 状态一致性、公共 API 依赖方向、平台独立 Production GO 三项回归。真实 CI 验证结果以 PR 工作流为准，不用文档自证 PASS。
 
+## PR CI 验证与修正
+
+- PR #66 首轮 Architecture Guard 失败（run 38139299010）：新验收断言误把“特定外部应用**不**构成 Gate”的否定表述当作未剥离的正向依赖；这属于测试误报，非平台实现失败。修正 M9 公共表述并保留平台无私有依赖的负例护栏。
+- [架构/里程碑回归 CI（run 38139392386）](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38139392386) **PASS**：包含新旧阶段测试、G01–G20 边界检查和文档导航。
+- [DEV-M7 授权读取 CI（run 38139392429）](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38139392429) **PASS**：授权读取 8 项单测无回退。
+- 本地独立 OpenSpec v1.12.0 的 M6/M7/M9 三阶段 Strict 在旧基线结构上均 PASS；此项**不是**本分支修改后全部文件的 Strict 复跑证据，不冒充真实 Gateway/PG/Cube/集成 Gate。
+
 ## 经验
 
 状态只随有证据的开发切片更新；阶段 Gate 与子切片区分。独立通用 Harness 与下游应用依赖不逆转。测试用合成客户端/样本，私有业务系统验收由其自身工程负责。本次文档治理不解除 M3/M4/M5/M7 任何真实环境 Gate。
