@@ -22,12 +22,12 @@
 | **DEV-M0 架构基线** | 统一业务/技术/数据/运行架构，ADR-031/032、G01–G20、HC-01/02/03 | ARCH-TODO-001～030 | **已完成架构决策** | 合同 Decision/ADR 纳入仓库；注意合同冻结 ≠ 功能验收 |
 | **DEV-M1 基础可运行平台** | Docker PG16 双 DB + 真实 Hatchet DAG + 双 SDK + Run Inspector + 持久业务 Run | [归档最小闭环](../openspec/changes/archive/) | **开发切片已完成** | 真 Engine/PG/Run/Step/终态 + CI PASS；完整 Kernel 仍归 M3/4 |
 | **DEV-M2 真实模型与交互** | LiteLLM Responses、需求分析/审核、Token SSE、游标回放、模型级取消、结果可解释 | [M1 已归档业务模型变更](../openspec/changes/archive/2026-10-11-real-model-agent-closed-loop/) | **开发切片已完成** | 双真实模型 SDK、PG 519 事件回放、取消、CI PASS；模型-only 范围，不含审批/Cube/Receipt |
-| **DEV-M3 领域内核完善** | Plan/Step/Attempt 版本、Replan、Workflow Segment、Provider Binding、合法终态投影 | DEV-HC-01 / HC-01 | **部分实现，正式 Gate 待开发** | 单 Run 真 Replan、新 Segment、旧 Attempt 拒绝、无第二调度器 |
+| **DEV-M3 领域内核完善** | Plan/Step/Attempt 版本、Replan、Workflow Segment、Provider Binding、合法终态投影 | DEV-HC-01 / HC-01 | **ACTIVE：Plan v1 冻结与 Replan Intent 已通过真实 PG 测试，安全切换 Gate OPEN** | 单 Run 真 Replan、新 Segment、旧 Attempt 拒绝、无第二调度器 |
 | **DEV-M4 持久可靠性** | Transactional Outbox/Inbox、ACK-loss reconcile、UNKNOWN / 非幂等 Tool Receipt、任务级恢复 | DEV-HC-02 / HC-02 | **部分实现，真实故障 Gate 未完成** | SIGKILL、并发重复投递、ACK 丢失、Receipt 对账，不盲目重试 |
-| **DEV-M5 Cube 可信执行** | SandboxProvider/WorkspaceRef/Session Scope、Lease/Fencing、跨 Worker 重连、OpenCode Coding Guest | DEV-HC-03 / HC-03 | **真机专项有证据，正式集成待完成** | Worker A→B 同受控 Workspace、旧 Owner/跨 Scope 拒绝、model-only 无沙箱 |
+| **DEV-M5 Cube 可信执行** | SandboxProvider/WorkspaceRef/Session Scope、Lease/Fencing、跨 Worker 重连、OpenCode Coding Guest | DEV-HC-03 / HC-03 | **ACTIVE：可信 Execution Gate 负例已通过；真实 Cube A→B Gate OPEN** | Worker A→B 同受控 Workspace、旧 Owner/跨 Scope 拒绝、model-only 无沙箱 |
 | **DEV-M6 可配置 Agent 工作流** | Recipe A→B→C、异构 SDK、Artifact/Evidence、Verifier、Approval/任务级恢复 | DEV-HC-01～03 / DEV-PDLC-04 | **待开发** | 真正产品→Coding→测试、审批/失败/恢复与可回溯交接 |
 | **DEV-M7 产品/API 接入** | Conversation/Turn/Run/Typed SSE、文件/Artifact 引用、Agent 选型、业务可读交互与外部授权输入 | M2/M3；PDLC-M1 前置 | **Inspector 有交付，其余待开发** | 统一 API/身份鉴权/历史/跨 Scope 拒绝；不重新做企业 IAM |
-| **DEV-M8 PDLC 迁移** | 存量只读盘点→兼容 Facade→影子/灰度→真实 Recipe→分批切流及回退 | DEV-PDLC-01～05，详见 §5 | **待开发；M0 可立即并行** | 旧入口/数据/资产/会话等价、单 Writer、实际 PDLC E2E 与回退 |
+| **DEV-M8 PDLC 迁移** | 存量只读盘点→兼容 Facade→影子/灰度→真实 Recipe→分批切流及回退 | DEV-PDLC-01～05，详见 §5 | **ACTIVE：PDLC-M0 私有源码只读基线完成第一版，现网与资产核验仍 OPEN** | 旧入口/数据/资产/会话等价、单 Writer、实际 PDLC E2E 与回退 |
 | **DEV-M9 集成与上线** | 私有部署、性能/容量/恢复/权限/监控、100 Active Runs 实测、上线/回退手册 | M3～M8 与外部 Owner | **待开发** | PDLC 不退化 + Recipe 可用 + 生产隔离/可靠性/容量全 Gate PASS 后才 GO |
 
 **命名约定**：项目统一用 `DEV-M0…DEV-M9`；`PDLC-M0…PDLC-M4` 只代表 **DEV-M8 内部迁移阶段**；历史 OpenSpec 的 `M1` 是已归档的“真实模型变更名”，不再用来代表整个正式项目。保留 `DEV-HC-01～03`、`DEV-PDLC-01～05` 原始追踪 ID，不重复制造一套任务权威。

@@ -1,10 +1,15 @@
 # DEV-M8 现有 PDLC 迁移 · Tasks
 
-> 状态：**PLANNED**。工期、Owner 和 Sprint 需要在真实代码/团队容量基线上评估；所有勾选项以运行证据为准。来源 DEV-PDLC-01～05；PDLC-M0～M4。
+> 状态：**ACTIVE（仅 PDLC-M0 真实仓库源码只读基线）**。工期、Owner 和 Sprint 需要在真实代码/团队容量基线上评估；所有勾选项以运行证据为准。来源 DEV-PDLC-01～05；PDLC-M0～M4。
 
 ## 0. 前置与需求冻结
 - [ ] 0.1 审阅原有 Accepted ADR/HC 与 G01–G20，识别事实 Owner、安全边界和阻断依赖；OpenSpec 四类规划材料 Strict PASS。
 - [ ] 0.2 确认代表性真实业务/失败样本、环境及测试数据，记录本阶段交付与不做范围。
+
+## 当前只读盘点状态（完整 M0 Gate 尚未通过）
+
+- 已确认私有 GitLab 的两份实际工程，拉取到企业本地 E:\\workspace\\jusda\\ai-power；初步完成源码 Owner/Session/Tool/Artifact 映射，完整报告只保留在企业本地 PDLC_M0_SOURCE_BASELINE_20261011.md，不上传本公开仓库。
+- 现网部署版本、OpenAPI、生产会话/MinIO/权限样本及同 Group 的完整项目列表尚未有足够证据，**1.1 保持未勾选**；绝不据此创建 Facade 或生产写操作。
 
 ## 1. TDD 与集成开发
 - [ ] 1.1 PDLC-M0 旧现网 API/数据/Session/OSS/Policy 只读基线与映射；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。

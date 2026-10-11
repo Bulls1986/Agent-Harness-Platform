@@ -1,10 +1,13 @@
 # DEV-M5 Cube 可信执行与 Coding Runtime · Tasks
 
-> 状态：**PLANNED**。工期、Owner 和 Sprint 需要在真实代码/团队容量基线上评估；所有勾选项以运行证据为准。来源 DEV-HC-03 / HC-03。
+> 状态：**ACTIVE · 可信工具准入首段已通过，真实 Cube/Worker 接管仍 OPEN**。工期、Owner 和 Sprint 需要在真实代码/团队容量基线上评估；所有勾选项以运行证据为准。来源 DEV-HC-03 / HC-03。
 
 ## 0. 前置与需求冻结
 - [ ] 0.1 审阅原有 Accepted ADR/HC 与 G01–G20，识别事实 Owner、安全边界和阻断依赖；OpenSpec 四类规划材料 Strict PASS。
 - [ ] 0.2 确认代表性真实业务/失败样本、环境及测试数据，记录本阶段交付与不做范围。
+
+## 已完成的可独立验收切片（不替代后续任务）
+- [x] A.1 在纯逻辑 TrustedExecutionGate 中验证不可信 Claim 与可信 ExecutionRecord/Workspace/Scope/Lease/Fencing/Capability 的负例，缺 Sandbox 时 Shell/Files/Git Fail Closed；**证据**：docs/retrospectives/DEV_M3_M5_FIRST_SLICE_20261011.md（TDD Red→Green、PR #61，CI 38132324088）。未执行 Cube Allocate/Bind/Release 或 Worker A→B 实机接管。
 
 ## 1. TDD 与集成开发
 - [ ] 1.1 先写无 ExecutionContext、越权、旧 Lease/Fencing 的拒绝测试；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
