@@ -77,6 +77,24 @@ class CubeBinding:
         if not row: raise KeyError(execution_id)
         return self._binding(row)
 
+    @staticmethod
+    def _metadata(row:Binding)->dict[str,str]:
+        """Correlation metadata, never a bearer token or SDK authorization."""
+        return {
+            "harness_execution_id":row.execution_id,
+            "harness_run_id":row.run_id,
+            "harness_scope":row.scope,
+            "harness_workspace_ref":row.workspace,
+            "harness_environment_digest":row.environment_digest,
+            "harness_generation":str(row.generation),
+        }
+
+    def correlation(self,execution_id)->dict[str,str]:
+        fact=self.get(execution_id)
+        if fact.state not in ("ALLOCATING","BLOCKED_UNKNOWN","ACTIVE"):
+            raise UnsafeDispatch("No live Cube allocation identity")
+        return self._metadata(fact)
+
     def begin(self,*,execution_id,run_id,scope,workspace,
               environment_digest,owner_id,fencing_epoch,lease_seconds=60):
         self._text(execution_id,run_id,scope,workspace,environment_digest,owner_id)
@@ -122,6 +140,11 @@ class CubeBinding:
         with self.facts.tx() as c:
             return self._check(c,execution_id,owner_id,epoch,"ACTIVE")
 
+    def assert_unknown(self,execution_id,owner_id,epoch):
+        self._valid_epoch(epoch)
+        with self.facts.tx() as c:
+            return self._check(c,execution_id,owner_id,epoch,"BLOCKED_UNKNOWN")
+
     def allocate_permitted(self,execution_id,owner_id,epoch):
         with self.facts.tx() as c:
             return self._check(c,execution_id,owner_id,epoch,"ALLOCATING")
@@ -145,6 +168,27 @@ class CubeBinding:
                       "WHERE execution_id=%s",(execution_id,))
             PgFacts.event(c,row.run_id,"sandbox.binding.unknown",
                           {"execution_id":execution_id})
+
+    def recover_unknown(self,execution_id,owner,epoch,sandbox_id):
+        """Persist an existing provider sandbox, never create a new instance."""
+        self._text(sandbox_id)
+        self._valid_epoch(epoch)
+        with self.facts.tx() as c:
+            row=self._check(c,execution_id,owner,epoch,"BLOCKED_UNKNOWN")
+            if row.sandbox_id is not None:
+                raise UnsafeDispatch("UNKNOWN binding already has a provider ID")
+            c.execute(
+                "UPDATE harness_cube_binding "
+                "SET state='ACTIVE',provider_sandbox_id=%s "
+                "WHERE execution_id=%s",
+                (sandbox_id,execution_id),
+            )
+            PgFacts.event(c,row.run_id,"sandbox.binding.reconciled",{
+                "execution_id":execution_id,
+                "sandbox_id":sandbox_id,
+                "correlation":"native_unique_metadata_confirmed",
+            })
+        return self.get(execution_id)
 
     def takeover(self,execution_id,expected_epoch,new_owner,scope,workspace,
                  environment_digest,lease_seconds=60):
@@ -218,12 +262,53 @@ class CubeWorkspaceGateway:
     def allocate(self,execution_id,owner,epoch):
         self.binding.allocate_permitted(execution_id,owner,epoch)
         try:
-            sbid=self.transport.create()
+            sbid=self.transport.create(metadata=self.binding.correlation(execution_id))
         except Exception:
             self.binding.unknown(execution_id,owner,epoch)
             raise UnsafeDispatch("Cube create outcome unknown; no blind reallocation") from None
         self.binding.confirm(execution_id,owner,epoch,sbid)
         return sbid
+
+    def reconcile_unknown(self,execution_id,owner,epoch):
+        """Only one native, fully verified Cube can recover a lost create ACK.
+
+        If the provider list is unavailable/incomplete, or zero/multiple
+        correlations match, never conclude sandbox absence or allocate again.
+        """
+        fact=self.binding.get(execution_id)
+        if fact.state=="ACTIVE":
+            active=self.binding.assert_active(execution_id,owner,epoch)
+            return active.sandbox_id
+        unknown=self.binding.assert_unknown(execution_id,owner,epoch)
+        expected=self.binding.correlation(execution_id)
+        try:
+            rows=self.transport.list()
+            if not isinstance(rows,list) or len(rows)>1000:
+                raise ValueError("Cube listing unavailable or too large to trust")
+            matches=[]
+            for row in rows:
+                if not isinstance(row,dict):
+                    raise ValueError("Malformed native Cube listing")
+                if row.get("metadata") == expected:
+                    sid=row.get("sandboxID")
+                    if not isinstance(sid,str) or not sid.strip():
+                        raise ValueError("Native Cube ID absent")
+                    matches.append(sid)
+            if len(matches)!=1:
+                raise ValueError("Ambiguous/absent native Cube correlation")
+            sid=matches[0]
+            sb=self.transport.connect(sid)
+            actual=self.transport.inspect(sb)
+            if (not isinstance(actual,dict)
+                    or actual.get("sandboxID")!=sid
+                    or actual.get("metadata")!=expected):
+                raise ValueError("Native Cube detail does not match frozen binding")
+        except Exception:
+            raise UnsafeDispatch("Native Cube evidence not unique/verified; stay BLOCKED_UNKNOWN") from None
+        recovered=self.binding.recover_unknown(execution_id,owner,epoch,sid)
+        if recovered.sandbox_id!=sid or recovered.generation!=unknown.generation:
+            raise UnsafeDispatch("Concurrent Cube binding changed")
+        return sid
 
     def _attach(self,execution_id,owner,epoch):
         fact=self.binding.assert_active(execution_id,owner,epoch)
@@ -273,9 +358,19 @@ class NativeCubeTransport:
         from cubesandbox import Sandbox
         self.sdk=Sandbox
 
-    def create(self):
-        sandbox=self.sdk.create()
+    def create(self,*,metadata):
+        sandbox=self.sdk.create(metadata=metadata)
         return sandbox.sandbox_id
+
+    def list(self):
+        return self.sdk.list()
+
+    def inspect(self,sandbox):
+        info=sandbox.get_info()
+        return {
+            "sandboxID":info.sandbox_id if hasattr(info,"sandbox_id") else info["sandboxID"],
+            "metadata":info.metadata if hasattr(info,"metadata") else info["metadata"],
+        }
 
     def connect(self,sandbox_id):
         return self.sdk.connect(sandbox_id)
