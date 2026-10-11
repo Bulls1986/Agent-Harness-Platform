@@ -125,6 +125,29 @@ class CubePgBindingTests(unittest.TestCase):
                                "/workspace/../etc/forbidden","x")
         self.assertEqual(len(self.transport.connected),baseline)
 
+    def test_cube_create_succeeds_but_pg_bind_ack_fails_no_second_create(self):
+        # Crash-window: Cube MicroVM exists, but Harness PG binding ACK
+        # is lost. A second allocate() MUST NEVER call Cube create again.
+        native_confirm=self.binding.confirm
+        def lost_pg_ack(*args,**kwargs):
+            raise ConnectionError("Simulated PG confirmation ACK loss")
+        self.binding.confirm=lost_pg_ack
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.allocate(self.execution,"worker-A",7)
+        self.assertEqual(len(self.transport.created),1)
+        self.assertIn(self.binding.get(self.execution).state,
+                      ("CREATING","BLOCKED_UNKNOWN"))
+        self.binding.confirm=native_confirm
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.allocate(self.execution,"worker-A",7)
+        self.assertEqual(len(self.transport.created),1)
+        # Deterministic read-only reconciliation of the original native ID.
+        if self.binding.get(self.execution).state=="CREATING":
+            self.binding.unknown(self.execution,"worker-A",7)
+        recovered=self.gateway.reconcile_unknown(self.execution,"worker-A",7)
+        self.assertEqual(recovered,self.transport.created[0])
+        self.assertEqual(len(self.transport.created),1)
+
     def test_failed_create_cannot_blind_retry_or_fall_back_to_host(self):
         class MissingCube(CountingCubeTransport):
             def create(self,*,metadata): raise ConnectionError("Cube API unavailable")
