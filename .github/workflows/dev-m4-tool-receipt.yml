@@ -7,6 +7,7 @@ on:
       - 'poc/closed_loop/nonidempotent_fault_worker.py'
       - 'poc/closed_loop/test_tool_receipt_fault_pg.py'
       - 'poc/closed_loop/verify_hatchet_tool_receipt_retry.py'
+      - 'poc/closed_loop/verify_physical_hatchet_worker_takeover.py'
       - 'poc/closed_loop/tool_recovery_owner.py'
       - 'poc/closed_loop/test_tool_recovery_owner_pg.py'
       - 'openspec/changes/dev-m4-reliable-task-facts/**'
@@ -15,6 +16,7 @@ on:
     branches: [main]
     paths:
       - 'poc/closed_loop/verify_hatchet_tool_receipt_retry.py'
+      - 'poc/closed_loop/verify_physical_hatchet_worker_takeover.py'
       - 'poc/closed_loop/tool_recovery_owner.py'
       - 'poc/closed_loop/test_tool_recovery_owner_pg.py'
       - 'poc/closed_loop/tool_receipt.py'
@@ -31,7 +33,7 @@ permissions:
 jobs:
   pg-external-ledger-sigkill:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 13
     services:
       postgres:
         image: postgres:16-alpine
@@ -77,3 +79,5 @@ jobs:
         run: python -B -m unittest poc.closed_loop.test_tool_receipt_fault_pg poc.closed_loop.test_tool_recovery_owner_pg -v
       - name: Real Hatchet-native Task retry reconciles Receipt without Tool replay
         run: python -B -m poc.closed_loop.verify_hatchet_tool_receipt_retry
+      - name: Real Hatchet fleet Worker A OS SIGKILL and independent B takeover
+        run: timeout --signal=KILL 285s python -B -m poc.closed_loop.verify_physical_hatchet_worker_takeover controller

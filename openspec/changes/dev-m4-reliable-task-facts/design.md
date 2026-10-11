@@ -35,6 +35,14 @@ PG transactional Outbox/Inbox、Provider 查询/ACK-loss Reconciliation、Tool I
 - Receipt 最终事务增加当前 Recovery Owner、Epoch 与 Lease 再校验（Run/Intent/Owner 行锁）；旧 A 和两名并发争抢者无法提交冲突 Outcome。若外部无/多条证据或 Lease 过期，保持 UNKNOWN。
 - **明确限制**：真实 SIGKILL 发生在独立 Tool 子进程，而非 Hatchet Worker A；新 Native Task Attempt 的 Owner B 是平台逻辑执行者，**未证明物理 Worker B 实际接管**。没有真实 Cube Workspace/Isolation/OCI、审批和外部 Policy，不能关闭 DEV-M4/M5 退出 Gate。
 
+### 第四开发切片：物理 Hatchet Worker 进程故障与独立实例原生接管（实测门禁）
+
+- 在同一外部 Hatchet PostgreSQL 上运行多个 Hatchet Embedded Engine 进程，先启动控制端并执行一次 Schema Migration，其余进程关闭 Migration；**Engine 技术 Task Reassignment 仍由 Hatchet 管理**，Harness 不实施第二套 Worker Recovery Daemon。
+- Worker A 进程组收到 **OS SIGKILL (-9)** 的注入点必须位于真正的外部 NON_RETRYABLE Tool Commit 之后、Harness Receipt 之前；控制进程检查其 OS 退出码与外部账本事实，才启动完全独立的 Worker B 进程。不能仅重启 SDK 子 Task 来冒充物理接管。
+- Worker B 必须由 Hatchet 原生 Retry/Task Queue 领取同一个 Provider WorkflowRun，查原 Execution `DISPATCHED/UNKNOWN` 并标记不确定，使用 PG Server-clock Owner Lease 过期后的 `A/7→B/8` CAS 获得**仅对账授权**，外部查询唯一可信 Effect 后确认原 Receipt，不派发第二次 Tool。
+- 验收同时检查实际 OS `A.pid/exit=-9`、`B.pid`、Hatchet Native Retry Count、相同 Run/Workflow ID、PG Fencing/Receipt 事件各一次、外部账本只有 1 条写入。任何不确定都保持门禁 RED，不能以 DONE 的单条状态替代全链路证据。
+- 本切片不覆盖真实 Cube Sandbox/Workspace/Scope/OCI/Guest Tool Bridge、生产身份/审批、跨主机部署、多副作用类型与完整恢复编排；即使通过，不关闭 DEV-M4/M5 整阶段 Gate。
+
 ## Test-first and failure injection
 
 正常验收：Provider Workflow 已接受而 Harness 创建调用超时 → 进入 BLOCKED_UNKNOWN，查询 Provider 并对账，不盲目重复创建。

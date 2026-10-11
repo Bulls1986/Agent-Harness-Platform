@@ -14,6 +14,8 @@
 
 - [x] A.3 真实 Hatchet Task Native Retry → Non-PURE Tool Receipt UNKNOWN 集成（固定 Hatchet SDK 1.42.1 / Embedded Engine v0.110.5，三套独立 PG）：首次 Attempt 的外部 Tool 子进程 Commit 后 SIGKILL，Hatchet 原生 Retry=1，新 Attempt 仅对账不重新写；PG Server-clock Owner/Fencing 7→8 CAS 在重试 Handler 中拒绝旧 Owner、确认唯一 Receipt。**证据**：docs/retrospectives/DEV_M4_HATCHET_NATIVE_RETRY_RECOVERY_FENCING_20261011.md（真实 Native Provider ID/Retry Count/非幂等写入次数/CI）。**物理 Hatchet Worker A SIGKILL / 独立 Worker B 接管未测**，M4 整阶段 OPEN。
 
+- [x] A.4 真实 Hatchet 多进程 Fleet 的**物理 Worker A 进程组 SIGKILL→独立 Worker B 进程**，Hatchet 原生 Retry 重新派发同一 WorkflowRun，PG Owner A/7→B/8 Fencing 后只查询原 Non-PURE UNKNOWN Receipt，外部非幂等账本仍 1 次写入。**证据**：docs/retrospectives/DEV_M4_M5_PHYSICAL_WORKER_TAKEOVER_20261011.md（CI 38145779308：A exit -9、A/B 不同 OS PID、native Retry=1、Receipt CONFIRMED_SUCCESS）。仅限无 Cube 的同宿主 CI Fleet；通用 ToolRunner、Inbox、长时故障/跨宿主 Gate 仍 OPEN。
+
 ## 1. TDD 与集成开发
 - [ ] 1.1 先写重复命令/并发 Outbox、ACK 丢失和 Receipt UNKNOWN 失败测试；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
 - [ ] 1.2 实现 Outbox/Inbox、Provider 原生 Lookup、Receipt 状态及 Reconcile；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。

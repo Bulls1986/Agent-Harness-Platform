@@ -11,6 +11,8 @@
 
 - [x] A.2 HC-03 受限 PostgreSQL Recovery Owner/Fencing：当前 Tool Execution 可信 Owner+Epoch+Lease 由 PG 持久化，PG 时钟校验到期后仅对 UNKNOWN 非幂等 Receipt 开放 B Owner CAS 接管；两个并发 B/C 只能一者获 Epoch+1，旧 A 的授权/Receipt 终态提交拒绝，新 B 只能外部读对账不重派 Tool；真实 Hatchet Native Retry 同 Run 验证 A/7→B/8。**证据**：docs/retrospectives/DEV_M4_HATCHET_NATIVE_RETRY_RECOVERY_FENCING_20261011.md。此项只代表**逻辑 Execution Owner** 交接，不等于物理双 Hatchet Worker 实机、真 Cube Sandbox、Workspace/OCI/Policy/Scope Gate。
 
+- [x] A.3 真实 Hatchet 多进程 Fleet 下，Worker A 进程组 SIGKILL（退出码 -9）后，独立 OS Worker B 接管同一 Native Workflow Task；对应 Harness PG Fencing Epoch A/7→B/8，B 只对账已有非幂等 UNKNOWN、旧 Owner 拒绝、外部效果只提交一次。**证据**：docs/retrospectives/DEV_M4_M5_PHYSICAL_WORKER_TAKEOVER_20261011.md。本切片**未使用 Cube**，Scope/WorkspaceRef/真实 Guest/OCI/跨宿主仍 OPEN，不能据此关闭 1.2/1.3 或 DEV-M5 Gate。
+
 ## 1. TDD 与集成开发
 - [ ] 1.1 先写无 ExecutionContext、越权、旧 Lease/Fencing 的拒绝测试；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
 - [ ] 1.2 完成真实 Cube Provider Allocate/Bind/Release 与 WorkspaceRef；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
