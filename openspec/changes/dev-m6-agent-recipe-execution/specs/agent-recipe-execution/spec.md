@@ -8,14 +8,14 @@ Recipe/Plan JSON/YAML 版本、跨 SDK A→B→C、Artifact/Evidence 引用、�
 
 #### Scenario: 交付成功
 - **WHEN** 阶段依赖满足且真实系统验收执行
-- **THEN** 真实 外部业务应用 需求→Coding→测试串联，后继只接收已验证结果，审批前工具不可执行，失败可恢复。
+- **THEN** 基于合成通用任务真实运行规划→Coding→验证三 Agent 跨 SDK Recipe，后继只接收已验证结果，审批前工具不可执行，任务级失败可恢复。
 
 ### Requirement: 必须覆盖正常流程与失败路径
 
 每条需求 MUST 先编写可失败的正/负例，再实现最小代码，并在实际环境测试、CI 和架构审查通过后关闭。
 
 #### Scenario: 真实异构 Recipe
-- **WHEN** 产品 Agent 完成已验证结构化需求并输出 ArtifactRef
+- **WHEN** 规划 Agent 针对合成通用任务完成已验证结构化输出并提供 ArtifactRef
 - **THEN** Coding Runtime 与测试 Runtime 分别按冻结 Recipe 执行、保留 Evidence
 
 #### Scenario: 审批拒绝

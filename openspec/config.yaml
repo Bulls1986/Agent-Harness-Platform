@@ -7,7 +7,7 @@ context: |
   Project stage is FORMAL DEVELOPMENT, not architecture-selection POC; production remains NO-GO until DEV-M9.
   Formal DEV-M0..M9 milestone authority: docs/DEVELOPMENT_MILESTONES.md.
   DEV-M3..M9 use distinct OpenSpec changes, each with proposal/specs/design/tasks; plans do not mark implementation done.
-  外部业务应用-M0 inventory / DEV-CONSUMER-01 may start in parallel with DEV-M3 and DEV-M5.
+  DEV-M8 uses only an independent synthetic consumer of the versioned Harness public API; external private business implementation and migration are never platform prerequisites.
 rules:
   proposal:
     - Explicitly scope production exclusions and observed versus unverified results.

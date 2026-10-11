@@ -14,7 +14,7 @@
 
 ## Dependencies / traceability
 
-DEV-M2 Typed SSE 和 M3 领域事实；可与 M5/M6 并行；任务编号：Conversation/Turn/Run 接口；DEV-CONSUMER-02 前置。严格遵守已冻结的 ADR/HC-01/02/03 和 G01–G20。范围不得扩大为第二套 Hatchet 技术执行引擎。
+DEV-M2 Typed SSE 和 DEV-M3 Run/Plan/Step 领域归属事实是平台内部依赖；可信身份/权限由外部 Gateway/IAM Adapter 输入。M7 接口实现可与 DEV-M4/M5/M6 适用切片并行；DEV-M8 的合成消费者验证依赖 **M7 的版本化公共 API**，不是反向前置。任务编号统一为 DEV-API-01；无需任何特定业务消费者先交付。严格遵守已冻结的 ADR/HC-01/02/03 和 G01–G20。范围不得扩大为第二套 Hatchet 技术执行引擎。
 
 ## Non-goals
 

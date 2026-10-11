@@ -8,7 +8,7 @@
 
 #### Scenario: 交付成功
 - **WHEN** 阶段依赖满足且真实系统验收执行
-- **THEN** 外部业务应用 等价、新 Recipe 业务和生产安全/容量三类 Gate 分别全部 PASS，才允许生产 GO。
+- **THEN** Harness 平台安全隔离、可靠恢复、真实容量、部署/回滚 Gate 全部 PASS 后才允许 Production GO；特定私有应用的等价性、迁移和上线不构成平台 Gate。
 
 ### Requirement: 必须覆盖正常流程与失败路径
 
@@ -20,7 +20,7 @@
 
 #### Scenario: 生产 NO-GO
 - **WHEN** 业务功能通过但权限、Receipt UNKNOWN、隔离或回退 Gate 未通过
-- **THEN** 必须保持 NO-GO 和现网旧端执行权威
+- **THEN** 必须维持 Harness Production NO-GO 且不得开放未通过门禁的生产执行入口
 
 ### Requirement: 未验证的结果不可升级为阶段完成
 
