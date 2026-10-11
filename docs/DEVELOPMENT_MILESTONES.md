@@ -9,7 +9,7 @@
 | DEV-M0 架构基线 | Accepted ADR、HC-01/02/03、G01–G20 | 决策已冻结 |
 | DEV-M1 基础可运行平台 | 真 Hatchet/PG、双 Agent SDK、Run Inspector | 开发切片 PASS |
 | DEV-M2 模型及流式交互 | 真实 LiteLLM、Token SSE、持久游标/取消 | 有限开发切片 PASS |
-| DEV-M3 领域内核 | Run/Plan/Step/Attempt、Replan v2、Workflow Segment | ACTIVE：Plan v1 保护通过，完整 Gate OPEN |
+| DEV-M3 领域内核 | Run/Plan/Step/Attempt、Replan v2、Workflow Segment | ACTIVE：Plan v1 与 PURE 真实 Hatchet v1→v2 独立 Segment 子切片 PASS；非 PURE/完整 Step-Attempt Gate OPEN |
 | DEV-M4 一致性与恢复 | Outbox/Inbox、ACK-loss、UNKNOWN/非幂等 Receipt | 部分实现，真实故障 Gate OPEN |
 | DEV-M5 Cube 可信执行 | WorkspaceRef/Scope/Lease/Fencing、跨 Worker 接管 | ACTIVE：可信准入测试通过，真 Cube Gate OPEN |
 | DEV-M6 多 Agent Recipe | 跨 Runtime 交接、Verifier、Artifact、Approval | PLANNED |
@@ -27,7 +27,7 @@
 
 | 阶段 | 真正前置与并行边界 | 未满足的完整阶段退出 Gate |
 |---|---|---|
-| M3 | M1 Run/PG/Hatchet 已有有限实测；M3 内核开发可独立推进 | 真实 PG+Hatchet Replan v1→v2、Workflow Segment、stale Attempt 拒绝 |
+| M3 | M1 Run/PG/Hatchet 已有有限实测；M3 内核开发可独立推进 | PURE PG+Hatchet v1→v2 子切片 PASS；运行中旧 Worker 结束确认、非 PURE/完整 Step-Attempt/业务终态仍 OPEN |
 | M4 | M3 Domain/Segment 事实是完整恢复对账的前置；故障负例可先并行 TDD | 原生 ACK-loss Lookup/Reconcile、非幂等 Receipt UNKNOWN、SIGKILL/并发 |
 | M5 | HC-03 是约束；Cube Allocate/Bind/Release 可与 M3/M4 并行；A→B 恢复需要相关执行事实 | 真实 Cube、跨 Worker Workspace/Lease/Fencing 接管和跨 Scope 拒绝 |
 | M6 | 依赖 M3/M4/M5 相关真实执行、安全和恢复 Gate | 通用合成 Recipe 的跨 Runtime、Approval、Artifact/Evidence、Verifier 实测 |
