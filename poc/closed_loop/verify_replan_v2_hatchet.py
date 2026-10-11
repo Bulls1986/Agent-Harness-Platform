@@ -20,7 +20,8 @@ from pydantic import BaseModel
 from poc.closed_loop.facts import PgFacts, UnsafeDispatch
 from poc.closed_loop.plan_guard import PlanGuard
 from poc.closed_loop.replan_v2 import ReplanV2
-from poc.closed_loop.segment_reconcile import ProviderMatch, SegmentReconciler
+from poc.closed_loop.segment_reconcile import SegmentReconciler
+from poc.closed_loop.hatchet_segment_lookup import HatchetSegmentLookup
 
 
 hatchet = Hatchet.from_embedded(ClientConfig(embedded=EmbeddedHatchetConfig(
@@ -105,25 +106,9 @@ def execute(*, simulate_ack_loss: bool = False) -> dict:
         replan.unknown(key)
         if replan.segment(run_id)["state"] != "BLOCKED_UNKNOWN":
             raise RuntimeError("Simulated ACK loss did not block dispatch")
-        def find_native(command_key):
-            rows = second.list_runs(additional_metadata={
-                "harness_command_key": command_key,
-                "harness_run_id": run_id,
-                "harness_plan_version": "2",
-            }, limit=20)
-            print("NATIVE_HATCHET_METADATA_CANDIDATES", len(rows),
-                  [(type(row).__name__, str(row)[:400]) for row in rows[:3]], flush=True)
-            return [
-                ProviderMatch(
-                    workflow_run_id=str(
-                        getattr(row, "workflow_run_external_id",
-                                getattr(row, "workflow_run_id", getattr(row, "id", "")))
-                    ),
-                    command_key=command_key, run_id=run_id, plan_version=2,
-                )
-                for row in rows
-            ]
-        recovered = SegmentReconciler(PgFacts()).reconcile_unknown(key, find_native)
+        lookup = HatchetSegmentLookup(second.list_runs)
+        recovered = SegmentReconciler(PgFacts()).reconcile_unknown(
+            key, lambda command_key: lookup.find(command_key, run_id, 2))
         if recovered != ref2.workflow_run_id:
             raise RuntimeError("Native recovered WorkflowRun does not match actual created workflow")
     else:
