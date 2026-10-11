@@ -88,9 +88,23 @@ class ReplanV2PgTests(unittest.TestCase):
         with self.assertRaises(UnsafeDispatch):
             self.replan.admit(self.rid, 2, "some-run")
 
-    def test_previous_attempt_cannot_commit_after_promotion(self):
-        self.db.start_step(self.rid, "pydantic", "generic synthetic intent")
+    def test_running_step_blocks_promotion_and_stale_attempt_cannot_commit(self):
+        # A stale or incomplete Platform Step remains a stronger veto even
+        # when the Provider observation claims it has terminated.
+        with self.db.tx() as c:
+            c.execute("UPDATE harness_step SET state='RUNNING' "
+                      "WHERE run_id=%s AND id='pydantic'", (self.rid,))
+        with self.assertRaises(UnsafeDispatch):
+            self.replan.promote(self.rid, lambda _: ProviderState.COMPLETED)
+        self.assertEqual(self.db.snapshot(self.rid)["plan_version"], 1)
+        with self.db.tx() as c:
+            c.execute("UPDATE harness_step SET state='PENDING' "
+                      "WHERE run_id=%s AND id='pydantic'", (self.rid,))
         self.replan.promote(self.rid, lambda _: ProviderState.COMPLETED)
+        # Simulate an old Worker replaying a stale completion after v2 commit.
+        with self.db.tx() as c:
+            c.execute("UPDATE harness_step SET state='RUNNING' "
+                      "WHERE run_id=%s AND id='pydantic'", (self.rid,))
         from poc.runtime_spi.contract import TypedEvent
         with self.assertRaises(UnsafeDispatch):
             self.db.finish_step(self.rid, "pydantic", "late",
