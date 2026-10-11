@@ -10,7 +10,7 @@
 2. 增加 `harness_run.project_scope`、`initiator_principal_id` 与 `PgRunReader`，真实 [Green CI 38139867680](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38139867680) 成功。
 3. 增加直接 SQL 改变 Run 归属及历史 Run 原地补绑的负例，[Red CI 38139953423](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38139953423) 确认 PostgreSQL 原先未禁止 UPDATE。
 4. 加入数据库触发器 `harness_run_owner_immutable` 后，[Green CI 38140021577](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38140021577) 真实 PostgreSQL **5/5 PASS**（0 skipped），原有授权 HTTP 单测 **8/8 PASS**。
-5. [Architecture Guard CI 38140021573](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38140021573) SUCCESS。独立 PG/Hatchet/Inspector 回归见 [workflow 38140021579](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38140021579)；最终状态须以该工作流结果为准，不能把进行中判定为通过。
+5. [Architecture Guard CI 38140021573](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38140021573) SUCCESS。独立 PG/Hatchet/Inspector [闭环回归 workflow 38140021579](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38140021579) **SUCCESS**；与本轮 PgFacts Schema 变更兼容。
 
 ## 验证行为与架构约束
 
