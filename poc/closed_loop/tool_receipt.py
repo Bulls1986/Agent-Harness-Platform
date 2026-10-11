@@ -71,6 +71,18 @@ class ToolReceiptJournal:
             raise KeyError(execution_id)
         return r
 
+    @staticmethod
+    def _replan_pending(c, run_id: str, plan_version: int) -> bool:
+        if not c.execute(
+            "SELECT to_regclass('harness_replan_intent') IS NOT NULL",
+        ).fetchone()[0]:
+            return False
+        return bool(c.execute(
+            "SELECT 1 FROM harness_replan_intent "
+            "WHERE run_id=%s AND from_version=%s",
+            (run_id, plan_version),
+        ).fetchone())
+
     def register_intent(
         self, run_id: str, plan_version: int, step_id: str, attempt_id: str,
         execution_id: str, owner_id: str, fencing_epoch: int,
@@ -91,6 +103,8 @@ class ToolReceiptJournal:
             ).fetchone()
             if not run or run[0]!="RUNNING" or run[1]!=plan_version or not run[2]:
                 raise UnsafeDispatch("Unbound/stale Run cannot register Tool Intent")
+            if self._replan_pending(c,run_id,plan_version):
+                raise UnsafeDispatch("Frozen Replan blocks new non-PURE Tool Intent")
             current = self._read(c, execution_id, lock=True)
             if current:
                 present = tuple(current[k] for k in self._columns[:10])
@@ -127,8 +141,9 @@ class ToolReceiptJournal:
                     or run[1]!=item["plan_version"]
                     or item["state"]!="RECORDED"
                     or item["owner_id"]!=owner_id
-                    or item["fencing_epoch"]!=fencing_epoch):
-                raise UnsafeDispatch("Duplicate/stale Tool execution; never redispatch")
+                    or item["fencing_epoch"]!=fencing_epoch
+                    or self._replan_pending(c,item["run_id"],item["plan_version"])):
+                raise UnsafeDispatch("Duplicate/stale/Replanned Tool; never redispatch")
             c.execute(
                 "UPDATE harness_tool_intent SET state='DISPATCHED' WHERE execution_id=%s",
                 (execution_id,),
