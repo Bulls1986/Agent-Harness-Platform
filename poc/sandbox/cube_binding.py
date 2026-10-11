@@ -208,7 +208,8 @@ class CubeBinding:
                     or row[10] is not True
                     or row[6]!=expected_epoch or row[5]==new_owner
                     or row[2:5]!=(scope,workspace,environment_digest)
-                    or not row[7]):
+                    or (row[9]=="ACTIVE" and not row[7])
+                    or (row[9]=="BLOCKED_UNKNOWN" and row[7] is not None)):
                 raise UnsafeDispatch("Sandbox takeover requires expired matching Scope/Workspace")
             run=c.execute("SELECT state FROM harness_run WHERE id=%s FOR UPDATE",
                           (row[1],)).fetchone()
