@@ -50,6 +50,7 @@ class ReplanV2PgTests(unittest.TestCase):
         key = self.replan.promote(self.rid, lambda x: ProviderState.COMPLETED)
         self.assertEqual(self.replan.promote(self.rid, lambda _: ProviderState.RUNNING), key)
         self.assertEqual(self.db.snapshot(self.rid)["plan_version"], 2)
+        self.assertEqual(self.guard.inspect(self.rid)["replan"]["state"], "COMMITTED")
         self.assertEqual(self.replan.segment(self.rid)["state"], "PENDING")
         self.assertEqual(self.guard.inspect(self.rid)["plans"], [
             {"version": 1, "recipe_digest": "sha256:recipe-one"},
