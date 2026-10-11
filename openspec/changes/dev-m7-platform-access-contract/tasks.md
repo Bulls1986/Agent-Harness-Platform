@@ -1,10 +1,14 @@
 # DEV-M7 统一 API、Chat 与用户交互 · Tasks
 
-> 状态：**ACTIVE（仅授权只读子切片单测）**，DEV-M7 全阶段仍 OPEN。工期、Owner 和 Sprint 需要在真实代码/团队容量基线上评估；所有勾选项以完整真实门禁为准。DEV-M7 实施项为 DEV-API-01；M8（DEV-CONSUMER-01）只作为下游合成客户端合同验证，不是 M7 前置，不把消费方业务逻辑并入 Harness。
+> 状态：**ACTIVE（授权只读单测 + PostgreSQL Run 归属/不可变性真实集成子切片）**，DEV-M7 全阶段仍 OPEN。工期、Owner 和 Sprint 需要在真实代码/团队容量基线上评估；所有勾选项以完整真实门禁为准。DEV-M7 实施项为 DEV-API-01；M8（DEV-CONSUMER-01）只作为下游合成客户端合同验证，不是 M7 前置，不把消费方业务逻辑并入 Harness。
 
 > 2026-10-11 过程证据：`poc/platform_access/test_authorized_reads.py` 从缺失实现的 Red（ModuleNotFoundError）开始，新增受信任 `SecurityContext` / 持久事实 `RunBinding` / `RunReader` / 外部 Policy 的注入式边界；8 项 HTTP 单测 Green（含跨项目、权限撤销、身份 Header 伪造、非法游标、缺省配置拒绝）；新增独立 CI 工作流 `dev-m7-access.yml`。**尚缺**真实 Gateway/IAM、PG 绑定、SSE 权限、ArtifactRef、真实 UI、CI/Live 证据；故 1.1～2.3 均保持未勾选。
 
 > CI 更新：PR #65 上 [访问控制单测工作流](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38137992463) 和 [架构门禁工作流](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38137992419) 已 PASS；这里的「CI/Live 证据尚缺」具体指**真实 Gateway + PostgreSQL + SSE/Artifact/用户端的集成 CI 与 Live Gate**，不是新增单元工作流。阶段仍 OPEN。
+
+## 已完成、独立验收的开发子切片（不替代整阶段 Gate）
+
+- [x] A.2 `PgFacts.create` 在真实 PostgreSQL 16 固定 Project/Initiator，`PgRunReader` 按 Run PG 归属读取并在 HTTP 政策拒绝前屏蔽历史无 Scope Run；禁止数据库归属 UPDATE/原地补绑；**证据**：docs/retrospectives/DEV_M7_PG_RUN_BINDING_20261011.md（2 次 Red→Green、PG 5 项和已有 8 项 HTTP 单测，CI 38140021577 / 38140021573）。真实企业 Gateway/IdP、完整 SSE、ArtifactRef/OSS、Conversation/Turn、UI 仍 OPEN。
 
 ## 0. 前置与需求冻结
 
