@@ -128,6 +128,22 @@ class PgFacts:
             (rid, seq, kind, json.dumps(data, sort_keys=True)),
         )
 
+    @staticmethod
+    def has_non_pure_tool_intent(c, rid: str) -> bool:
+        """Avoid PURE-only Run completion/cancel when non-PURE Tool exists.
+
+        Test POC schema may not have the new M4 journal installed yet.
+        Run row must be locked by the caller to serialize intent insertions.
+        """
+        if not c.execute(
+            "SELECT to_regclass('harness_tool_intent') IS NOT NULL"
+        ).fetchone()[0]:
+            return False
+        return bool(c.execute(
+            "SELECT 1 FROM harness_tool_intent WHERE run_id=%s LIMIT 1",
+            (rid,),
+        ).fetchone())
+
     def create(self, rid: str, prompt: str | None = None,
                model_mode: str = 'deterministic_local_model',
                model_id: str | None = None,
@@ -204,6 +220,8 @@ class PgFacts:
             row=c.execute('SELECT state FROM harness_run WHERE id=%s FOR UPDATE',(rid,)).fetchone()
             if not row or row[0]!='CANCEL_REQUESTED':
                 raise UnsafeDispatch('Cancellation cannot be acknowledged without request')
+            if self.has_non_pure_tool_intent(c,rid):
+                raise UnsafeDispatch('Model-only Cancel ACK cannot finalize a Run with external Tool Intent')
             c.execute("UPDATE harness_run SET state='CANCELLED' WHERE id=%s",(rid,))
             self.event(c,rid,'run.cancelled',{'side_effects':'NO_EXTERNAL_TOOLS_MODEL_ONLY'})
 
@@ -336,6 +354,8 @@ class PgFacts:
                 "SELECT id,state,output FROM harness_step WHERE run_id=%s",
                 (rid,),
             ).fetchall()
+            if self.has_non_pure_tool_intent(c,rid):
+                raise UnsafeDispatch("Model-only Run terminal cannot ignore non-PURE Tool Receipt")
             if (not run or run[0] != "RUNNING" or not run[1] or run[4] != 1
                     or len(steps) != 2
                     or any(s[1] != "COMPLETED" for s in steps)):

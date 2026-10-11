@@ -7,7 +7,7 @@
 | 任务编号 | 里程碑 | 交付 | 验收状态 |
 |---|---|---|---|
 | DEV-HC-01 | DEV-M3 | Run/Plan/Step/Attempt、Workflow Segment/Replan v2 与旧 Attempt 保护 | Plan v1 + PURE 真实 Hatchet v1→v2 独立 Segment PASS；运行中/非 PURE 与完整领域 Gate OPEN |
-| DEV-HC-02 | DEV-M4 | Outbox/Inbox、丢 ACK 对账、非幂等 Tool Receipt UNKNOWN | ACTIVE：PURE v2 Segment 创建丢 ACK 后 Native 元数据对账/PG 补绑 PASS；非幂等 Receipt/SIGKILL 完整 Gate OPEN |
+| DEV-HC-02 | DEV-M4 | Outbox/Inbox、丢 ACK 对账、非幂等 Tool Receipt UNKNOWN | ACTIVE：PURE v2 Segment Native 对账 + 双 PG 非幂等 Tool 真 SIGKILL/UNKNOWN Receipt 对账子切片 PASS；真实 Hatchet Worker/Tool Runner 恢复与完整 Gate OPEN |
 | DEV-HC-03 | DEV-M5 | ExecutionContext、Cube Scope/Lease/Fencing/WorkspaceRef、Worker A→B 安全接管 | 授权负例已通过；真实 Cube Gate OPEN |
 | DEV-RECIPE-01 | DEV-M6 | Provider-neutral Recipe、Artifact/Evidence、Verifier 与 Approval | PLANNED |
 | DEV-API-01 | DEV-M7 | 稳定公共 Run/Conversation/SSE/Cancel/ArtifactRef API/SDK 与服务身份合同 | ACTIVE：PR #65 授权读取与 PR #67 PG 归属/不可变性集成子切片 PASS；真实 IAM/Policy+PG、SSE/Artifact/UI Gate OPEN |
