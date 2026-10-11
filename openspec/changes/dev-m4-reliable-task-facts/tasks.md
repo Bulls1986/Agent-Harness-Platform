@@ -1,6 +1,6 @@
 # DEV-M4 持久一致性、Receipt 与任务级恢复 · Tasks
 
-> 状态：**ACTIVE（仅 PURE v2 Segment ACK 丢失后原生查询 + PG 对账子切片）**。工期、Owner 和 Sprint 需要在真实代码/团队容量基线上评估；所有勾选项以运行证据为准。来源 DEV-HC-02 / HC-02。
+> 状态：**ACTIVE（PURE v2 Segment ACK-loss + 独立双库非幂等 Tool Intent/Receipt/SIGKILL 安全子切片）**。工期、Owner 和 Sprint 需要在真实代码/团队容量基线上评估；所有勾选项以运行证据为准。来源 DEV-HC-02 / HC-02。
 
 ## 0. 前置与需求冻结
 - [ ] 0.1 审阅原有 Accepted ADR/HC 与 G01–G20，识别事实 Owner、安全边界和阻断依赖；OpenSpec 四类规划材料 Strict PASS。
@@ -9,6 +9,8 @@
 ## 已有证据的独立开发子切片（不替代完整阶段 Gate）
 
 - [x] A.1 基于真实 PostgreSQL / Hatchet SDK 1.42.1 + Engine v0.110.5，验证 PURE v2 Segment 创建 ACK 丢失后的 `BLOCKED_UNKNOWN`，只经元数据精确匹配、完整分页和唯一 Native Provider ID 对账补录，拒绝盲目重建/不明旧 Workflow；**证据**：docs/retrospectives/DEV_M4_SEGMENT_ACK_RECONCILIATION_20261011.md（初始 Red CI 38142140618、过滤泄漏 Red CI 38142256547、真实 PG/Hatchet Green CI 38142456717）。仅限该场景；Receipt UNKNOWN、非幂等 Tool、SIGKILL、跨 Worker 仍 OPEN。
+
+- [x] A.2 HC-02 非幂等 Tool Intent/Receipt 的真实双 PostgreSQL 事务与故障注入：外部账本允许重复副作用，独立 Worker 进程在外部 Commit 之后、Harness Receipt 之前遭受 SIGKILL，Harness UNKNOWN 阻断重派，只依据唯一且匹配的外部证据补记 Receipt；两 Reconciler 并发去重、旧 Owner/Fencing/Plan、外部重复/缺失记录、跨 M3 PURE Replan/旧模型终态负例；**证据**：docs/retrospectives/DEV_M4_NONIDEMPOTENT_TOOL_RECEIPT_SIGKILL_20261011.md（Red→Green、独立双库 CI）。仅此子切片完成；真实 Hatchet Worker A→B 接管、非幂等 Tool Runtime 全链路、自动故障观察、正式 Receipt 策略和 Cube Gate 仍 OPEN。
 
 ## 1. TDD 与集成开发
 - [ ] 1.1 先写重复命令/并发 Outbox、ACK 丢失和 Receipt UNKNOWN 失败测试；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
