@@ -36,6 +36,20 @@ class StreamFactsTests(unittest.TestCase):
         with self.assertRaises(UnsafeDispatch):self.db.request_cancel(self.rid)
         with self.assertRaises(UnsafeDispatch):self.db.complete(self.rid)
 
+    def test_terminal_replay_drains_multiple_pg_pages(self):
+        with self.db.tx() as c:
+            for i in range(280):
+                self.db.event(c,self.rid,'response.output_text.delta',
+                              {'step_id':'pydantic','delta':'x','source':'provider_stream'})
+        self.db.request_cancel(self.rid)
+        self.db.acknowledge_cancel(self.rid)
+        client=TestClient(create_app(submit=lambda *a:None))
+        response=client.get('/api/runs/'+self.rid+'/stream')
+        ids=[line for line in response.text.splitlines() if line.startswith('id: ')]
+        expected=len(self.db.events_since(self.rid,0,limit=500))
+        self.assertGreater(expected,250)
+        self.assertEqual(len(ids),expected)
+        self.assertTrue(ids[-1].endswith(':'+str(expected)))
     def test_http_sse_replay_and_cross_run_cursor_validation(self):
         self.db.append_stream_delta(self.rid,"pydantic","第一段","pydantic")
         self.db.request_cancel(self.rid);self.db.acknowledge_cancel(self.rid)
