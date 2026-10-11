@@ -149,6 +149,34 @@ class CubePgBindingTests(unittest.TestCase):
         self.assertEqual(len([r for r in results if r is not None]),1)
         self.assertEqual(self.binding.get(self.execution).fencing_epoch,8)
 
+    def test_native_cube_requires_actual_endpoint_no_local_fallback(self):
+        from unittest.mock import patch
+        from poc.sandbox.cube_binding import NativeCubeTransport
+        with patch.dict(os.environ,{},clear=True):
+            with self.assertRaisesRegex(RuntimeError,"Real CUBE_API_URL"):
+                NativeCubeTransport()
+        self.assertEqual(self.transport.created,[])
+
+    def test_duplicate_allocation_and_release_unknown_are_non_retryable(self):
+        sid=self.gateway.allocate(self.execution,"worker-A",7)
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.allocate(self.execution,"worker-A",7)
+        self.assertEqual(self.transport.created,[sid])
+        original_connect=self.transport.connect
+        def unavailable(_):
+            raise ConnectionError("Cube destroy ACK cannot be determined")
+        self.transport.connect=unavailable
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.release(self.execution,"worker-A",7)
+        self.assertEqual(self.binding.get(self.execution).state,"RELEASING")
+        self.transport.connect=original_connect
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.allocate(self.execution,"worker-A",7)
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.read(self.execution,"worker-A",7,
+                              "/workspace/proof.txt")
+        self.assertEqual(len(self.transport.created),1)
+
     def test_missing_cube_on_connect_blocks_and_does_not_create_new_empty_one(self):
         sb=self.gateway.allocate(self.execution,"worker-A",7)
         self.gateway.write(self.execution,"worker-A",7,
