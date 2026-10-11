@@ -146,9 +146,10 @@ def create_app(
                     yield ('id: '+run_id+':'+str(pos)+'\n' +
                            'event: '+evt['type']+'\n'+'data: '+body+'\n\n')
                 state=await asyncio.to_thread(db.run_state,run_id)
-                if state in ('COMPLETED','CANCELLED') or any(
-                    x['type']=='workflow.observation_error' for x in batch
-                ): break
+                finished=(state in ('COMPLETED','CANCELLED') or any(
+                    x['type']=='workflow.observation_error' for x in batch))
+                # Drain every persisted event page before closing terminal SSE.
+                if finished and len(batch)<250: break
                 if not batch: yield ': keepalive\n\n'
                 await asyncio.sleep(0.35)
         return StreamingResponse(generate(),media_type='text/event-stream',
