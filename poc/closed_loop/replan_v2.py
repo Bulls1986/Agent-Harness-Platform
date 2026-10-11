@@ -80,6 +80,20 @@ class ReplanV2:
                 "SELECT 1 FROM harness_step WHERE run_id=%s AND state='RUNNING'", (rid,),
             ).fetchone():
                 raise UnsafeDispatch("Step still RUNNING; quiescence not proven")
+            # "deterministic model" is not proof of PURE execution. A Run
+            # might have registered a non-PURE Tool via another Worker/SDK.
+            # The Run row lock serializes Tool Intent registration and Plan
+            # promotion. For this limited PURE-v2 adapter ANY such Intent
+            # (including an already reconciled Receipt) makes PURE promotion
+            # ineligible; non-PURE Replan needs its own HC-02/03 Gate.
+            exists = c.execute(
+                "SELECT to_regclass('harness_tool_intent') IS NOT NULL",
+            ).fetchone()[0]
+            if exists and c.execute(
+                "SELECT 1 FROM harness_tool_intent WHERE run_id=%s LIMIT 1",
+                (rid,),
+            ).fetchone():
+                raise UnsafeDispatch("Non-PURE Tool Intent forbids PURE Replan")
             intent = c.execute(
                 "SELECT intended_recipe_digest,state FROM harness_replan_intent "
                 "WHERE run_id=%s AND from_version=1", (rid,),
