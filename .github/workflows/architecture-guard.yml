@@ -20,6 +20,8 @@ jobs:
           python-version: "3.12"
       - name: Negative guardrail regression tests
         run: python -B -m unittest discover -s tests -p "test_architecture_guardrails.py" -v
+      - name: Formal development milestone plan and OpenSpec phase regression
+        run: python -B -m unittest discover -s tests -p "test_development_milestone_plan.py" -v
       - name: Architecture docs and import boundaries
         run: python -B scripts/check_architecture_guardrails.py
       - name: Current architecture navigation and local Markdown link targets
