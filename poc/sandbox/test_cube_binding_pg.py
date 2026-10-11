@@ -269,6 +269,25 @@ class CubePgBindingTests(unittest.TestCase):
                         self.assertEqual(transport.read(sb,"/workspace/abc"),
                                          "from-guest")
 
+    def test_creator_crashes_in_creating_then_b_safely_reconciles(self):
+        # Worker A may die after contacting Cube but before it marks UNKNOWN.
+        metadata=self.binding.claim_create(self.execution,"worker-A",7)
+        sid=self.transport.create(metadata=metadata)
+        self.assertEqual(self.binding.get(self.execution).state,"CREATING")
+        with self.db.tx() as c:
+            c.execute("UPDATE harness_cube_binding "
+                      "SET lease_expires_at=now()-interval '1 second' "
+                      "WHERE execution_id=%s",(self.execution,))
+        b=self.binding.takeover(
+            self.execution,7,"worker-B",self.scope,self.workspace,self.digest)
+        self.assertEqual(b.fencing_epoch,8)
+        self.assertEqual(b.state,"BLOCKED_UNKNOWN")
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.allocate(self.execution,"worker-B",8)
+        self.assertEqual(self.gateway.reconcile_unknown(
+            self.execution,"worker-B",8),sid)
+        self.assertEqual(self.transport.created,[sid])
+
     def test_native_create_propagates_frozen_metadata_not_caller_claim(self):
         self.gateway.allocate(self.execution,"worker-A",7)
         metadata=self.transport.metadata[self.transport.created[0]]
