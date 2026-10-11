@@ -21,6 +21,15 @@ DEV-M2 Typed SSE 和 DEV-M3 持久 Run 所属事实构成完整 API 的内部依
 - 当前 Policy 每次读取重新评估 `run.read` / `run.events.read`。此阶段不发行 OSS 链接，也不允许用户自行接入 SSE；后续 SSE 需重验权限和取消下游订阅，不能直接复用 Local Inspector 的无鉴权路由。
 - 单元测试使用内存 Read Adapter 验证 HTTP 策略边界，**未对接真实 PostgreSQL 与 IAM**；仅代表可审查的接口骨架，不构成 Gate 2.1 PASS。
 
+### 第二开发切片：PostgreSQL Run 归属与拒绝原地改绑（真实 PG，非企业身份联调）
+
+- `poc/closed_loop/facts.py` 的 `harness_run` 新增可空 `project_scope` 与 `initiator_principal_id`，使用 `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` 兼容旧 POC 数据；不会把历史 Run 的项目或发起者伪造补齐。
+- 可信创建边界 `PgFacts.create(..., project_scope=..., initiator_principal_id=...)` 仅允许两个字段同时提供合法非空值；原有本地 Inspector 可继续创建无 Scope 的受限 POC Run，**该类 Run 不允许进入正式只读 API**。
+- PostgreSQL 触发器 `harness_run_owner_immutable` 拒绝修改已经写入的归属，也拒绝将历史未绑定 Run 原地改绑。Run 状态机更新不触发归属变更。
+- `PgRunReader` 从 Harness PostgreSQL 的 `harness_run` 独立读取归属，通过既有只读 `snapshot/events_since` 投影返回载荷；未绑定或不存在的 Run 返回统一 404。
+- 完整 HTTP 授权流程仍必须由已验证的外部 Gateway Identity 和当前 Policy 授权结果注入；**本切片只用合成身份，未联调真实 IdP**。不开发匿名回退、Inspector 对外转接、流式 SSE 中途撤权、OSS Artifact 或 Conversation/Turn。
+- PostgreSQL 16 CI 新增真实 DB 合同与越权负例，原有 8 项无数据库单测保留。PG 单测绿灯属于 DEV-M7 的受限集成子门禁，非全阶段 Gate。
+
 ## Test-first and failure injection
 
 正常验收：同一会话内不同 SDK 产生文本、工具、文件和审批事件 → 统一 API/页面关联 Turn/Run/Step、流式进度和最终结果。

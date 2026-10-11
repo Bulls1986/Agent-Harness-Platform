@@ -44,7 +44,9 @@ class PgFacts:
                     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
                     input_prompt TEXT, result_json JSONB,
                     model_mode TEXT NOT NULL DEFAULT 'deterministic_local_model',
-                    model_id TEXT
+                    model_id TEXT,
+                    project_scope TEXT,
+                    initiator_principal_id TEXT
                 )
             """)
             c.execute("ALTER TABLE harness_run ADD COLUMN IF NOT EXISTS "
@@ -55,6 +57,42 @@ class PgFacts:
             c.execute("ALTER TABLE harness_run ADD COLUMN IF NOT EXISTS model_mode "
                       "TEXT NOT NULL DEFAULT 'deterministic_local_model'")
             c.execute("ALTER TABLE harness_run ADD COLUMN IF NOT EXISTS model_id TEXT")
+            # Legacy POC Runs remain unscoped and MUST NOT be made externally
+            # readable by backfilling a project or deriving owner from prompt.
+            c.execute("ALTER TABLE harness_run ADD COLUMN IF NOT EXISTS project_scope TEXT")
+            c.execute("ALTER TABLE harness_run ADD COLUMN IF NOT EXISTS initiator_principal_id TEXT")
+            c.execute("""
+                CREATE OR REPLACE FUNCTION harness_reject_run_owner_change()
+                RETURNS trigger
+                LANGUAGE plpgsql
+                AS $owner_guard$
+                BEGIN
+                    IF NEW.project_scope IS DISTINCT FROM OLD.project_scope
+                       OR NEW.initiator_principal_id IS DISTINCT FROM OLD.initiator_principal_id
+                    THEN
+                        RAISE EXCEPTION 'Persisted Run ownership is immutable'
+                            USING ERRCODE = '23514';
+                    END IF;
+                    RETURN NEW;
+                END
+                $owner_guard$
+            """)
+            c.execute("""
+                DO $create_owner_guard$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM pg_trigger
+                        WHERE tgname='harness_run_owner_immutable'
+                          AND tgrelid='harness_run'::regclass
+                    ) THEN
+                        CREATE TRIGGER harness_run_owner_immutable
+                        BEFORE UPDATE OF project_scope, initiator_principal_id
+                        ON harness_run
+                        FOR EACH ROW EXECUTE FUNCTION harness_reject_run_owner_change();
+                    END IF;
+                END
+                $create_owner_guard$
+            """)
             c.execute("""
                 CREATE TABLE IF NOT EXISTS harness_step (
                     run_id TEXT NOT NULL REFERENCES harness_run(id), id TEXT NOT NULL,
@@ -92,18 +130,30 @@ class PgFacts:
 
     def create(self, rid: str, prompt: str | None = None,
                model_mode: str = 'deterministic_local_model',
-               model_id: str | None = None) -> str:
+               model_id: str | None = None,
+               *, project_scope: str | None = None,
+               initiator_principal_id: str | None = None) -> str:
         # Prompt is only kept for local Inspector diagnosis; never forward
         # this POC plain-text input storage practice to production secrets.
         key = f"{rid}:segment-0:create:v1"
+        # A trusted calling service supplies BOTH immutable ownership facts.
+        # None/None is retained solely for historical local Inspector POC Runs.
+        owner = (project_scope, initiator_principal_id)
+        if owner != (None, None) and (
+            not all(isinstance(v, str) and v and v == v.strip() for v in owner)
+        ):
+            raise ValueError("Scoped Run requires project and initiator identity")
         with self.tx() as c:
             if model_mode not in ('deterministic_local_model', 'live'):
                 raise ValueError('Unsupported POC model mode')
             if model_mode == 'live' and not model_id:
                 raise ValueError('Live Run requires pinned model')
-            c.execute("INSERT INTO harness_run(id,plan_version,state,input_prompt,model_mode,model_id) "
-                      "VALUES (%s,1,'CREATED',%s,%s,%s)",
-                      (rid, prompt, model_mode, model_id))
+            c.execute("INSERT INTO harness_run("
+                      "id,plan_version,state,input_prompt,model_mode,model_id,"
+                      "project_scope,initiator_principal_id) "
+                      "VALUES (%s,1,'CREATED',%s,%s,%s,%s,%s)",
+                      (rid, prompt, model_mode, model_id,
+                       project_scope, initiator_principal_id))
             for name in ("pydantic", "openai"):
                 c.execute("INSERT INTO harness_step(run_id,id,state) "
                           "VALUES (%s,%s,'PENDING')", (rid, name))
