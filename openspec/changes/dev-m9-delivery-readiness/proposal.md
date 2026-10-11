@@ -10,11 +10,11 @@
 
 ## Deliverable
 
-外部业务应用 等价、新 Recipe 业务和生产安全/容量三类 Gate 分别全部 PASS，才允许生产 GO。
+Harness 平台自身安全隔离、可靠恢复、真实容量、部署与回滚门禁全部 PASS，方可决定 Production GO；不以任何特定外部业务应用的功能等价或迁移上线为前置。
 
 ## Dependencies / traceability
 
-DEV-M3～M8 核心 Gate；外部 IAM/运维/安全协作；任务编号：DEV-M9 / Production GO Gate。严格遵守已冻结的 ADR/HC-01/02/03 和 G01–G20。范围不得扩大为第二套 Hatchet 技术执行引擎。
+DEV-M3～M7 适用的平台真实 Gate 及本阶段平台安全/容量/回滚 Gate；M8 可为对外公共 API 提供独立合成客户端合同证据，但不引入私有消费者验收。外部 IAM/运维/安全协作；任务编号 DEV-OPERATIONS-01。严格遵守已冻结的 ADR/HC-01/02/03 和 G01–G20。范围不得扩大为第二套 Hatchet 技术执行引擎。
 
 ## Non-goals
 
