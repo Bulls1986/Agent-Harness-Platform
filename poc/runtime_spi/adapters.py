@@ -13,13 +13,22 @@ class PydanticRuntimeAdapter:
     name = "pydantic"
     operations = frozenset({"model.run"})
 
-    def __init__(self, agent):
+    def __init__(self, agent, *, live_stream: bool = False):
         self.agent = agent
+        self.live_stream = live_stream
 
     async def invoke(self, request: RunRequest, emit: Emit,
                      cancellation: CancelSignal) -> str:
         if request.capabilities - {"model"}:
             raise UnsupportedRuntimeOperation("Use explicitly bound ToolAdapters for FS")
+        if self.live_stream:
+            async with self.agent.run_stream(request.prompt) as response:
+                async for delta in response.stream_text(delta=True, debounce_by=0.1):
+                    if cancellation.cancelled: raise InterruptedError('cancel requested')
+                    if delta:
+                        emit('response.output_text.delta',
+                             {'delta':delta,'mode':'provider_stream'})
+                return str(await response.get_output())
         result = await self.agent.run(request.prompt)
         text = str(result.output)
         emit("response.output_text.delta", {"delta": text, "mode": "buffered"})
@@ -30,14 +39,25 @@ class OpenAIAgentsRuntimeAdapter:
     name = "openai-agents"
     operations = frozenset({"model.run"})
 
-    def __init__(self, agent):
+    def __init__(self, agent, *, live_stream: bool = False):
         self.agent = agent
+        self.live_stream = live_stream
 
     async def invoke(self, request: RunRequest, emit: Emit,
                      cancellation: CancelSignal) -> str:
         if request.capabilities - {"model"}:
             raise UnsupportedRuntimeOperation("Use explicitly bound ToolAdapters for FS")
         from agents import Runner
+        if self.live_stream:
+            from openai.types.responses import ResponseTextDeltaEvent
+            result = Runner.run_streamed(self.agent, input=request.prompt)
+            async for evt in result.stream_events():
+                if cancellation.cancelled: raise InterruptedError('cancel requested')
+                if evt.type == 'raw_response_event' and isinstance(evt.data,ResponseTextDeltaEvent):
+                    if evt.data.delta:
+                        emit('response.output_text.delta',
+                             {'delta':evt.data.delta,'mode':'provider_stream'})
+            return str(result.final_output)
         result = await Runner.run(self.agent, input=request.prompt)
         text = str(result.final_output)
         emit("response.output_text.delta", {"delta": text, "mode": "buffered"})
