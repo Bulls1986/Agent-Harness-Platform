@@ -71,6 +71,8 @@ class ReplanV2PgTests(unittest.TestCase):
         self.replan.claim(key)
         with self.assertRaises(UnsafeDispatch):
             self.replan.claim(key)
+        with self.assertRaises(UnsafeDispatch):
+            self.replan.bind(key, self.old)  # a v2 Segment must be a NEW WorkflowRun
         self.replan.bind(key, "new-engine-id-" + self.rid)
         self.replan.admit(self.rid, 2, "new-engine-id-" + self.rid)
         with self.assertRaises(UnsafeDispatch):
