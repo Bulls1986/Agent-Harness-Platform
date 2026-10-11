@@ -31,6 +31,13 @@ SandboxProvider→Cube Scope/Lease/Fencing/WorkspaceRef 绑定、按需分配释
 - SDK 绑定测试以真实 PG + Fake Transport 验证控制平面逻辑；假 Transport 不等于真实 Cube MicroVM、跨宿主隔离、Guest Tool 完整授权，也无法阻止已经进入真实 Guest 的 in-flight 调用。真实验收必须由 `dev-m5-cube-live.yml` 显式使用实际 Cube API/Template/Proxy，创建真实 Sandbox、保存文件、经另一 Native SDK 实例重新连接同一 Sandbox ID、确认文件保留、destroy；未配置必须 FAIL CLOSED，不得 SKIP。
 - 本轮没有可用真实 Cube Endpoint/Template，因此真实 M5 1.2/1.3 仍 OPEN、Production NO-GO。
 
+### 第五开发切片：Cube 原生创建 ACK 丢失、不可重派与崩溃恢复
+
+- Harness PG 的 Sandbox Binding 在真正调用 Cube `Sandbox.create(metadata=...)` **之前**持久写入 `CREATING`（控制层 durable dispatch barrier）；即使 Cube 创建已经完成但客户端在写 Provider ID 前死亡，也不得再对相同 Execution 调用 Create。
+- 创建时向 Cube 原生 Metadata 注入平台根据冻结事实生成的相关键：Execution/Run/IsolationScope/WorkspaceRef/Environment/immutable allocation generation；此 Metadata 是定位和审计信息，**不是授权凭证**。Worker B 失去旧 Creator ACK 后只能 `BLOCKED_UNKNOWN→(native list + connect + get_info unique proof)→ACTIVE`；无匹配、多匹配、错误 Scope/Workspace/Generation、不可信列表均拒绝恢复，不重新创建 Sandbox。
+- `CREATING` Worker A 失联并且 PG Server-clock Lease 到期时，Worker B 只可经 Scope/Workspace/Environment 一致性和 Owner/Epoch CAS 把它转入 `BLOCKED_UNKNOWN` 并核实既有原生 Cube；绑定的 `binding_generation` 递增不改变原创建标识。
+- 真 PostgreSQL + Fake Cube Transport 执行 Red→Green 故障合同；官方真实 Python Cube SDK 的 `create/list/connect/get_info` 参数由 Mock SDK 单元测试确认。**这些结果不能计入真实 Cube MicroVM Gate**；物理 Hatchet A→B+Cube Guest 数据保持、OCI/Guest Fencing、跨 Scope/Principal/Repo 仍需独立实机验收。
+
 ## Test-first and failure injection
 
 正常验收：Worker A 在授权 Cube 中工作后中断 → Worker B 持有新 Lease 绑定同一 Workspace，恢复操作和已有文件。
