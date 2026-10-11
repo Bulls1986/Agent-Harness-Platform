@@ -53,7 +53,7 @@ The first screen explains **what is being verified**, its scope and the exact tw
 
 ## M1: Real LiteLLM Responses model (explicit opt-in)
 
-[OpenSpec M1](../../openspec/changes/real-model-agent-closed-loop/) introduces an **actual LLM requirement-analysis → independent review** chain. This is a limited POC, **not** a production-ready business agent. The default remains `local` for deterministic clean CI.
+[OpenSpec M1](../../openspec/changes/archive/2026-10-11-real-model-agent-closed-loop/) introduces an **actual LLM requirement-analysis → independent review** chain. This is a limited POC, **not** a production-ready business agent. The default remains `local` for deterministic clean CI.
 
 When a trusted LiteLLM-compatible **Responses API** and key are available in the operator's environment, select mode `live`. Never commit the key, endpoint credentials or real sensitive input to source/CI:
 
@@ -79,7 +79,7 @@ A returns validated JSON with feature, summary, capabilities, rules and acceptan
 ## Tests and limitations
 
 ```sh
-openspec validate minimal-run-closed-loop --strict
+openspec validate --specs --strict
 python -B -m unittest poc.closed_loop.test_facts_pg poc.closed_loop.test_inspector_pg poc.closed_loop.test_real_model -v
 python -B -m poc.closed_loop.verify_inspector_live
 ```

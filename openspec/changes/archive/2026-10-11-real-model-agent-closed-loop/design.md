@@ -25,7 +25,7 @@ Use the existing `poc/closed_loop/` PostgreSQL/Hatchet/AgentRuntime SPI/Inspecto
 - Red: pure parser/render contract, missing API key, malicious markup, invalid fields; checks fail before implementation.
 - Green: deterministic non-live tests + PG regression still pass without external dependencies.
 - Live: demonstrate LiteLLM `/v1/responses` behavior with selected model; execute actual Hatchet → Pydantic SDK → OpenAI Agents SDK with PostgreSQL, verify both Step responses and final product report after refresh.
-- Stream: real Pydantic AI run_stream and OpenAI Agents Runner.run_streamed raw Responses text deltas accepted as source=provider_stream, written to Harness PG before Step terminal. SSE uses Run-scoped PG seq as Last-Event-ID; >250 events are paginated to completion and cancellation is durable intent → Worker-acknowledged SDK stop → business CANCELLED. M1 real Live proofs in [SSE retrospective](../../../docs/retrospectives/M1_TOKEN_SSE_CLOSEOUT_20261011.md).
+- Stream: real Pydantic AI run_stream and OpenAI Agents Runner.run_streamed raw Responses text deltas accepted as source=provider_stream, written to Harness PG before Step terminal. SSE uses Run-scoped PG seq as Last-Event-ID; >250 events are paginated to completion and cancellation is durable intent → Worker-acknowledged SDK stop → business CANCELLED. M1 real Live proofs in [SSE retrospective](../../../../docs/retrospectives/M1_TOKEN_SSE_CLOSEOUT_20261011.md).
 
 ## Risks
 - LiteLLM/model may not support native JSON schema output; use ordinary text generation but parse and validate strict JSON at the Harness Verification boundary, no silent repairs. The model can be prompted for JSON but may still fail.
