@@ -151,6 +151,23 @@ class ToolReceiptFaultTests(unittest.TestCase):
             self.journal.dispatch(self.execution,"worker-A",7)
         self.assertEqual(self.journal.inspect(self.execution)["state"],"RECORDED")
 
+    def test_model_only_terminal_cannot_ignore_registered_external_tool(self):
+        # Simulate both old POC model Step results already committed. A Tool
+        # Intent makes its PURE-only terminal contract invalid even if both
+        # model Steps are complete.
+        with self.db.tx() as c:
+            c.execute("UPDATE harness_step SET state='COMPLETED',"
+                      "output='ok' WHERE run_id=%s",(self.rid,))
+        with self.assertRaises(UnsafeDispatch):
+            self.db.complete(self.rid)
+        self.assertEqual(self.db.run_state(self.rid),"RUNNING")
+
+    def test_model_only_cancel_ack_cannot_hide_external_tool(self):
+        self.assertEqual(self.db.request_cancel(self.rid),"CANCEL_REQUESTED")
+        with self.assertRaises(UnsafeDispatch):
+            self.db.acknowledge_cancel(self.rid)
+        self.assertEqual(self.db.run_state(self.rid),"CANCEL_REQUESTED")
+
     def test_concurrent_recovery_one_receipt_event_and_no_extra_external_effect(self):
         self.journal.dispatch(self.execution,"worker-A",7)
         self.ledger.debit(self.execution,"ledger.debit","synthetic-account",self.key)
