@@ -6,7 +6,7 @@
 
 | 任务编号 | 里程碑 | 交付 | 验收状态 |
 |---|---|---|---|
-| DEV-HC-01 | DEV-M3 | Run/Plan/Step/Attempt、Workflow Segment/Replan v2 与旧 Attempt 保护 | Plan v1 保护已实测；完整动态 Replan Gate OPEN |
+| DEV-HC-01 | DEV-M3 | Run/Plan/Step/Attempt、Workflow Segment/Replan v2 与旧 Attempt 保护 | Plan v1 + PURE 真实 Hatchet v1→v2 独立 Segment PASS；运行中/非 PURE 与完整领域 Gate OPEN |
 | DEV-HC-02 | DEV-M4 | Outbox/Inbox、丢 ACK 对账、非幂等 Tool Receipt UNKNOWN | 真实故障 Gate OPEN |
 | DEV-HC-03 | DEV-M5 | ExecutionContext、Cube Scope/Lease/Fencing/WorkspaceRef、Worker A→B 安全接管 | 授权负例已通过；真实 Cube Gate OPEN |
 | DEV-RECIPE-01 | DEV-M6 | Provider-neutral Recipe、Artifact/Evidence、Verifier 与 Approval | PLANNED |
