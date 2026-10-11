@@ -18,11 +18,18 @@ class CountingCubeTransport:
         self.connected=[]
         self.killed=[]
         self.files={}
-    def create(self):
+        self.metadata={}
+    def create(self,*,metadata):
         sandbox_id="cube-"+uuid4().hex
         self.created.append(sandbox_id)
         self.files[sandbox_id]={}
+        self.metadata[sandbox_id]=dict(metadata)
         return sandbox_id
+    def list(self):
+        return [{"sandboxID":sid,"metadata":metadata}
+                for sid,metadata in self.metadata.items()]
+    def inspect(self,sandbox):
+        return {"sandboxID":sandbox,"metadata":self.metadata[sandbox]}
     def connect(self, sandbox_id):
         self.connected.append(sandbox_id)
         if sandbox_id in self.killed or sandbox_id not in self.files:
@@ -120,7 +127,7 @@ class CubePgBindingTests(unittest.TestCase):
 
     def test_failed_create_cannot_blind_retry_or_fall_back_to_host(self):
         class MissingCube(CountingCubeTransport):
-            def create(self): raise ConnectionError("Cube API unavailable")
+            def create(self,*,metadata): raise ConnectionError("Cube API unavailable")
         g=CubeWorkspaceGateway(self.binding,MissingCube())
         with self.assertRaises(UnsafeDispatch):
             g.allocate(self.execution,"worker-A",7)
@@ -130,6 +137,61 @@ class CubePgBindingTests(unittest.TestCase):
         with self.assertRaises(UnsafeDispatch):
             g.read(self.execution,"worker-A",7,"/workspace/a")
         self.assertEqual(len(self.transport.created),0)
+
+    def test_lost_create_ack_reconciles_existing_native_cube_without_reallocate(self):
+        # Native Cube creation succeeds, but caller never persists its ACK.
+        frozen=self.binding.correlation(self.execution)
+        cube_id=self.transport.create(metadata=frozen)
+        self.binding.unknown(self.execution,"worker-A",7)
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.allocate(self.execution,"worker-A",7)
+        self.assertEqual(self.gateway.reconcile_unknown(
+            self.execution,"worker-A",7),cube_id)
+        self.assertEqual(self.binding.get(self.execution).sandbox_id,cube_id)
+        self.assertEqual(self.binding.get(self.execution).state,"ACTIVE")
+        self.assertEqual(len(self.transport.created),1)
+        self.gateway.write(self.execution,"worker-A",7,
+                           "/workspace/retain.txt","original")
+        self.assertEqual(self.gateway.read(
+            self.execution,"worker-A",7,"/workspace/retain.txt"),"original")
+        self.assertEqual(self.gateway.reconcile_unknown(
+            self.execution,"worker-A",7),cube_id)
+        self.assertEqual(sum(e["type"]=="sandbox.binding.reconciled"
+           for e in self.db.snapshot(self.rid)["events"]),1)
+
+    def test_absent_duplicate_mismatch_or_unreadable_native_cube_stays_unknown(self):
+        frozen=self.binding.correlation(self.execution)
+        self.binding.unknown(self.execution,"worker-A",7)
+        for entries in ([],[
+            {"sandboxID":"cube-x","metadata":frozen},
+            {"sandboxID":"cube-y","metadata":frozen},
+        ],[
+            {"sandboxID":"cube-other","metadata":{**frozen,"harness_scope":"other"}},
+        ],[
+            {"sandboxID":"cube-other","metadata":{**frozen,"harness_generation":"2"}},
+        ],[
+            {"sandboxID":"cube-other","metadata":None},
+        ],[
+            {"sandboxID":"cube-other","metadata":frozen},
+            {"sandboxID":"cube-other","metadata":frozen},
+        ]):
+            with self.subTest(entries=entries):
+                self.transport.list=lambda e=entries:e
+                with self.assertRaises(UnsafeDispatch):
+                    self.gateway.reconcile_unknown(self.execution,"worker-A",7)
+                self.assertEqual(self.binding.get(self.execution).state,"BLOCKED_UNKNOWN")
+        def broken(): raise TimeoutError("Cube listing unreliable")
+        self.transport.list=broken
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.reconcile_unknown(self.execution,"worker-A",7)
+        self.assertEqual(self.binding.get(self.execution).state,"BLOCKED_UNKNOWN")
+
+    def test_native_create_propagates_frozen_metadata_not_caller_claim(self):
+        self.gateway.allocate(self.execution,"worker-A",7)
+        metadata=self.transport.metadata[self.transport.created[0]]
+        self.assertEqual(metadata,self.binding.correlation(self.execution))
+        self.assertEqual(metadata["harness_scope"],self.scope)
+        self.assertEqual(metadata["harness_workspace_ref"],self.workspace)
 
     def test_parallel_owner_takeover_only_one_wins(self):
         self.gateway.allocate(self.execution,"worker-A",7)
