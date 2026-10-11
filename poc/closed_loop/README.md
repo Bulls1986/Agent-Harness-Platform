@@ -86,6 +86,6 @@ python -B -m poc.closed_loop.verify_inspector_live
 
 Note: PG contract tests require `HARNESS_POC_DATABASE_URL`; otherwise they skip and **must not be counted PASS**. End-to-end test requires the real application dependencies and actual Engine. Independent legacy Hatchet SDK POCs are insufficient proof for this combined path.
 
-**Not yet tested here:** CubeSandbox authorization/lease/fencing and cross-Worker recovery, non-idempotent Tool Receipts/UNKNOWN reconciliation, durable Approval/Wait, true model Token SSE and cursor/cancellation (independent gate), 100 concurrent Runs, production authentication or PDLC migration.
+**Not yet tested here:** CubeSandbox authorization/lease/fencing and cross-Worker recovery, non-idempotent Tool Receipts/UNKNOWN reconciliation, durable Approval/Wait, production-grade token/Tool/Artifact multi-part SSE, 100 concurrent Runs, production authentication or PDLC migration.
 
 **Safety:** localhost-only published ports, local disposable passwords (never use in production). No input is executed as Host Shell, and browser rendering uses `textContent`, never `innerHTML`.
