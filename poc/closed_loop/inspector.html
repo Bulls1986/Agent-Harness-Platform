@@ -77,9 +77,11 @@ Hatchet 负责两个节点的调度；Harness 保存业务 Run、每步输入输
 <span class="fieldname">最终输出 · 来自节点 B</span>
 <div id="final-output" class="value result">尚无输出</div>
 <div id="result-explanation" class="caption">这是运行链路的最终 SDK 输出，不代表需求分析报告。</div>
+<div class="headrow" style="margin-top:12px"><span class="caption" id="stream-connection">执行事件：等待连接</span><button id="cancel-run" type="button" disabled>取消当前 Run</button></div>
 </section>
 <section class="panel">
 <h2>节点做了什么</h2>
+<p class="caption">实时草稿为来自模型 API 的文本片段，尚未通过平台验证，最终结果以 Run Result 为准。</p>
 <div class="steps" id="steps">
 <p class="muted">选择一个 Run 后，会显示每个节点的职责、真实输入、输出和运行状态。</p>
 </div>
@@ -114,12 +116,32 @@ const eventLabels={
   "runtime.run.started":"Agent SDK 开始运行",
   "runtime.run.completed":"Agent SDK 返回完成结果",
   "runtime.output.delta":"Agent SDK 返回内容片段",
+  "response.output_text.delta":"模型实时输出片段（尚未验证）",
+  "run.cancel.requested":"已请求取消，等待 Worker 确认",
+  "run.cancelled":"Worker 已确认取消", 
   "workflow.unknown":"工作流提交结果不确定，停止盲目重试",
   "workflow.observation_error":"运行过程发生错误，请查看技术详情"
 };
-const stateLabels={CREATED:"已创建",RUNNING:"执行中",COMPLETED:"完成",FAILED:"失败",CANCELLED:"已取消"};
+const stateLabels={CREATED:"已创建",RUNNING:"执行中",COMPLETED:"完成",FAILED:"失败",CANCEL_REQUESTED:"正在取消",CANCELLED:"已取消"};
 let current=location.hash.startsWith("#run-")?location.hash.slice(1):null;
 let busy=false;
+let activeStream=null, streamRun=null;
+function connectStream(id){
+  if(streamRun===id)return;
+  if(activeStream)activeStream.close();
+  streamRun=id;
+  activeStream=new EventSource('/api/runs/'+encodeURIComponent(id)+'/stream');
+  $('stream-connection').textContent='SSE：连接真实执行事件…';
+  activeStream.onopen=()=>$('stream-connection').textContent='SSE：已连接 · PostgreSQL 持久游标';
+  activeStream.onerror=()=>$('stream-connection').textContent='SSE：断线重连中（按 Last-Event-ID 续传）';
+  activeStream.addEventListener('response.output_text.delta',()=>refresh());
+  for(const type of ['run.completed','run.cancelled','workflow.observation_error']){
+    activeStream.addEventListener(type,()=>{
+      refresh();activeStream.close();activeStream=null;streamRun=null;
+      $('stream-connection').textContent='SSE：执行已结束，可从历史记录回看';
+    });
+  }
+}
 function node(tag,value,css){const x=document.createElement(tag);x.textContent=String(value??"—");if(css)x.className=css;return x}
 async function api(url,opts){
   const r=await fetch(url,opts),d=await r.json().catch(()=>({detail:"无效 HTTP 响应"}));
@@ -145,6 +167,7 @@ function render(s){
   const state=unknown?"状态不确定":(stateLabels[s.state]||s.state);
   $("state").textContent=state;
   $("state").className="status "+(s.state==="COMPLETED"?"ok":unknown?"wait":"");
+  $('cancel-run').disabled=s.state!=='RUNNING';
   $("outcome-description").textContent=s.state==="COMPLETED"
     ?"两个 Agent SDK 均执行成功，Hatchet 完成调度，Harness 已写入业务终态和最终输出。"
     :unknown?"Hatchet 工作流创建结果不确定，平台不会盲目再次执行。"
@@ -167,6 +190,10 @@ function render(s){
       "使用真实 LiteLLM 模型生成需求分析 JSON，通过结构校验并持久化后交给节点 B。":
       "读取 A 的结构化结果，使用真实 LiteLLM 模型独立审核并生成最终业务报告。"):info.role));
     field(card,"输入",step.input??(id==="pydantic"?"历史 Run 没有记录原始输入":"等待节点 A 产生输出"));
+    if(live){
+      const tokens=s.events.filter(e=>e.type==='response.output_text.delta' && e.data?.source==='provider_stream' && e.data.step_id===id);
+      field(card,'模型实时草稿（未验证）',tokens.map(e=>e.data.delta).join('').slice(-5000)||'尚未收到模型片段');
+    }
     field(card,"实际输出",step.output??"尚未生成");
     card.append(node("p","执行尝试："+step.attempts+" 次。"+(id==="pydantic"?"输出被持久化后才允许节点 B 执行。":"节点 B 的输出是最终 Run Result 的来源。"),"caption"));
     $("steps").append(card);
@@ -191,11 +218,24 @@ async function refresh(){
   if(busy)return;busy=true;
   try{
     await loadHistory();
-    if(current){render(await api("/api/runs/"+encodeURIComponent(current)))}
+    if(current){
+      const s=await api('/api/runs/'+encodeURIComponent(current));
+      render(s);
+      if(!['COMPLETED','CANCELLED'].includes(s.state) && !s.events.some(e=>e.type==='workflow.observation_error'))connectStream(current);
+    }
     $("detail-error").textContent="";
   }catch(err){$("detail-error").textContent="读取真实执行数据失败："+err.message}
   finally{busy=false}
 }
+$('cancel-run').addEventListener('click',async()=>{
+  if(!current)return;
+  $('cancel-run').disabled=true;
+  try{
+    await api('/api/runs/'+encodeURIComponent(current)+'/cancel',{method:'POST'});
+    $('message').textContent='取消请求已写入 PG，等待 Worker 关闭模型流并确认。';
+    refresh();
+  }catch(err){$('message').textContent='取消失败：'+err.message;refresh();}
+});
 $("start").addEventListener("click",async()=>{
   $("start").disabled=true;$("message").textContent="正在保存 Run 并提交 Hatchet…";
   try{
@@ -209,7 +249,7 @@ $("start").addEventListener("click",async()=>{
 api('/api/config').then(cfg=>{
   const live=cfg.mode==='live';
   $('mode-notice').textContent=live?
-    '当前模式：真实模型 Live（'+cfg.model_id+'）。节点 A 负责需求分析，节点 B 负责独立审核；仍未验收真正的 Token SSE、Cube 和审批。':
+    '当前模式：真实模型 Live（'+cfg.model_id+'）。模型文本片段经真实 SDK 流式进入持久 PG SSE；Cube/审批等生产门禁仍未验收。':
     '当前模式：确定性本地模型（不会产生真实业务分析）。如需真实模型，请在服务端配置 Live 模式。';
   $('prompt-note').textContent='演示输入将保存在本地 PostgreSQL，请勿输入密码或敏感信息。'+(live?'当前会调用真实模型。':'当前只验证技术执行链路。');
 }).catch(err=>{$('mode-notice').textContent='模型配置读取失败：'+err.message;});
