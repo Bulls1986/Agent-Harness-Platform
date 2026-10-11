@@ -50,7 +50,7 @@ class CubeBinding:
                   provider_sandbox_id TEXT UNIQUE,
                   binding_generation BIGINT NOT NULL DEFAULT 1,
                   state TEXT NOT NULL CHECK(state IN
-                     ('ALLOCATING','ACTIVE','BLOCKED_UNKNOWN','RELEASING','RELEASED'))
+                     ('ALLOCATING','CREATING','ACTIVE','BLOCKED_UNKNOWN','RELEASING','RELEASED'))
                 )
             """)
 
@@ -151,10 +151,24 @@ class CubeBinding:
         with self.facts.tx() as c:
             return self._check(c,execution_id,owner_id,epoch,"ALLOCATING")
 
+    def claim_create(self,execution_id,owner_id,epoch):
+        """Durably mark native creation in-flight BEFORE contacting Cube.
+
+        A client retry may not call create again when the ACK is uncertain.
+        """
+        with self.facts.tx() as c:
+            fact=self._check(c,execution_id,owner_id,epoch,"ALLOCATING")
+            c.execute(
+                "UPDATE harness_cube_binding SET state='CREATING' "
+                "WHERE execution_id=%s",(execution_id,))
+            PgFacts.event(c,fact.run_id,"sandbox.binding.creation_dispatched",{
+                "execution_id":execution_id,"generation":fact.generation})
+        return self._metadata(fact)
+
     def confirm(self,execution_id,owner_id,epoch,sandbox_id):
         self._text(sandbox_id)
         with self.facts.tx() as c:
-            row=self._check(c,execution_id,owner_id,epoch,"ALLOCATING")
+            row=self._check(c,execution_id,owner_id,epoch,"CREATING")
             c.execute(
                 "UPDATE harness_cube_binding SET provider_sandbox_id=%s,state='ACTIVE' "
                 "WHERE execution_id=%s",(sandbox_id,execution_id),
@@ -165,7 +179,12 @@ class CubeBinding:
 
     def unknown(self,execution_id,owner_id,epoch):
         with self.facts.tx() as c:
-            row=self._check(c,execution_id,owner_id,epoch,"ALLOCATING")
+            # ALLOCATING direct transition remains test-only for confirmed
+            # creation ACK simulation; CREATING is the real dispatch phase.
+            try:
+                row=self._check(c,execution_id,owner_id,epoch,"CREATING")
+            except UnsafeDispatch:
+                row=self._check(c,execution_id,owner_id,epoch,"ALLOCATING")
             c.execute("UPDATE harness_cube_binding SET state='BLOCKED_UNKNOWN' "
                       "WHERE execution_id=%s",(execution_id,))
             PgFacts.event(c,row.run_id,"sandbox.binding.unknown",
@@ -266,13 +285,22 @@ class CubeWorkspaceGateway:
         return path
 
     def allocate(self,execution_id,owner,epoch):
-        self.binding.allocate_permitted(execution_id,owner,epoch)
+        metadata=self.binding.claim_create(execution_id,owner,epoch)
         try:
-            sbid=self.transport.create(metadata=self.binding.correlation(execution_id))
+            sbid=self.transport.create(metadata=metadata)
         except Exception:
             self.binding.unknown(execution_id,owner,epoch)
             raise UnsafeDispatch("Cube create outcome unknown; no blind reallocation") from None
-        self.binding.confirm(execution_id,owner,epoch,sbid)
+        try:
+            self.binding.confirm(execution_id,owner,epoch,sbid)
+        except Exception:
+            # The native sandbox exists; even a lost PG ACK can never
+            # re-enter ALLOCATING after the durable CREATING transition.
+            try:
+                self.binding.unknown(execution_id,owner,epoch)
+            except Exception:
+                pass  # PG may have committed ACTIVE despite a lost ACK.
+            raise UnsafeDispatch("Cube bind ACK unknown; reconcile existing sandbox") from None
         return sbid
 
     def reconcile_unknown(self,execution_id,owner,epoch):
