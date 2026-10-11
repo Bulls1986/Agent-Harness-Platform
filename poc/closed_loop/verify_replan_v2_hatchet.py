@@ -20,6 +20,8 @@ from pydantic import BaseModel
 from poc.closed_loop.facts import PgFacts, UnsafeDispatch
 from poc.closed_loop.plan_guard import PlanGuard
 from poc.closed_loop.replan_v2 import ReplanV2
+from poc.closed_loop.segment_reconcile import SegmentReconciler
+from poc.closed_loop.hatchet_segment_lookup import HatchetSegmentLookup
 
 
 hatchet = Hatchet.from_embedded(ClientConfig(embedded=EmbeddedHatchetConfig(
@@ -52,7 +54,7 @@ async def execute_v2(input: SegmentInput, ctx: Context) -> dict:
     # workflow ID. It does no work until the trusted PG binding is confirmed.
     # Prepare the schema projection once; retry only the read-only admission.
     replan = ReplanV2(PgFacts())
-    for _ in range(80):
+    for _ in range(240):
         try:
             replan.admit(input.run_id, 2, ctx.workflow_run_id)
             break
@@ -64,7 +66,7 @@ async def execute_v2(input: SegmentInput, ctx: Context) -> dict:
             "provider_workflow_id": ctx.workflow_run_id}
 
 
-def execute() -> dict:
+def execute(*, simulate_ack_loss: bool = False) -> dict:
     db = PgFacts()
     run_id = "m3-hatchet-" + uuid4().hex
     command = db.create(run_id, prompt="pure synthetic verifier")
@@ -89,11 +91,28 @@ def execute() -> dict:
     replan.claim(key)
     try:
         ref2 = second.run(SegmentInput(run_id=run_id, plan_version=2),
-                          wait_for_result=False)
+                          wait_for_result=False,
+                          additional_metadata={
+                              "harness_command_key": key,
+                              "harness_run_id": run_id,
+                              "harness_plan_version": "2",
+                          })
     except Exception:
         replan.unknown(key)
         raise
-    replan.bind(key, ref2.workflow_run_id)
+    if simulate_ack_loss:
+        # Engine has accepted the run, but the platform never receives its
+        # returned WorkflowRun ID; durable Outbox remains BLOCKED_UNKNOWN.
+        replan.unknown(key)
+        if replan.segment(run_id)["state"] != "BLOCKED_UNKNOWN":
+            raise RuntimeError("Simulated ACK loss did not block dispatch")
+        lookup = HatchetSegmentLookup(second.list_runs)
+        recovered = SegmentReconciler(PgFacts()).reconcile_unknown(
+            key, lambda command_key: lookup.find(command_key, run_id, 2))
+        if recovered != ref2.workflow_run_id:
+            raise RuntimeError("Native recovered WorkflowRun does not match actual created workflow")
+    else:
+        replan.bind(key, ref2.workflow_run_id)
     r2 = hatchet.runs.get_run_ref(ref2.workflow_run_id).result()
     if not isinstance(r2, dict) or not any(
         isinstance(x, dict) and x.get("admission") == "PG_CONFIRMED"
@@ -121,6 +140,7 @@ def execute() -> dict:
         "native_old_provider_status": str(getattr(native, "value", native)),
         "active_plan_version": snap["plan_version"], "segment_state": with_v2["state"],
         "events": len(snap["events"]), "tools_or_receipts": "NOT_TESTED",
+        "simulated_creation_ack_loss": simulate_ack_loss,
         "old_worker_cancel_ack": "NOT_TESTED", "side_effect_recovery": "NOT_TESTED",
     }
 
@@ -133,6 +153,7 @@ def main():
     code = 0
     try:
         print(json.dumps(execute(), sort_keys=True), flush=True)
+        print(json.dumps(execute(simulate_ack_loss=True), sort_keys=True), flush=True)
     except Exception:
         code = 1
         import traceback
