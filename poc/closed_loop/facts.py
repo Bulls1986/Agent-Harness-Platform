@@ -118,6 +118,59 @@ class PgFacts:
         if row != (mode, model_id):
             raise UnsafeDispatch('Model mode/name changed during frozen Run')
 
+    def events_since(self, rid: str, after: int = 0, limit: int = 250) -> list[dict]:
+        if after < 0 or not 1 <= limit <= 500:
+            raise ValueError('Invalid stream event cursor')
+        with self.tx() as c:
+            if not c.execute('SELECT 1 FROM harness_run WHERE id=%s', (rid,)).fetchone():
+                raise KeyError(rid)
+            records = c.execute('SELECT seq,type,data FROM harness_event '
+                                'WHERE run_id=%s AND seq>%s ORDER BY seq LIMIT %s',
+                                (rid, after, limit)).fetchall()
+        return [{'seq': seq, 'type': kind, 'data': data} for seq,kind,data in records]
+
+    def run_state(self, rid: str) -> str:
+        with self.tx() as c:
+            row = c.execute('SELECT state FROM harness_run WHERE id=%s', (rid,)).fetchone()
+        if not row: raise KeyError(rid)
+        return row[0]
+
+    def cancel_requested(self, rid: str) -> bool:
+        return self.run_state(rid) in ('CANCEL_REQUESTED','CANCELLED')
+
+    def request_cancel(self, rid: str) -> str:
+        with self.tx() as c:
+            row = c.execute('SELECT state FROM harness_run WHERE id=%s FOR UPDATE',(rid,)).fetchone()
+            if not row: raise KeyError(rid)
+            if row[0] == 'CANCEL_REQUESTED': return row[0]
+            if row[0] != 'RUNNING':
+                raise UnsafeDispatch('Can cancel only a running model-only Run')
+            c.execute("UPDATE harness_run SET state='CANCEL_REQUESTED' WHERE id=%s",(rid,))
+            self.event(c,rid,'run.cancel.requested',{'reason':'user_requested'})
+        return 'CANCEL_REQUESTED'
+
+    def acknowledge_cancel(self, rid: str):
+        with self.tx() as c:
+            row=c.execute('SELECT state FROM harness_run WHERE id=%s FOR UPDATE',(rid,)).fetchone()
+            if not row or row[0]!='CANCEL_REQUESTED':
+                raise UnsafeDispatch('Cancellation cannot be acknowledged without request')
+            c.execute("UPDATE harness_run SET state='CANCELLED' WHERE id=%s",(rid,))
+            self.event(c,rid,'run.cancelled',{'side_effects':'NO_EXTERNAL_TOOLS_MODEL_ONLY'})
+
+    def append_stream_delta(self, rid: str, step: str, delta: str, runtime: str):
+        if not isinstance(delta,str) or not delta or len(delta.encode('utf-8'))>8192:
+            raise ValueError('Invalid model text delta')
+        if step not in ('pydantic','openai'):
+            raise ValueError('Unknown stream Step')
+        with self.tx() as c:
+            row=c.execute('SELECT state,model_mode FROM harness_run WHERE id=%s FOR UPDATE',(rid,)).fetchone()
+            if row != ('RUNNING','live'):
+                raise UnsafeDispatch('Only active Live Runs accept model-stream events')
+            sr=c.execute('SELECT state FROM harness_step WHERE run_id=%s AND id=%s',(rid,step)).fetchone()
+            if sr!=('RUNNING',): raise UnsafeDispatch('Step is not actively streaming')
+            self.event(c,rid,'response.output_text.delta',
+                       {'step_id':step,'runtime':runtime,'delta':delta,'source':'provider_stream'})
+
     def dispatch(self, key: str):
         with self.tx() as c:
             row = c.execute(
