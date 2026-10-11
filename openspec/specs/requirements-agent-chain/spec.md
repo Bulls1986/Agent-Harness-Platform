@@ -1,7 +1,7 @@
 # requirements-agent-chain Specification
 
 ## Purpose
-TBD - created by archiving change real-model-agent-closed-loop. Update Purpose after archive.
+Specify how a real Pydantic AI requirements draft is validated and committed before an OpenAI Agents SDK review consumes it, producing an attributable, readable business Run result without blurring technical and domain terminal states.
 
 ## Requirements
 
