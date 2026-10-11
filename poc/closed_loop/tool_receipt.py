@@ -183,6 +183,8 @@ class ToolReceiptJournal:
     def reconcile(
         self, execution_id: str,
         trusted_lookup: Callable[[str],Sequence[EffectEvidence]],
+        *, recovery_owner: str | None = None,
+        recovery_epoch: int | None = None,
     ) -> str:
         """A trusted external ledger query provides correlation proof; no redo.
 
@@ -213,6 +215,23 @@ class ToolReceiptJournal:
             c.execute("SELECT id FROM harness_run WHERE id=%s FOR UPDATE",
                       (original["run_id"],))
             item=self._read(c,execution_id,lock=True)
+            # A registered takeover authority makes Owner/Fencing mandatory
+            # for Receipt writes. Check it IN the same transaction with the
+            # corresponding Run and Tool row locks; no TOCTOU bypass.
+            if c.execute(
+                "SELECT to_regclass('harness_tool_recovery_authority') IS NOT NULL"
+            ).fetchone()[0]:
+                authority=c.execute(
+                    "SELECT owner_id,fencing_epoch,lease_expires_at>now() "
+                    "FROM harness_tool_recovery_authority "
+                    "WHERE execution_id=%s FOR UPDATE",(execution_id,),
+                ).fetchone()
+                if authority is not None and (
+                    not isinstance(recovery_owner,str)
+                    or type(recovery_epoch) is not int
+                    or authority != (recovery_owner,recovery_epoch,True)
+                ):
+                    raise UnsafeDispatch("Receipt writer has stale or missing recovery permit")
             if item["state"]=="CONFIRMED_SUCCESS":
                 if item["external_reference"]!=evidence.external_reference:
                     raise UnsafeDispatch("Conflicting confirmed external receipt")

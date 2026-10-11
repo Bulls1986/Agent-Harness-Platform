@@ -12,6 +12,12 @@ HC-03 已冻结；DEV-M3/4 联合接管用例。映射 DEV-HC-03 / HC-03。对�
 
 SandboxProvider→Cube Scope/Lease/Fencing/WorkspaceRef 绑定、按需分配释放和 OpenCode Coding Guest；模型-only 0 Sandbox，禁止 Host Shell 兜底。
 
+### 第二开发切片：持久化逻辑 Execution Owner Epoch 与 Receipt 门禁
+
+- `ToolRecoveryOwner` 在 Harness PG 中以 Execution 为键持久化当前 `owner_id/fencing_epoch/lease_expires_at`，只允许在数据库服务器时钟判定旧 Owner Lease 到期、对应非幂等 Tool 状态 UNKNOWN、Run/Plan/Provider Binding 一致时，通过锁与 CAS 提升 Epoch。此 Permit 仅供**读取外部事实并补录 Receipt**，不赋予 Host Shell/Files/Git、Tool 重派发或 Cube 调用能力。
+- `ToolReceiptJournal.reconcile` 的确认事务与现有当前 Owner/Epoch/Lease 同锁校验，排除外部查询与 Receipt 提交之间的夺权竞态；遗留未登记 Recovery Authority 的 POC Journal 内部调用维持原有行为，正式运行时入口仍需要统一接入 HC-03 AuthZ。
+- 实际 Hatchet Native Retry 的 A/7→B/8 是**逻辑 Owner 交接**。真正 Hatchet Worker A 进程 SIGKILL→Worker B 进程领取并验证 Sandbox Workspace/OCI/Fencing 是下一门禁；不得将此切片等同实机 Cube/Worker B03/B05 PASS。
+
 ## Test-first and failure injection
 
 正常验收：Worker A 在授权 Cube 中工作后中断 → Worker B 持有新 Lease 绑定同一 Workspace，恢复操作和已有文件。
