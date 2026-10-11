@@ -2,14 +2,14 @@
 
 **现有 OpenCode PDLC 平台的下一代执行架构：保留已建能力、支持无感迁移，新增可组合的专业 Agent 与任务串联。** Coding 能力继续复用 OpenCode，平台层不再与单一 Agent SDK 绑定。
 
-> **架构状态：集成 POC 阶段（LIMITED GO），非生产准入。** 更新依据截至 **2026-10-10**。**当前 Process/Durable SPI 首选实现为 Hatchet Embedded / 私有化集群 + PostgreSQL；DBOS 因许可证约束正式排除（REJECTED），不作为候选或备选。** Hatchet 双 SDK DAG 与两个独立 Engine 的跨 Worker 安全步骤恢复已分别 LIVE PASS；统一平台的 Task Facts 对接、真实模型 SSE、审批、非幂等 Tool Receipt、Cube 恢复和生产隔离仍未整体验收。
+> **项目阶段：正式研发实施（Implementation），非 POC 阶段，生产准入仍为 NO-GO。** 状态核对截至 **2026-10-11**。DEV-M0 架构决策已冻结、DEV-M1/M2 开发切片已交付：Docker PostgreSQL/真实 Hatchet、双 SDK、LiteLLM Responses、模型文本 SSE/PG 游标回放与模型级取消已通过实际联调及 CI；**完整 Run/Plan/Replan、ACK 丢失与非幂等 Receipt、Cube 可信接管、审批、PDLC 迁移和上线 Gate 仍待正式研发验收**。当前 Process/Durable SPI 实施基线为 Hatchet + PostgreSQL，DBOS 已按许可证结论排除。
 > **阅读说明：** 本 README 是项目的**总体方案与项目入口**。正式语义遵循已 Accepted 的 [Architecture Contracts](docs/references/README.md)；正在比较的技术方案、具体实现、历史实验和风险以所链接的专题及 [Backlog](docs/ARCHITECTURE_BACKLOG.md) 为准。本文不将候选方案擅自升级为正式 ADR。
 
 > **当前架构选型与分层图权威增量：** [Hatchet Process/Durable 架构与职责/恢复/部署边界](docs/references/HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md)（候选实施基线，非生产 Accepted ADR）。**Control Plane 自研边界已按 [ADR-031：薄应用/领域控制层](docs/references/THIN_HARNESS_CONTROL_PLANE_DECISION_20261010.md) 收敛**：Hatchet 是技术执行状态/队列/调度权威；Harness 保留必要 Run/Step/Attempt 业务事实、Approval/Receipt/授权/业务终态和状态投影，不再造第二套技术执行状态机。
 
 > **架构阶段最终三合同（ADR-032 / ARCH-TODO-030：DECIDED）**：[HC-01 Workflow Mapping / Replan](docs/references/HATCHET_WORKFLOW_MAPPING_CONTRACT_20261010.md) · [HC-02 Outbox / 状态投影 / 非幂等 Receipt 一致性](docs/references/HARNESS_HATCHET_CONSISTENCY_CONTRACT_20261010.md) · [HC-03 Worker / ExecutionContext / Cube 可信绑定](docs/references/HATCHET_WORKER_SANDBOX_BINDING_CONTRACT_20261010.md)。**这三份冻结接口与安全语义，非真实集成验收 PASS。**第 4 项旧 PDLC API/会话/数据盘点已转 [Development Backlog](docs/DEVELOPMENT_BACKLOG.md) 中的 DEV-PDLC-01～05，不阻碍架构阶段收口。
 
-> **OpenSpec 工程实施入口**：[minimal-run-closed-loop：Proposal / 四项 Specs / Design / Tasks](openspec/changes/minimal-run-closed-loop/)（规格 4/4 校验通过；**Docker PG + 真 Hatchet + 双 SDK + Inspector 本地/CI 最小闭环 PASS，非完整生产准入**）。当前探索直接使用 [Docker PostgreSQL Compose](compose.yaml)，Hatchet 与 Harness 使用独立数据库；见 [开发任务清单](docs/DEVELOPMENT_BACKLOG.md)。
+> **正式研发里程碑计划（项目管理主入口）**：[DEV-M0～M9 计划、依赖/并行顺序、退出门禁及 PDLC-M0～M4](docs/DEVELOPMENT_MILESTONES.md)。**OpenSpec 分阶段实施**：DEV-M3～M9 的 Proposal / Specs / Design / Tasks 已分别建档，规划校验通过，代码实现进度不由文档 4/4 推断；详见计划 §4。原 [minimal-run-closed-loop](openspec/changes/minimal-run-closed-loop/) 为历史已验收开发切片，原始代码与 [Compose](compose.yaml) 继续保留。
 
 > **M1 真实模型业务 Agent（LIMITED LIVE PASS）**：[OpenSpec 需求和任务](openspec/changes/archive/2026-10-11-real-model-agent-closed-loop/) · [真实模型与 Run Inspector 使用方法](poc/closed_loop/README.md#m1-real-litellm-responses-model-explicit-opt-in) · [测试与失败复盘](docs/retrospectives/REAL_MODEL_AGENT_CLOSED_LOOP_20261011.md)。Pydantic AI → OpenAI Agents SDK 已通过真实 LiteLLM Responses + PG 端到端，**真实模型文本 Token SSE、PG 游标重放与模型-only 取消已 LIMITED LIVE PASS；Cube、Tool Receipt、审批与生产仍 NO-GO**。
 
@@ -67,10 +67,10 @@
 | 一个 Cube 内能运行 OpenCode 2，并创建两个逻辑 V2 Session 吗？ | **真实 POC 通过** |
 | Git、文件、Shell 与 Pydantic/OpenAI Tool 能接力吗？ | **真实 POC 通过**；同一 Sandbox、零托管模型调用 |
 | 官方 E2B SDK 可直接连接自建 Cube 吗？ | **限定版本通过**：E2B 2.40.0 + 指定 DNS/TLS；2.53.1 创建请求仍 HTTP 405 |
-| 两个 Agent SDK 能在统一平台 Run Contract 下运行吗？ | **局部通过**：Pydantic / OpenAI 真实 SDK + 本地确定性模型；Hatchet 真 Engine DAG 顺序交接也已 LIVE PASS |
+| 两个 Agent SDK 能在统一平台 Run Contract 下运行吗？ | **开发切片 LIVE PASS**：Pydantic AI/OpenAI Agents SDK 真实 LiteLLM Responses、Hatchet DAG + 独立 PG、持久业务结果与 Inspector；不代表 M3～M6 全功能 |
 | Hatchet 多 Engine / PostgreSQL 下 Worker A 强杀、B 接手原 Workflow 吗？ | **真实限定 PASS**：安全步骤、A 不重启、已完成步骤不重复；尚未验证平台同 Run + Cube + 非幂等 Tool 全链 |
-| 统一 Agent 运行、真实模型 Token SSE、Tool Receipt、租约接管是否端到端完成？ | **没有**；需继续集成 |
-| 可以进入集成开发吗？ | **可以（LIMITED GO）** |
+| 统一 Agent 运行、真实模型 Token SSE、Tool Receipt、租约接管是否端到端完成？ | **模型-only 真实 Token SSE + PG 游标/取消已开发验收；非幂等 Tool Receipt、Cube 真实租约接管及审批未完成** |
+| 可以进入集成开发吗？ | **已经进入正式开发阶段；下一步 DEV-M3/M5 与 PDLC-M0 并行推进** |
 | 可以宣布企业生产上线了吗？ | **不可以（NO-GO）** |
 
 ## 2. 这套平台具体怎样工作？
