@@ -14,7 +14,7 @@ PHASES = {
     "DEV-M5": ("dev-m5-sandbox-worker-binding", "sandbox-worker-binding"),
     "DEV-M6": ("dev-m6-agent-recipe-execution", "agent-recipe-execution"),
     "DEV-M7": ("dev-m7-platform-access-contract", "platform-access-contract"),
-    "DEV-M8": ("dev-m8-legacy-pdlc-transition", "legacy-pdlc-transition"),
+    "DEV-M8": ("dev-m8-external-consumer-integration", "external-consumer-integration"),
     "DEV-M9": ("dev-m9-delivery-readiness", "delivery-readiness"),
 }
 

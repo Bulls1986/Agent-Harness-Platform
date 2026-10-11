@@ -23,7 +23,7 @@
 
 ```mermaid
 flowchart TB
-  UI["PDLC / Portal / Enterprise API"]
+  UI["外部业务应用 / Portal / Enterprise API"]
   API["Responses-compatible Chat/Run API\nTyped SSE + Event Cursor"]
   CORE["Harness Domain / Run Controller\nRecipe · Step · Attempt · Policy · Approval\nVerification · RecoveryPoint · Receipt"]
   FACTS["PostgreSQL / Harness Task Facts\nEvent · Binding · Owner · Fencing"]

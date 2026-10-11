@@ -14,7 +14,7 @@
 
 ## Dependencies / traceability
 
-DEV-M2 Typed SSE 和 M3 领域事实；可与 M5/M6 并行；任务编号：Conversation/Turn/Run 接口；DEV-PDLC-02 前置。严格遵守已冻结的 ADR/HC-01/02/03 和 G01–G20。范围不得扩大为第二套 Hatchet 技术执行引擎。
+DEV-M2 Typed SSE 和 M3 领域事实；可与 M5/M6 并行；任务编号：Conversation/Turn/Run 接口；DEV-CONSUMER-02 前置。严格遵守已冻结的 ADR/HC-01/02/03 和 G01–G20。范围不得扩大为第二套 Hatchet 技术执行引擎。
 
 ## Non-goals
 

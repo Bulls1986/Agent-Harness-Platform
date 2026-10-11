@@ -1,6 +1,6 @@
 # DEV-M3 / DEV-M5 第一开发切片 · TDD 证据与复盘（2026-10-11）
 
-> 状态：**IN PROGRESS / 部分开发切片验收**。当前只开发两项平台安全基础能力，不表示 DEV-M3/DEV-M5 里程碑整体关闭。**PDLC-M0 已根据用户要求暂停**：尚未确认实际旧 PDLC 仓库与部署，不执行代码/Schema/API 盘点，也不猜测工程对应关系。
+> 状态：**IN PROGRESS / 部分开发切片验收**。当前只开发两项平台安全基础能力，不表示 DEV-M3/DEV-M5 里程碑整体关闭。**外部业务应用-M0 已根据用户要求暂停**：尚未确认实际旧 外部业务应用 仓库与部署，不执行代码/Schema/API 盘点，也不猜测工程对应关系。
 
 ## 1. 当前实现
 
@@ -28,7 +28,7 @@
 - **不得因用户要求“推进开发”而伪装已经具备 Replan v2 安全切换。** Provider Quiescence 是真实 Hatchet STOP/WAIT/Receipt 状态；目前没有足够证据。正确实现是先永久记录意图并阻断新版本执行，让旧 Worker 不确定的副作用仍由 HC-02/03 决策。
 - **请求自带字段不是执行授权。** 本次发现现有 Sandbox POC 的 `ExecutionBinding(run_id,isolation_scope)` 过于粗，无法表达 HC-03 需要的 Owner/Fencing/Attempt/Workspace/OCI。新增纯 Gate 不覆盖旧 POC，生产写 Capability 必须经受信任持久执行事实和真实 Cube Provider 证明。
 - **不跨界**：Hatchet Workflow/DAG/Retry 仍是 Engine 唯一权威；Harness 只写 Domain Plan 意图、授权核验，不实现自己的技术 Scheduler。
-- **旧系统仓库未经确认就不能盘点**：PDLC-M0 保持 NOT_STARTED，本次未以名字相似的知识平台工程当作 PDLC 迁移仓库，没有修改现有 PDLC 代码。
+- **旧系统仓库未经确认就不能盘点**：外部业务应用-M0 保持 NOT_STARTED，本次未以名字相似的知识平台工程当作 外部业务应用 迁移仓库，没有修改现有 外部业务应用 代码。
 
 ## 4. 后续实测门禁（保持 OPEN）
 
@@ -37,6 +37,6 @@
 | DEV-M3 | Worker 执行入口真正调用冻结 Plan/Attempt/Segment 校验；真实 Hatchet Provider Quiescence → CAS 创建 v2 Plan/Segment +旧 Owner 拒绝 | 不确认旧执行安全停止就不能启动 v2 写侧任务 |
 | DEV-M4 | ACK 丢失对账、Receipt UNKNOWN 和外部非幂等副作用 SIGKILL | 与 M3/M5 的接管测试联合推进 |
 | DEV-M5 | 从 Harness PG/Policy 获取可信 Record，真实 Cube Allocate/Bind/Release；Worker A→B 同 Workspace、过期 Owner 拒绝 | 未经真实 Cube 证据不得声明 Sandbox 集成完成 |
-| PDLC-M0 | **暂停，等待真正 PDLC 仓库和部署信息** | 不生成虚假盘点表、项目映射或迁移成果 |
+| 外部业务应用-M0 | **暂停，等待真正 外部业务应用 仓库和部署信息** | 不生成虚假盘点表、项目映射或迁移成果 |
 
 

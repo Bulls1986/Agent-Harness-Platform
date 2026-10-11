@@ -10,11 +10,11 @@ Recipe/Plan JSON/YAML 版本、跨 SDK A→B→C、Artifact/Evidence 引用、�
 
 ## Deliverable
 
-真实 PDLC 需求→Coding→测试串联，后继只接收已验证结果，审批前工具不可执行，失败可恢复。
+真实 外部业务应用 需求→Coding→测试串联，后继只接收已验证结果，审批前工具不可执行，失败可恢复。
 
 ## Dependencies / traceability
 
-DEV-M3/M4/M5 相关真实 Gate；任务编号：HC-01/02/03 + DEV-PDLC-04。严格遵守已冻结的 ADR/HC-01/02/03 和 G01–G20。范围不得扩大为第二套 Hatchet 技术执行引擎。
+DEV-M3/M4/M5 相关真实 Gate；任务编号：HC-01/02/03 + DEV-CONSUMER-04。严格遵守已冻结的 ADR/HC-01/02/03 和 G01–G20。范围不得扩大为第二套 Hatchet 技术执行引擎。
 
 ## Non-goals
 

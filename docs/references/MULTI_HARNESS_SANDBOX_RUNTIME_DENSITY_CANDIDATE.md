@@ -24,7 +24,7 @@
 >
 ## 1. 触发背景及变更范围
 
-未来 PDLC、AI 企业门户需要不同的逻辑专业 Agent（产品、研发、测试、知识、业务等），
+未来 外部业务应用、AI 企业门户需要不同的逻辑专业 Agent（产品、研发、测试、知识、业务等），
 各自可选 OpenCode 2、OpenAI Agents SDK、MAF 等 Harness；Intent Router 可选定逻辑
 Agent 或 Process，Workflow 管理跨 Agent 的门禁/审批。现有 Sandbox 讨论主要面向
 Coding Execution，现把 Sandbox 调度契约推广到**需要隔离执行能力的所有 Harness**，

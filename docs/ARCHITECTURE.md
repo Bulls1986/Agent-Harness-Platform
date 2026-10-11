@@ -1,7 +1,7 @@
 | 文档版本 | V1.0                                 |
 |----------|--------------------------------------|
 | 文档日期 | 2026-09-29                           |
-| 适用范围 | 企业内部 Agent / Harness / PDLC 平台 |
+| 适用范围 | 企业内部 Agent / Harness / 外部业务应用 平台 |
 | 状态     | 架构评审稿                           |
 
 **架构基线：厂商无关、控制/执行解耦、协议优先、可恢复、可替换、可审计**
@@ -23,7 +23,7 @@
 > **2026-10-10 真实集成 POC 增量（非 Accepted ADR）：** 已真实验证 Cube v0.7.2 与官方 `e2b==2.40.0` 在私有 DNS/`E2B_DOMAIN=cube.app`/可信 TLS CA 条件下的 Sandbox create/files/commands/kill、两 Sandbox 文件隔离与 `openai-agents==0.23.1` 的原生 E2BSandboxClient create/exec/aclose；`e2b==2.53.1` 与本版本 Cube 的 `POST /v2/sandboxes` 仍 405。
 > 平台自有 [AgentRuntime SPI 最小代码](../poc/runtime_spi/README.md) 已具 Run/Execution/Scope/Owner/Fencing/Grant/Capabilities、Typed Event/SSE、Cancel/Unsupported 和 Pydantic/OpenAI 公共 Run Adapter 的真实 SDK 本地确定性模型 POC；OpenCode V2 的 SPI Session Factory 当前离线模拟。两项进度归 ARCH-TODO-025/026，**不修改 Accepted Contract、不关闭生产准入**。详见 [版本矩阵与原始真机证据](../poc/opencode_sandbox/E2B_PRIVATE_DNS_VERIFICATION_20261010.md)。
 
-> **2026-10-09 追加架构候选（尚未 Accepted）：** 针对 PDLC / AI 企业门户的
+> **2026-10-09 追加架构候选（尚未 Accepted）：** 针对 外部业务应用 / AI 企业门户的
 > 多专业 Agent 和 OpenCode 2 / OpenAI Agents SDK / MAF 等多 Harness，
 > 已登记 [ARCH-TODO-024：按需共享 Sandbox 与高密度 Runtime 拓扑](references/MULTI_HARNESS_SANDBOX_RUNTIME_DENSITY_CANDIDATE.md)。
 > Agent Session 不直接等于 Worker 进程或 Sandbox，隔离执行统一通过
@@ -929,7 +929,7 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 
 | ADR-030 | Multica 仅作为调度/任务生命周期的设计思想参考，不复制/依赖其源码；本平台独立实现领域状态机与 Execution 授权/容量策略，不引入 Multica CLI/Daemon。Hatchet SPI 当前实现选择不改变这条源码使用边界，也不意味着生产准入。 | Accepted（源码使用边界；非生产选型） |
 | ADR-031 | **Harness Control Plane 保持轻量自研；Hatchet 负责技术执行状态、DAG/队列/Worker/Retry/Wait，Harness 保留必要业务事实与可重建投影、审批/Receipt/恢复准入裁决；禁止自建第二套技术执行状态机**。遵循 G01/G02 与 Domain Contract。 | Decided（实施职责边界；非生产选型） |
-| ADR-032 | **集成实施三合同 HC-01/02/03**：Run/Step/Attempt ↔ Hatchet Workflow Segment/Task/Retry/Replan；双事实域 Outbox/Inbox/幂等 Binding/Receipt UNKNOWN；Hatchet Worker → ExecutionContext/Scope/Lease/Fencing → CubeSandbox。第 4 项 PDLC 迁移接口盘点转 DEV-PDLC-01～05。 | Decided（架构实现合同；生产与集成 Gate OPEN） |
+| ADR-032 | **集成实施三合同 HC-01/02/03**：Run/Step/Attempt ↔ Hatchet Workflow Segment/Task/Retry/Replan；双事实域 Outbox/Inbox/幂等 Binding/Receipt UNKNOWN；Hatchet Worker → ExecutionContext/Scope/Lease/Fencing → CubeSandbox。第 4 项 外部业务应用 迁移接口盘点转 DEV-CONSUMER-01。 | Decided（架构实现合同；生产与集成 Gate OPEN） |
 
 # 19. MAF 扩展性验证要求
 
@@ -961,7 +961,7 @@ LangGraph OSS 的编程模型本身仍具有参考价值，但本轮不进入 PO
 2. **明确并落实分权**：Harness 控制 Plane/领域状态仍是权威；Hatchet Process/Durable SPI 只管理持久 DAG、队列和 Worker 接管；分离 PostgreSQL Schema、Provider Binding、Event Bridge、故障重试安全门禁；严禁 DBOS 与自行重造通用 Scheduler。
 3. 验证并冻结 AgentRuntime SPI、SandboxProvider SPI、Process/Durable SPI（Hatchet Adapter）、Conversation Event Protocol 的 V1 契约。
 4. 完成 CubeSandbox/Execution Lease、Environment Registry 专项 POC；ExecutionScheduler 仅保留平台可信 Execution 授权/Owner/Fencing 语义，不重复实现 Hatchet 现成的持久通用调度器与 Queue。
-5. 将现有 PDLC 的产品 → 研发 → 测试及 Document 两类真实 Recipe 接入同一个 Hatchet 驱动的 Run，证明跨 SDK 的结构化输出/OSS Evidence 交接与原有产品功能等价。
+5. 将现有 外部业务应用 的产品 → 研发 → 测试及 Document 两类真实 Recipe 接入同一个 Hatchet 驱动的 Run，证明跨 SDK 的结构化输出/OSS Evidence 交接与原有产品功能等价。
 6. 最后再决定是否引入 Codex OSS、Strands、OpenAI Agents SDK 作为标准 Runtime Adapter。
 
 # 参考资料与事实基线

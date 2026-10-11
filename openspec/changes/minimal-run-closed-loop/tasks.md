@@ -1,6 +1,6 @@
 # Tasks: Minimum Runnable Agent Harness Loop
 
-> Check a task only when its named verification has actually passed. “Code written” alone is not completion. The POC uses **Docker PostgreSQL** (not SQLite). HC-01/02/03 architecture remains the contract; DEV-PDLC-01～05 remain later work.
+> Check a task only when its named verification has actually passed. “Code written” alone is not completion. The POC uses **Docker PostgreSQL** (not SQLite). HC-01/02/03 architecture remains the contract; DEV-CONSUMER-01～05 remain later work.
 
 ## 1. Initialize OpenSpec and baseline the scope
 
@@ -41,4 +41,4 @@
 
 ## Out of scope — tracked outside this change
 
-Production HC-02 Receipt/Inbox/Provider-side ACK reconciliation, real HC-03 Cube/Lease/Fencing, Token SSE/Approval/100 concurrency and PDLC M0–M4 migration **are not acceptance tasks for this model-only OpenSpec change**. They remain **OPEN** in [Development Backlog](../../../docs/DEVELOPMENT_BACKLOG.md) and [ARCH-TODO-025–029](../../../docs/ARCHITECTURE_BACKLOG.md); see [retrospective](../../../docs/retrospectives/MINIMAL_CLOSED_LOOP_20261010.md). Do not silently close or relabel them as integrated/production PASS.
+Production HC-02 Receipt/Inbox/Provider-side ACK reconciliation, real HC-03 Cube/Lease/Fencing, Token SSE/Approval/100 concurrency and 外部业务应用 M0–M4 migration **are not acceptance tasks for this model-only OpenSpec change**. They remain **OPEN** in [Development Backlog](../../../docs/DEVELOPMENT_BACKLOG.md) and [ARCH-TODO-025–029](../../../docs/ARCHITECTURE_BACKLOG.md); see [retrospective](../../../docs/retrospectives/MINIMAL_CLOSED_LOOP_20261010.md). Do not silently close or relabel them as integrated/production PASS.

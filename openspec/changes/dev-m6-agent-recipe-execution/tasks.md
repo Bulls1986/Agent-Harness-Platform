@@ -1,6 +1,6 @@
 # DEV-M6 多 Agent Recipe 与审批验证 · Tasks
 
-> 状态：**PLANNED**。工期、Owner 和 Sprint 需要在真实代码/团队容量基线上评估；所有勾选项以运行证据为准。来源 HC-01/02/03 + DEV-PDLC-04。
+> 状态：**PLANNED**。工期、Owner 和 Sprint 需要在真实代码/团队容量基线上评估；所有勾选项以运行证据为准。来源 HC-01/02/03 + DEV-CONSUMER-04。
 
 ## 0. 前置与需求冻结
 - [ ] 0.1 审阅原有 Accepted ADR/HC 与 G01–G20，识别事实 Owner、安全边界和阻断依赖；OpenSpec 四类规划材料 Strict PASS。

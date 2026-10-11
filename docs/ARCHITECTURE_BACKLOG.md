@@ -618,7 +618,7 @@ Harness 仍负责具体 Execution 的 Capability / Policy / Approval / Credentia
 
 **状态：POC / ARCHITECTURE CANDIDATE（未接受）**
 
-**触发：** PDLC 与 AI 企业门户的专业 Agent 将运行于 OpenCode 2、
+**触发：** 外部业务应用 与 AI 企业门户的专业 Agent 将运行于 OpenCode 2、
 OpenAI Agents SDK、MAF 等不同 Harness。高密度要求逻辑 Session 不与
 Runtime Worker/Sandbox 一一绑定；Sandbox 由 Execution Capability
 按需申请，且跨 Harness 可共享**平台 SandboxProvider 契约**。
@@ -660,7 +660,7 @@ OpenCode 2 / MAF；目前全部为候选，尚无完美零适配技术栈。
 
 **方向：** Pydantic AI Harness 是新通用 Agent 的默认 Runtime Adapter 候选；OpenAI Agents SDK、OpenCode 2 和 MAF 分别作为独立适配器。SDK 切换由**平台 AgentRuntime SPI** 实现，不由 Pydantic 原生托管其他 SDK；模型 Provider 切换另行治理。关联 [目标架构候选](references/MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md)。
 
-**业务优先级 P0（2026-10-10）：** 单一 Run 下以 Recipe/Step 顺序调度至少两个异构 AgentRuntime；使用授权 WorkspaceRef 和受控 Artifact/Evidence 交接，失败阻断后继 Step，支持重试/重规划、审批暂停与任务级恢复。现有真实 Tool 接力不等于 Kernel 端到端串联完成。PDLC 是用例而非固定流程。
+**业务优先级 P0（2026-10-10）：** 单一 Run 下以 Recipe/Step 顺序调度至少两个异构 AgentRuntime；使用授权 WorkspaceRef 和受控 Artifact/Evidence 交接，失败阻断后继 Step，支持重试/重规划、审批暂停与任务级恢复。现有真实 Tool 接力不等于 Kernel 端到端串联完成。外部业务应用 是用例而非固定流程。
 **2026-10-10 版本冻结门禁：** [已验证 SDK/Runtime/OCI Digest/Template 快照](references/VERIFIED_STACK_BASELINE_20261010.md) 已单独存为机器可读基线，包含 E2B 2.40.0 限定 PASS / 2.53.1 HTTP405 负例及自动防漂移验证；后续集成必须依 [Accepted Registry & Versioning Contract](references/REGISTRY_AND_VERSIONING.md) **在 Run 创建时**记录确切 Runtime/Adapter/SDK/Environment/Digest，重试/恢复沿用冻结绑定。POC 快照不等于数据库层已实现此持久化。
 
 
@@ -756,25 +756,25 @@ OpenCode 2 / MAF；目前全部为候选，尚无完美零适配技术栈。
 
 ---
 
-## ARCH-TODO-029 存量 OpenCode PDLC 平台无感替换与跨 Agent 串联
+## ARCH-TODO-029 存量 OpenCode 外部业务应用 平台无感替换与跨 Agent 串联
 
 **状态：DEFERRED TO DEVELOPMENT / P0 DELIVERY（业务目标已确认；旧平台实码盘点 M0 与 M1–M4 迁移为开发任务，不阻挡本次架构阶段 HC-01/02/03 收口；生产迁移 NO-GO）**
 
-**业务目标：** 当前企业内产品、研发、测试、文档及业务 Agent **统一基于 OpenCode 实现**。新平台必须**替换其 PDLC 执行与控制架构，保留既有建设并实现用户侧平滑迁移**；同时新增能够将不同专业 Agent SDK 编排成一条任务的**跨 Agent 串联能力**。更换底层架构并不要求淘汰 OpenCode Coding Runtime，也不意味着在新平台复制既有 PDLC 需求/迭代/知识库等业务领域模型。
+**业务目标：** 当前企业内产品、研发、测试、文档及业务 Agent **统一基于 OpenCode 实现**。新平台必须**替换其 外部业务应用 执行与控制架构，保留既有建设并实现用户侧平滑迁移**；同时新增能够将不同专业 Agent SDK 编排成一条任务的**跨 Agent 串联能力**。更换底层架构并不要求淘汰 OpenCode Coding Runtime，也不意味着在新平台复制既有 外部业务应用 需求/迭代/知识库等业务领域模型。
 
 **架构策略：** 保留既有 UI/业务资产/项目与会话读取能力，经 Legacy API Facade 与稳定 ID 映射逐步迁移新 Run；原活动会话由旧执行端安全继续或在经验证的恢复点切换；同一写操作只允许一个执行 Owner，不做有副作用的双写。新 Harness 负责 Recipe/Step/Attempt/任务事实、交接、审核与恢复；各 Agent SDK 由 AgentRuntime SPI 接入。
 
-**开发跟踪入口：** [Development Backlog · DEV-PDLC-01～05](DEVELOPMENT_BACKLOG.md)。本架构清单只保留已确认的 M0–M4 业务目标、单 Writer、兼容和安全边界；**本项不再要求在架构阶段先拿到旧系统源码/Schema**，但开发迁移前必须实际盘点，不能凭假设通过迁移验收。
+**开发跟踪入口：** [Development Backlog · DEV-CONSUMER-01](DEVELOPMENT_BACKLOG.md)。本架构清单只保留已确认的 M0–M4 业务目标、单 Writer、兼容和安全边界；**本项不再要求在架构阶段先拿到旧系统源码/Schema**，但开发迁移前必须实际盘点，不能凭假设通过迁移验收。
 
 **分阶段必过门禁：**
 
-1. **M0 旧平台只读事实盘点：** 获取现有 PDLC 源码、运行版本、API/事件、数据 Schema、OpenCode Session、Prompt/Skills/Subagents/Plugins/Hooks/MCP、Workspace/Git、对象存储、身份权限与启用功能清单；形成业务功能与迁移对象的一一对应表。**当前 Agent Harness 仓库无法独立证明旧 PDLC 每项现网能力。**
+1. **M0 旧平台只读事实盘点：** 获取现有 外部业务应用 源码、运行版本、API/事件、数据 Schema、OpenCode Session、Prompt/Skills/Subagents/Plugins/Hooks/MCP、Workspace/Git、对象存储、身份权限与启用功能清单；形成业务功能与迁移对象的一一对应表。**当前 Agent Harness 仓库无法独立证明旧 外部业务应用 每项现网能力。**
 2. **M1 原功能与数据兼容：** 既有 URL/页面/SSO、历史消息/附件、项目/工作区、已有 Agent 与 Skill 均可继续使用；旧 Session/新 Run ID 稳定关联，跨 Scope 请求拒绝。
 3. **M2 逐步灰度：** 新请求按确定性路由进入旧/新运行时；有副作用的执行禁止双写，失败和回退不导致重复 Tool/Git/外部业务操作。
-4. **M3 跨 Agent 串联：** 至少一条真实既有 PDLC 场景通过一个 Run 下 ≥2 个 Runtime 的 Recipe/Step 执行、受控 Artifact/Evidence 交接、验收阻断、审批、失败与任务级恢复；该机制必须能被非 PDLC Agent 复用。
+4. **M3 跨 Agent 串联：** 至少一条真实既有 外部业务应用 场景通过一个 Run 下 ≥2 个 Runtime 的 Recipe/Step 执行、受控 Artifact/Evidence 交接、验收阻断、审批、失败与任务级恢复；该机制必须能被非 外部业务应用 Agent 复用。
 5. **M4 用户无感验收与回退：** 以真实用户/项目和活动会话分别检查原功能、行为、权限、数据、Workspace/历史、一致性及回退；新旧执行权威和副作用对账清晰，未经验收不宣告生产迁移成功。
 
-**专题及验收矩阵：** [现有 PDLC 平台替换与无感迁移方案](references/PDLC_REPLACEMENT_MIGRATION_20261010.md)。迁移实施使用 DEV-PDLC-01～05；可以与 ARCH-TODO-025～028 集成 POC 并行，**不作为 HC-01/02/03 架构决策阻塞项**，但旧平台生产切换必须按 M0→M4 和安全门禁验收。
+**专题及验收矩阵：** [现有 外部业务应用 平台替换与无感迁移方案](references/DEVELOPMENT_MILESTONES.md)。迁移实施使用 DEV-CONSUMER-01；可以与 ARCH-TODO-025～028 集成 POC 并行，**不作为 HC-01/02/03 架构决策阻塞项**，但旧平台生产切换必须按 M0→M4 和安全门禁验收。
 
 ## ARCH-TODO-030 Hatchet 三项集成实施合同（HC-01 / HC-02 / HC-03）
 
@@ -784,7 +784,7 @@ OpenCode 2 / MAF；目前全部为候选，尚无完美零适配技术栈。
 
 **落档与验收**：[HC-01](references/HATCHET_WORKFLOW_MAPPING_CONTRACT_20261010.md)、[HC-02](references/HARNESS_HATCHET_CONSISTENCY_CONTRACT_20261010.md)、[HC-03](references/HATCHET_WORKER_SANDBOX_BINDING_CONTRACT_20261010.md)。每份文档内的 M/C/B 负例门禁都归 ARCH-TODO-025～028 与 [Development Backlog](DEVELOPMENT_BACKLOG.md) 后续 POC/实现，**不因 ARCH-TODO-030 CLOSED 就修改生产 NO-GO**。
 
-**第 4 项（PDLC 迁移接口实码盘点）**：明确延期为 [DEV-PDLC-01～05](DEVELOPMENT_BACKLOG.md)，ARCH-TODO-029 保留真实生产迁移 Gate 的事实追踪，但从本阶段架构讨论顺序移除。
+**第 4 项（外部业务应用 迁移接口实码盘点）**：明确延期为 [DEV-CONSUMER-01](DEVELOPMENT_BACKLOG.md)，ARCH-TODO-029 保留真实生产迁移 Gate 的事实追踪，但从本阶段架构讨论顺序移除。
 
 ---
 

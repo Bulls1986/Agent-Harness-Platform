@@ -30,15 +30,15 @@
 | G13 | H | **Runtime Topology 只是事实关系。** 记录 Participant 身份、生命周期、稳定 OWNS/SPAWNS/HANDOFF/ON 等，不代表 Workflow/Scheduler；高频 Tool 进 Event/Trace。 | 每个 Token 建拓扑节点；Topology 决定下一 Step。 | [Topology](references/RUNTIME_TOPOLOGY.md) |
 | G14 | H | **Git/Workspace 单一权威。** Git Server 是主干权威，Run 冻结 Revision Set；并发可写 Worktree 默认隔离，Push/Merge 走 Policy。 | 共享可写 Worktree；执行中隐式 rebase；未授权 force push。 | [Workspace](references/WORKSPACE_AND_GIT_MODEL.md) |
 | G15 | R | **真实可回放的协议。** SDK 事件转换成平台 Responses-compatible/Harness Typed Event；不伪造实时 Tool Activity/Token SSE；业务 Event 不受 OTel Sampling 影响。 | buffered 文本伪装 Token 级 streaming；SDK 私有事件直接驱动 UI。 | [Protocol](references/CONVERSATION_PROTOCOL.md)、[OTel](references/OBSERVABILITY_CONTRACT.md) |
-| G16 | R | **跨 Agent 串联由平台编排。** Recipe/Step 依赖、受控结构化 Artifact/WorkspaceRef 交接、Verification/审批/失败阻断都由平台保障。 | 仅通过 Prompt 请下一个 Agent 继续；交接裸 Sandbox ID 和全历史。 | [PDLC 迁移](references/PDLC_REPLACEMENT_MIGRATION_20261010.md) |
-| G17 | R | **存量 PDLC 迁移单 Writer。** 老历史/接口/资产可查，旧新执行端不双写副作用；影子比较只读或无副作用。 | 新旧端都执行同一 Tool/MR/Git Push；历史聊天被当成新平台已执行的 Run。 | [PDLC 迁移](references/PDLC_REPLACEMENT_MIGRATION_20261010.md) |
+| G16 | R | **跨 Agent 串联由平台编排。** Recipe/Step 依赖、受控结构化 Artifact/WorkspaceRef 交接、Verification/审批/失败阻断都由平台保障。 | 仅通过 Prompt 请下一个 Agent 继续；交接裸 Sandbox ID 和全历史。 | [外部业务应用 迁移](references/DEVELOPMENT_MILESTONES.md) |
+| G17 | R | **存量 外部业务应用 迁移单 Writer。** 老历史/接口/资产可查，旧新执行端不双写副作用；影子比较只读或无副作用。 | 新旧端都执行同一 Tool/MR/Git Push；历史聊天被当成新平台已执行的 Run。 | [外部业务应用 迁移](references/DEVELOPMENT_MILESTONES.md) |
 | G18 | R | **部署、数据、协议与模型独立性。** 关键 Harness 能力不强制依赖厂商托管 Control Plane 或收费多 Executor 协调组件；复用 Hatchet 已有调度能力，不重造通用队列/定时器/Worker 心跳服务。 | 为简单任务强制另一 SaaS 控制面；新增统一 Registry 或锁服务。 | [Deployment](references/DEPLOYMENT_INDEPENDENCE.md)、[Lease](references/EXECUTION_LEASE_FENCING_HEARTBEAT.md) |
 | G19 | D | **候选不等于 Accepted。** Process/Durable SPI 当前唯一优先实施候选为 Hatchet；DBOS 因许可证正式 REJECTED，不再开发、引入依赖或评估替代协调器；Temporal/MAF Durable/手写 PG Worker 仅留历史结论。Runtime/Cube/Process 均须按 Gate 实测，不因 Hatchet 分项 PASS 自动生产 GO。 | 仅凭 Demo 就移除 Process SPI 或宣布生产选型完成。 | [候选](references/MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md)、[Backlog](ARCHITECTURE_BACKLOG.md) |
 | G20 | R | **验收等级不可混淆。** Mock、Offline、Docker、Live、Production 逐项注明，必要时保留失败反例，禁止 skip 降门禁。 | 一个 FunctionTool 独立成功就声称跨 Runtime 全链恢复可用。 | [POC](POC.md)、[Admission](references/MULTI_HARNESS_ADMISSION_20261009.md) |
 
 **M1 故障注入新增审查点（不改变既有 G01/G08/G09）：** 不同 Model Mode/Adapter Version/Execution Capability 的 Hatchet Worker 不得无意领取彼此的 Workflow；Workflow Definition/Provider Binding 需版本隔离。业务 Run Terminal 必须在**模型/领域 Verification 实际输出匹配已持久化 Step 成果之后**写入；Hatchet Task SUCCEEDED 不能替代业务验证。参见 [2026-10-11 实际故障复盘](retrospectives/REAL_MODEL_AGENT_CLOSED_LOOP_20261011.md)。
 
-**ADR-032 集成三合同的 PR 拒绝条件（G01/G03/G04/G06/G07/G08/G09/G10/G16）：** [HC-01 Mapping](references/HATCHET_WORKFLOW_MAPPING_CONTRACT_20261010.md) · [HC-02 Consistency](references/HARNESS_HATCHET_CONSISTENCY_CONTRACT_20261010.md) · [HC-03 Worker/Sandbox](references/HATCHET_WORKER_SANDBOX_BINDING_CONTRACT_20261010.md)。直接把 Provider Task Retry 等同 New Attempt、以旧 Plan/DAG 覆盖 Replan 历史、丢 ACK 后创建重复 Workflow、Hatchet SUCCEEDED 直接写业务 Run Terminal、Worker 用裸 Sandbox ID 或过期 Fencing 执行、无授权回退 Host Shell，均为 Hard Stop。**第 4 项 PDLC M0 迁移盘点已转开发清单，不因尚未拿到旧 Schema 阻挡 HC 架构决议。**
+**ADR-032 集成三合同的 PR 拒绝条件（G01/G03/G04/G06/G07/G08/G09/G10/G16）：** [HC-01 Mapping](references/HATCHET_WORKFLOW_MAPPING_CONTRACT_20261010.md) · [HC-02 Consistency](references/HARNESS_HATCHET_CONSISTENCY_CONTRACT_20261010.md) · [HC-03 Worker/Sandbox](references/HATCHET_WORKER_SANDBOX_BINDING_CONTRACT_20261010.md)。直接把 Provider Task Retry 等同 New Attempt、以旧 Plan/DAG 覆盖 Replan 历史、丢 ACK 后创建重复 Workflow、Hatchet SUCCEEDED 直接写业务 Run Terminal、Worker 用裸 Sandbox ID 或过期 Fencing 执行、无授权回退 Host Shell，均为 Hard Stop。**第 4 项 外部业务应用 M0 迁移盘点已转开发清单，不因尚未拿到旧 Schema 阻挡 HC 架构决议。**
 
 **ADR-031 自研边界补充（不改变 G01/G02/G07 等 Accepted 合同）：** [Thin Harness Control Plane 决议](references/THIN_HARNESS_CONTROL_PLANE_DECISION_20261010.md) 将 Hatchet 作为**技术执行状态权威**；平台只保留 Run/Step/Attempt 业务身份、必要状态投影、Verification/Approval/Receipt/Policy/终态约束。若 PR 新增第二套可领取任务的 Scheduler/History/Worker RecoveryDaemon 或让 Domain 直接依赖 Hatchet SDK，必须拒绝。Provider Workflow/Task ID 不得反向成为平台主键。
 
@@ -47,7 +47,7 @@
 ## 3. 依赖关系与禁止边
 
 ~~~text
-既有 PDLC UI / Portal / Enterprise API
+既有 外部业务应用 UI / Portal / Enterprise API
    ↓（Legacy Facade / Responses-compatible API）
 平台 Domain / Harness Control / State Machine / Verification
    ↓（稳定 SPI + 可信 ExecutionContext）
@@ -66,11 +66,11 @@ Model/Tool/Storage SPI→ 企业 Model Gateway / MCP / OSS
 
 ## 4. 变更准入流程
 
-1. **明确 Owner。** 判断变更是否属于 Harness 的任务/协议/Adapter/执行边界；属于旧 PDLC 业务、IAM、MCP 治理、Secret、存储运维的，定义 Reference/Adapter，不提升为 Harness Domain。
-2. **列出受影响 Gxx。** 逐项检查 Domain、Protocol、AgentRuntime、Process、Sandbox、Tool、Data、Security、Deployment、PDLC Migration；使用当前 Accepted Contract，而不是根据便利性推断。
+1. **明确 Owner。** 判断变更是否属于 Harness 的任务/协议/Adapter/执行边界；属于旧 外部业务应用 业务、IAM、MCP 治理、Secret、存储运维的，定义 Reference/Adapter，不提升为 Harness Domain。
+2. **列出受影响 Gxx。** 逐项检查 Domain、Protocol、AgentRuntime、Process、Sandbox、Tool、Data、Security、Deployment、外部业务应用 Migration；使用当前 Accepted Contract，而不是根据便利性推断。
 3. **决定处理路径。** 语义不变的 SDK Adapter/Recipe/Policy/POC → 正常 PR + 契约测试；影响领域、授权、事件、恢复、副作用、版本的 → 架构 Review；违反 Accepted 的 → 先 ADR/Contract 后实现；默认技术选型 → Backlog/等价 POC/Decision。
 4. **提供可复验证据。** 至少成功+拒绝/故障路径；非幂等操作需 UNKNOWN/Receipt/Cancel/Lease 负例；新 Runtime 必须注明 Native/Adapter、Mock/Live、Unsupported、版本冻结。
-5. **检查兼容与回滚。** 原 PDLC UI/历史/API/Agent 资产、单 Writer、已有 Run 的冻结版本、OSS 引用和证据保持可追溯；迁移前后不重复外部副作用。
+5. **检查兼容与回滚。** 原 外部业务应用 UI/历史/API/Agent 资产、单 Writer、已有 Run 的冻结版本、OSS 引用和证据保持可追溯；迁移前后不重复外部副作用。
 
 ### 立即拒绝（Hard Stop）示例
 
@@ -84,7 +84,7 @@ Model/Tool/Storage SPI→ 企业 Model Gateway / MCP / OSS
 
 ## 5. PR 评审契约
 
-[PR Template](../.github/PULL_REQUEST_TEMPLATE.md) 要求每个改动回答：影响哪些 Gxx、谁拥有新增数据与生命周期、是否修改 Run/Step/事件/Recovery/Approval/Receipt 语义、如何隔离 SDK/Tool/Sandbox、成功/拒绝/故障证据、现有 PDLC 迁移影响与回滚方案、真实 POC 状态。
+[PR Template](../.github/PULL_REQUEST_TEMPLATE.md) 要求每个改动回答：影响哪些 Gxx、谁拥有新增数据与生命周期、是否修改 Run/Step/事件/Recovery/Approval/Receipt 语义、如何隔离 SDK/Tool/Sandbox、成功/拒绝/故障证据、现有 外部业务应用 迁移影响与回滚方案、真实 POC 状态。
 
 **架构 Review 触发条件：** 新增或修改 Domain Model / State Transition / SPI 公共接口 / Event Schema / Policy / Execution Scope / SideEffect / RecoveryPoint / 版本冻结 / 生产拓扑 / 平台与企业系统边界。纯文档导航不变更语义时可以注明「无需 ADR」。当前不假造 CODEOWNERS 审批人。
 

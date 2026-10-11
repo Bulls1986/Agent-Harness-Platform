@@ -8,7 +8,7 @@
 
 #### Scenario: 交付成功
 - **WHEN** 阶段依赖满足且真实系统验收执行
-- **THEN** PDLC 等价、新 Recipe 业务和生产安全/容量三类 Gate 分别全部 PASS，才允许生产 GO。
+- **THEN** 外部业务应用 等价、新 Recipe 业务和生产安全/容量三类 Gate 分别全部 PASS，才允许生产 GO。
 
 ### Requirement: 必须覆盖正常流程与失败路径
 

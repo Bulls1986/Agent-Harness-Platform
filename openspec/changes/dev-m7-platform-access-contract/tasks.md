@@ -1,6 +1,6 @@
 # DEV-M7 统一 API、Chat 与用户交互 · Tasks
 
-> 状态：**PLANNED**。工期、Owner 和 Sprint 需要在真实代码/团队容量基线上评估；所有勾选项以运行证据为准。来源 Conversation/Turn/Run 接口；DEV-PDLC-02 前置。
+> 状态：**PLANNED**。工期、Owner 和 Sprint 需要在真实代码/团队容量基线上评估；所有勾选项以运行证据为准。来源 Conversation/Turn/Run 接口；DEV-CONSUMER-02 前置。
 
 ## 0. 前置与需求冻结
 - [ ] 0.1 审阅原有 Accepted ADR/HC 与 G01–G20，识别事实 Owner、安全边界和阻断依赖；OpenSpec 四类规划材料 Strict PASS。

@@ -10,7 +10,7 @@
 
 ## Deliverable
 
-PDLC 等价、新 Recipe 业务和生产安全/容量三类 Gate 分别全部 PASS，才允许生产 GO。
+外部业务应用 等价、新 Recipe 业务和生产安全/容量三类 Gate 分别全部 PASS，才允许生产 GO。
 
 ## Dependencies / traceability
 

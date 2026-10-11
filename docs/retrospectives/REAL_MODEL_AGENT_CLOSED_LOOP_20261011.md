@@ -26,4 +26,4 @@
 
 ## 仍未收口
 
-真实上游 Token SSE → Harness 持久游标/取消/断线回放，Cube Worker A/B 续连与授权、非幂等 Receipt UNKNOWN、Durable Approval、100 并发、旧 PDLC M0–M4 迁移仍为 OPEN，不因本轮 Model LIVE PASS 就认定完成。
+真实上游 Token SSE → Harness 持久游标/取消/断线回放，Cube Worker A/B 续连与授权、非幂等 Receipt UNKNOWN、Durable Approval、100 并发、旧 外部业务应用 M0–M4 迁移仍为 OPEN，不因本轮 Model LIVE PASS 就认定完成。
