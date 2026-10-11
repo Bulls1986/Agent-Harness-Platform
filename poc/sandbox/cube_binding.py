@@ -50,7 +50,7 @@ class CubeBinding:
                   provider_sandbox_id TEXT UNIQUE,
                   binding_generation BIGINT NOT NULL DEFAULT 1,
                   state TEXT NOT NULL CHECK(state IN
-                     ('ALLOCATING','ACTIVE','BLOCKED_UNKNOWN','RELEASING','RELEASED'))
+                     ('ALLOCATING','CREATING','ACTIVE','BLOCKED_UNKNOWN','RELEASING','RELEASED'))
                 )
             """)
 
@@ -76,6 +76,26 @@ class CubeBinding:
             ).fetchone()
         if not row: raise KeyError(execution_id)
         return self._binding(row)
+
+    @staticmethod
+    def _metadata(row:Binding)->dict[str,str]:
+        """Correlation metadata, never a bearer token or SDK authorization."""
+        return {
+            "harness_execution_id":row.execution_id,
+            "harness_run_id":row.run_id,
+            "harness_scope":row.scope,
+            "harness_workspace_ref":row.workspace,
+            "harness_environment_digest":row.environment_digest,
+            # Allocation identity remains immutable while binding_generation
+            # advances with A -> B fencing. No second create is permitted.
+            "harness_generation":"1",
+        }
+
+    def correlation(self,execution_id)->dict[str,str]:
+        fact=self.get(execution_id)
+        if fact.state not in ("ALLOCATING","BLOCKED_UNKNOWN","ACTIVE"):
+            raise UnsafeDispatch("No live Cube allocation identity")
+        return self._metadata(fact)
 
     def begin(self,*,execution_id,run_id,scope,workspace,
               environment_digest,owner_id,fencing_epoch,lease_seconds=60):
@@ -122,14 +142,33 @@ class CubeBinding:
         with self.facts.tx() as c:
             return self._check(c,execution_id,owner_id,epoch,"ACTIVE")
 
+    def assert_unknown(self,execution_id,owner_id,epoch):
+        self._valid_epoch(epoch)
+        with self.facts.tx() as c:
+            return self._check(c,execution_id,owner_id,epoch,"BLOCKED_UNKNOWN")
+
     def allocate_permitted(self,execution_id,owner_id,epoch):
         with self.facts.tx() as c:
             return self._check(c,execution_id,owner_id,epoch,"ALLOCATING")
 
+    def claim_create(self,execution_id,owner_id,epoch):
+        """Durably mark native creation in-flight BEFORE contacting Cube.
+
+        A client retry may not call create again when the ACK is uncertain.
+        """
+        with self.facts.tx() as c:
+            fact=self._check(c,execution_id,owner_id,epoch,"ALLOCATING")
+            c.execute(
+                "UPDATE harness_cube_binding SET state='CREATING' "
+                "WHERE execution_id=%s",(execution_id,))
+            PgFacts.event(c,fact.run_id,"sandbox.binding.creation_dispatched",{
+                "execution_id":execution_id,"generation":fact.generation})
+        return self._metadata(fact)
+
     def confirm(self,execution_id,owner_id,epoch,sandbox_id):
         self._text(sandbox_id)
         with self.facts.tx() as c:
-            row=self._check(c,execution_id,owner_id,epoch,"ALLOCATING")
+            row=self._check(c,execution_id,owner_id,epoch,"CREATING")
             c.execute(
                 "UPDATE harness_cube_binding SET provider_sandbox_id=%s,state='ACTIVE' "
                 "WHERE execution_id=%s",(sandbox_id,execution_id),
@@ -140,11 +179,37 @@ class CubeBinding:
 
     def unknown(self,execution_id,owner_id,epoch):
         with self.facts.tx() as c:
-            row=self._check(c,execution_id,owner_id,epoch,"ALLOCATING")
+            # ALLOCATING direct transition remains test-only for confirmed
+            # creation ACK simulation; CREATING is the real dispatch phase.
+            try:
+                row=self._check(c,execution_id,owner_id,epoch,"CREATING")
+            except UnsafeDispatch:
+                row=self._check(c,execution_id,owner_id,epoch,"ALLOCATING")
             c.execute("UPDATE harness_cube_binding SET state='BLOCKED_UNKNOWN' "
                       "WHERE execution_id=%s",(execution_id,))
             PgFacts.event(c,row.run_id,"sandbox.binding.unknown",
                           {"execution_id":execution_id})
+
+    def recover_unknown(self,execution_id,owner,epoch,sandbox_id):
+        """Persist an existing provider sandbox, never create a new instance."""
+        self._text(sandbox_id)
+        self._valid_epoch(epoch)
+        with self.facts.tx() as c:
+            row=self._check(c,execution_id,owner,epoch,"BLOCKED_UNKNOWN")
+            if row.sandbox_id is not None:
+                raise UnsafeDispatch("UNKNOWN binding already has a provider ID")
+            c.execute(
+                "UPDATE harness_cube_binding "
+                "SET state='ACTIVE',provider_sandbox_id=%s "
+                "WHERE execution_id=%s",
+                (sandbox_id,execution_id),
+            )
+            PgFacts.event(c,row.run_id,"sandbox.binding.reconciled",{
+                "execution_id":execution_id,
+                "sandbox_id":sandbox_id,
+                "correlation":"native_unique_metadata_confirmed",
+            })
+        return self.get(execution_id)
 
     def takeover(self,execution_id,expected_epoch,new_owner,scope,workspace,
                  environment_digest,lease_seconds=60):
@@ -156,10 +221,15 @@ class CubeBinding:
             row=c.execute("SELECT "+",".join(self.FIELDS)+",lease_expires_at<=now() "
                           "FROM harness_cube_binding WHERE execution_id=%s FOR UPDATE",
                           (execution_id,)).fetchone()
-            if (not row or row[9]!="ACTIVE" or row[10] is not True
+            # An UNKNOWN creation ACK can be reconciled by B after
+            # the expired A lease; it is NEVER permission to create again.
+            if (not row or row[9] not in ("ACTIVE","BLOCKED_UNKNOWN","CREATING")
+                    or row[10] is not True
                     or row[6]!=expected_epoch or row[5]==new_owner
                     or row[2:5]!=(scope,workspace,environment_digest)
-                    or not row[7]):
+                    or (row[9]=="ACTIVE" and not row[7])
+                    or (row[9] in ("BLOCKED_UNKNOWN","CREATING")
+                        and row[7] is not None)):
                 raise UnsafeDispatch("Sandbox takeover requires expired matching Scope/Workspace")
             run=c.execute("SELECT state FROM harness_run WHERE id=%s FOR UPDATE",
                           (row[1],)).fetchone()
@@ -168,7 +238,9 @@ class CubeBinding:
             c.execute(
                 "UPDATE harness_cube_binding SET owner_id=%s,fencing_epoch=%s,"
                 "lease_expires_at=now()+(%s * interval '1 second'),"
-                "binding_generation=binding_generation+1 "
+                "binding_generation=binding_generation+1,"
+                "state=CASE WHEN state='CREATING' THEN 'BLOCKED_UNKNOWN' "
+                "ELSE state END "
                 "WHERE execution_id=%s",
                 (new_owner,expected_epoch+1,lease_seconds,execution_id),
             )
@@ -216,14 +288,64 @@ class CubeWorkspaceGateway:
         return path
 
     def allocate(self,execution_id,owner,epoch):
-        self.binding.allocate_permitted(execution_id,owner,epoch)
+        metadata=self.binding.claim_create(execution_id,owner,epoch)
         try:
-            sbid=self.transport.create()
+            sbid=self.transport.create(metadata=metadata)
         except Exception:
             self.binding.unknown(execution_id,owner,epoch)
             raise UnsafeDispatch("Cube create outcome unknown; no blind reallocation") from None
-        self.binding.confirm(execution_id,owner,epoch,sbid)
+        try:
+            self.binding.confirm(execution_id,owner,epoch,sbid)
+        except Exception:
+            # The native sandbox exists; even a lost PG ACK can never
+            # re-enter ALLOCATING after the durable CREATING transition.
+            try:
+                self.binding.unknown(execution_id,owner,epoch)
+            except Exception:
+                pass  # PG may have committed ACTIVE despite a lost ACK.
+            raise UnsafeDispatch("Cube bind ACK unknown; reconcile existing sandbox") from None
         return sbid
+
+    def reconcile_unknown(self,execution_id,owner,epoch):
+        """Only one native, fully verified Cube can recover a lost create ACK.
+
+        If the provider list is unavailable/incomplete, or zero/multiple
+        correlations match, never conclude sandbox absence or allocate again.
+        """
+        fact=self.binding.get(execution_id)
+        if fact.state=="ACTIVE":
+            active=self.binding.assert_active(execution_id,owner,epoch)
+            return active.sandbox_id
+        unknown=self.binding.assert_unknown(execution_id,owner,epoch)
+        expected=self.binding.correlation(execution_id)
+        try:
+            rows=self.transport.list()
+            if not isinstance(rows,list) or len(rows)>1000:
+                raise ValueError("Cube listing unavailable or too large to trust")
+            matches=[]
+            for row in rows:
+                if not isinstance(row,dict):
+                    raise ValueError("Malformed native Cube listing")
+                if row.get("metadata") == expected:
+                    sid=row.get("sandboxID")
+                    if not isinstance(sid,str) or not sid.strip():
+                        raise ValueError("Native Cube ID absent")
+                    matches.append(sid)
+            if len(matches)!=1:
+                raise ValueError("Ambiguous/absent native Cube correlation")
+            sid=matches[0]
+            sb=self.transport.connect(sid)
+            actual=self.transport.inspect(sb)
+            if (not isinstance(actual,dict)
+                    or actual.get("sandboxID")!=sid
+                    or actual.get("metadata")!=expected):
+                raise ValueError("Native Cube detail does not match frozen binding")
+        except Exception:
+            raise UnsafeDispatch("Native Cube evidence not unique/verified; stay BLOCKED_UNKNOWN") from None
+        recovered=self.binding.recover_unknown(execution_id,owner,epoch,sid)
+        if recovered.sandbox_id!=sid or recovered.generation!=unknown.generation:
+            raise UnsafeDispatch("Concurrent Cube binding changed")
+        return sid
 
     def _attach(self,execution_id,owner,epoch):
         fact=self.binding.assert_active(execution_id,owner,epoch)
@@ -273,9 +395,19 @@ class NativeCubeTransport:
         from cubesandbox import Sandbox
         self.sdk=Sandbox
 
-    def create(self):
-        sandbox=self.sdk.create()
+    def create(self,*,metadata):
+        sandbox=self.sdk.create(metadata=metadata)
         return sandbox.sandbox_id
+
+    def list(self):
+        return self.sdk.list()
+
+    def inspect(self,sandbox):
+        info=sandbox.get_info()
+        return {
+            "sandboxID":info.sandbox_id if hasattr(info,"sandbox_id") else info["sandboxID"],
+            "metadata":info.metadata if hasattr(info,"metadata") else info["metadata"],
+        }
 
     def connect(self,sandbox_id):
         return self.sdk.connect(sandbox_id)

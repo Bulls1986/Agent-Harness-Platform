@@ -15,6 +15,8 @@
 
 - [x] A.4 Native Cube SDK 适配与 Harness PostgreSQL Sandbox Binding 的**控制层开发切片**：真实 PG 保存 Scope/WorkspaceRef/Environment/Owner/Lease/Fencing/Sandbox Locator/Generation/生命周期；跨 Owner 过期接管、旧 Owner 拒绝、同 Workspace 语义和 Fail Closed；测试使用 Fake Cube Transport **仅验证适配合同**。红→绿及 CI 证据：docs/retrospectives/DEV_M5_CUBE_PG_BINDING_20261011.md（真实 PG 5/5 PASS、官方 Cube SDK 方法检查）。**真实 Cube MicroVM 尚未验收，不得勾选 1.2/1.3/2.x**；`dev-m5-cube-live.yml` 配置真实 Cube 后才可执行明确实机 Gate。
 
+- [x] A.5 CubeSandbox 创建 ACK 丢失及 Creator A 崩溃时的持久化 UNKNOWN 对账合同：真实 PostgreSQL `ALLOCATING→CREATING` dispatch barrier，外部创建已成功而 PG Binding ACK 丢失时不得盲目新建；官方 SDK Metadata 冻结，受信任 Native List/Connect/GetInfo 只有唯一完整匹配才允许 `BLOCKED_UNKNOWN→ACTIVE`；PG Fencing B 接管 A 的 `CREATING/UNKNOWN` 时仅能查询同一 Cube。**证据**：docs/retrospectives/DEV_M5_CUBE_CREATE_ACK_RECONCILE_20261011.md（Red 38148112088、Green 38148372940，14/14 PG/SDK 合同）。测试为 Fake Cube + PG，真实 Cube 实机继续 OPEN，不勾选正式 1.2/1.3。
+
 ## 1. TDD 与集成开发
 - [ ] 1.1 先写无 ExecutionContext、越权、旧 Lease/Fencing 的拒绝测试；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
 - [ ] 1.2 完成真实 Cube Provider Allocate/Bind/Release 与 WorkspaceRef；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
