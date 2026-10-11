@@ -114,7 +114,15 @@ class PlanGuard:
             pending=c.execute("SELECT from_version,intended_recipe_digest,reason,state "
                               "FROM harness_replan_intent WHERE run_id=%s ORDER BY from_version DESC "
                               "LIMIT 1",(rid,)).fetchone()
+        # The historical intent is intentionally immutable: its original
+        # BLOCKED decision remains evidence. Once the Run atomically moves to
+        # a newer frozen version, derive COMMITTED for the read projection.
+        # This is not evidence that a new Hatchet Workflow was confirmed:
+        # Segment PENDING/DISPATCHING/CONFIRMED is tracked separately.
+        shown = (dict(zip(("from_version","intended_recipe_digest","reason","state"),pending))
+                 if pending else None)
+        if shown and r[0] > shown["from_version"]:
+            shown["state"] = "COMMITTED"
         return {"active_plan_version":r[0],
                 "plans":[{"version":v,"recipe_digest":digest} for v,digest in plans],
-                "replan":(dict(zip(("from_version","intended_recipe_digest","reason","state"),pending))
-                          if pending else None)}
+                "replan":shown}
