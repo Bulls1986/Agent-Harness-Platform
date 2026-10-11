@@ -52,7 +52,7 @@ def collect(base,rid,*,cancel=False):
     assert snapshot==final or snapshot["run_id"]==final["run_id"]
     assert len(seen)==len(timeline)
     persisted={e["seq"] for e in snapshot["events"]}
-    assert seen.issubset(persisted)
+    assert seen==persisted,(len(seen),len(persisted),'Partial terminal SSE replay')
     if cancel:
         assert did_cancel and final["state"]=="CANCELLED",final["state"]
         assert final["result"] is None
