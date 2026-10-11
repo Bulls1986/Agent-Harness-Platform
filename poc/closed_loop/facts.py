@@ -62,6 +62,38 @@ class PgFacts:
             c.execute("ALTER TABLE harness_run ADD COLUMN IF NOT EXISTS project_scope TEXT")
             c.execute("ALTER TABLE harness_run ADD COLUMN IF NOT EXISTS initiator_principal_id TEXT")
             c.execute("""
+                CREATE OR REPLACE FUNCTION harness_reject_run_owner_change()
+                RETURNS trigger
+                LANGUAGE plpgsql
+                AS $owner_guard$
+                BEGIN
+                    IF NEW.project_scope IS DISTINCT FROM OLD.project_scope
+                       OR NEW.initiator_principal_id IS DISTINCT FROM OLD.initiator_principal_id
+                    THEN
+                        RAISE EXCEPTION 'Persisted Run ownership is immutable'
+                            USING ERRCODE = '23514';
+                    END IF;
+                    RETURN NEW;
+                END
+                $owner_guard$
+            """)
+            c.execute("""
+                DO $create_owner_guard$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM pg_trigger
+                        WHERE tgname='harness_run_owner_immutable'
+                          AND tgrelid='harness_run'::regclass
+                    ) THEN
+                        CREATE TRIGGER harness_run_owner_immutable
+                        BEFORE UPDATE OF project_scope, initiator_principal_id
+                        ON harness_run
+                        FOR EACH ROW EXECUTE FUNCTION harness_reject_run_owner_change();
+                    END IF;
+                END
+                $create_owner_guard$
+            """)
+            c.execute("""
                 CREATE TABLE IF NOT EXISTS harness_step (
                     run_id TEXT NOT NULL REFERENCES harness_run(id), id TEXT NOT NULL,
                     state TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0,
