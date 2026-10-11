@@ -42,6 +42,17 @@ def create_app(
         except Exception:
             raise HTTPException(503, "Harness PostgreSQL unavailable") from None
 
+    @app.get('/api/config')
+    def get_model_config():
+        from .real_model import ModelConfiguration
+        try:
+            cfg = ModelConfiguration.from_env()
+        except ValueError:
+            raise HTTPException(503, 'Real model configuration missing/invalid') from None
+        # Only non-sensitive metadata: never return endpoint/key/authorization.
+        return {'mode': cfg.mode, 'model_id': cfg.model_id,
+                'real_token_sse': 'NOT_TESTED'}
+
     @app.get("/", include_in_schema=False)
     def home():
         return FileResponse(index, media_type="text/html")
@@ -50,10 +61,16 @@ def create_app(
     def create_run(body: RunCreate):
         if submit is None:
             raise HTTPException(503, "Real Hatchet runner is unavailable")
+        from .real_model import ModelConfiguration
+        try:
+            cfg = ModelConfiguration.from_env()
+        except ValueError:
+            raise HTTPException(503, 'Real model configuration missing/invalid') from None
         db = facts()
         run_id = "run-" + uuid4().hex
         try:
-            key = db.create(run_id, prompt=body.prompt)
+            key = db.create(run_id, prompt=body.prompt,
+                            model_mode=cfg.mode, model_id=cfg.model_id)
         except Exception:
             raise HTTPException(503, "Unable to create persisted Run") from None
         try:
