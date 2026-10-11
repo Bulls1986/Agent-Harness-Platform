@@ -9,6 +9,8 @@
 ## 已完成的可独立验收切片（不替代后续任务）
 - [x] A.1 在纯逻辑 TrustedExecutionGate 中验证不可信 Claim 与可信 ExecutionRecord/Workspace/Scope/Lease/Fencing/Capability 的负例，缺 Sandbox 时 Shell/Files/Git Fail Closed；**证据**：docs/retrospectives/DEV_M3_M5_FIRST_SLICE_20261011.md（TDD Red→Green、PR #61，CI 38132324088）。未执行 Cube Allocate/Bind/Release 或 Worker A→B 实机接管。
 
+- [x] A.2 HC-03 受限 PostgreSQL Recovery Owner/Fencing：当前 Tool Execution 可信 Owner+Epoch+Lease 由 PG 持久化，PG 时钟校验到期后仅对 UNKNOWN 非幂等 Receipt 开放 B Owner CAS 接管；两个并发 B/C 只能一者获 Epoch+1，旧 A 的授权/Receipt 终态提交拒绝，新 B 只能外部读对账不重派 Tool；真实 Hatchet Native Retry 同 Run 验证 A/7→B/8。**证据**：docs/retrospectives/DEV_M4_HATCHET_NATIVE_RETRY_RECOVERY_FENCING_20261011.md。此项只代表**逻辑 Execution Owner** 交接，不等于物理双 Hatchet Worker 实机、真 Cube Sandbox、Workspace/OCI/Policy/Scope Gate。
+
 ## 1. TDD 与集成开发
 - [ ] 1.1 先写无 ExecutionContext、越权、旧 Lease/Fencing 的拒绝测试；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
 - [ ] 1.2 完成真实 Cube Provider Allocate/Bind/Release 与 WorkspaceRef；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
