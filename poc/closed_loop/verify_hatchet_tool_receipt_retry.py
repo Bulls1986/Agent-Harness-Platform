@@ -29,6 +29,7 @@ from pydantic import BaseModel
 
 from poc.closed_loop.facts import PgFacts, UnsafeDispatch
 from poc.closed_loop.tool_receipt import ToolReceiptJournal
+from poc.closed_loop.tool_recovery_owner import ToolRecoveryOwner
 from poc.closed_loop.external_ledger_demo import ExternalLedger
 
 hatchet = Hatchet.from_embedded(
@@ -71,8 +72,16 @@ def nonidempotent_receipt_task(input: ReceiptInput, ctx: Context) -> dict:
     db=PgFacts()
     journal=ToolReceiptJournal(db)
     ledger=ExternalLedger(os.environ["HARNESS_LEDGER_DATABASE_URL"])
-    intent=journal.inspect(input.execution_id)
-    if intent["run_id"]!=input.run_id:
+    # Hatchet dispatch can beat the control-plane's PG Intent insertion.
+    # This loop waits for a persisted source-of-truth fact, not a local cache.
+    intent=None
+    for _ in range(80):
+        try:
+            intent=journal.inspect(input.execution_id)
+            break
+        except KeyError:
+            time.sleep(0.25)
+    if intent is None or intent["run_id"]!=input.run_id:
         raise UnsafeDispatch("Untrusted execution identity")
 
     if ctx.retry_count == 0:
@@ -95,6 +104,9 @@ def nonidempotent_receipt_task(input: ReceiptInput, ctx: Context) -> dict:
         if len(ledger.find(input.execution_id))!=1:
             raise RuntimeError("Real ledger did not persist exactly one effect")
         journal.mark_unknown(input.execution_id,"EXECUTOR_CRASH")
+        # Let the short test-only trusted lease expire on the PG clock
+        # before Hatchet's native retry becomes eligible to reconcile.
+        time.sleep(1.3)
         # Must be retried by Hatchet Engine, not a user-space loop or second
         # scheduler. Native retry count is tested on resumed execution.
         raise RuntimeError("FAULT_INJECTED_RECEIPT_UNKNOWN_AFTER_EXTERNAL_COMMIT")
@@ -103,7 +115,20 @@ def nonidempotent_receipt_task(input: ReceiptInput, ctx: Context) -> dict:
         raise RuntimeError("Native task did not retry")
     if intent["state"]!="UNKNOWN":
         raise UnsafeDispatch("Resumed Hatchet task may not re-dispatch uncertain Tool")
-    result=journal.reconcile(input.execution_id,ledger.find)
+    # Hatchet owns the technical retry; Harness PG owns the permission
+    # transfer. This names two logical owners on successive native task
+    # attempts, NOT two physically distinct Hatchet worker processes.
+    owner=ToolRecoveryOwner(db)
+    permit=owner.takeover(input.execution_id,"worker-B",expected_epoch=7)
+    if permit.fencing_epoch!=8:
+        raise UnsafeDispatch("New native attempt did not fence old Tool owner")
+    try:
+        owner.admit(input.execution_id,"worker-A",7)
+    except UnsafeDispatch:
+        pass
+    else:
+        raise UnsafeDispatch("Old Tool worker retained stale owner authority")
+    result=owner.reconcile(input.execution_id,"worker-B",8,ledger.find)
     if result!="CONFIRMED_SUCCESS":
         raise RuntimeError("Receipt not safely reconciled")
     external_ref=journal.require_confirmed(input.execution_id)
@@ -114,6 +139,7 @@ def nonidempotent_receipt_task(input: ReceiptInput, ctx: Context) -> dict:
         "execution_id":input.execution_id,
         "external_reference":external_ref,
         "retry_count":ctx.retry_count,
+        "recovery_fencing_epoch":8,
         "provider_workflow_id":ctx.workflow_run_id,
     }
 
@@ -136,6 +162,8 @@ def verify():
         "worker-A",7,"ledger.debit","synthetic-account",
         "ledger-key-"+rid,
     )
+    ToolRecoveryOwner(db).initialize(
+        execution,"worker-A",7,lease_seconds=1)
     result=hatchet.runs.get_run_ref(ref.workflow_run_id).result()
     if not isinstance(result,dict):
         raise RuntimeError("No real native Hatchet result mapping")
@@ -145,6 +173,7 @@ def verify():
     out=values[0]
     if (out.get("status")!="RECEIPT_RECONCILED_NATIVE_RETRY"
             or out.get("retry_count",0)<1
+            or out.get("recovery_fencing_epoch")!=8
             or out.get("provider_workflow_id")!=ref.workflow_run_id
             or out.get("execution_id")!=execution):
         raise RuntimeError("Native retry/Receipt proof is incomplete "+repr(out))
@@ -171,6 +200,8 @@ def verify():
         "external_effect_count":1,
         "receipt_state":journal.inspect(execution)["state"],
         "tool_dispatch_events":1,
+        "recovery_fencing_epoch":8,
+        "logical_owner_transition":"worker-A/7 → worker-B/8",
         "physical_worker_A_SIGKILL":"NOT_TESTED",
         "worker_B_takeover":"NOT_TESTED",
         "cube_fencing":"NOT_TESTED",
