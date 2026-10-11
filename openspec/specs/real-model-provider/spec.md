@@ -1,7 +1,7 @@
 # real-model-provider Specification
 
 ## Purpose
-TBD - created by archiving change real-model-agent-closed-loop. Update Purpose after archive.
+Define a replaceable, opt-in Responses-compatible model provider for the model-only Harness POC, with environment-supplied credentials, real public Agent SDK calls, frozen model identity and an unambiguous deterministic test fallback.
 
 ## Requirements
 
