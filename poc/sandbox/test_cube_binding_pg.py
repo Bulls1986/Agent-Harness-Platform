@@ -186,6 +186,66 @@ class CubePgBindingTests(unittest.TestCase):
             self.gateway.reconcile_unknown(self.execution,"worker-A",7)
         self.assertEqual(self.binding.get(self.execution).state,"BLOCKED_UNKNOWN")
 
+    def test_worker_b_recovers_unknown_cube_after_creator_lost_ack(self):
+        frozen=self.binding.correlation(self.execution)
+        sid=self.transport.create(metadata=frozen)
+        self.transport.write(sid,"/workspace/proof.txt","still-on-original-cube")
+        self.binding.unknown(self.execution,"worker-A",7)
+        with self.db.tx() as c:
+            c.execute(
+                "UPDATE harness_cube_binding "
+                "SET lease_expires_at=now()-interval '1 second' "
+                "WHERE execution_id=%s",(self.execution,))
+        b=self.binding.takeover(
+            self.execution,7,"worker-B",self.scope,self.workspace,self.digest)
+        self.assertEqual(b.fencing_epoch,8)
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.reconcile_unknown(self.execution,"worker-A",7)
+        resolved=self.gateway.reconcile_unknown(self.execution,"worker-B",8)
+        self.assertEqual(resolved,sid)
+        self.assertEqual(self.gateway.read(
+            self.execution,"worker-B",8,"/workspace/proof.txt"),
+            "still-on-original-cube")
+        self.assertEqual(self.transport.created,[sid])
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.write(self.execution,"worker-A",7,
+                               "/workspace/proof.txt","stale")
+
+    def test_actual_cube_sdk_adapter_metadata_list_detail_contract(self):
+        from unittest.mock import patch, MagicMock
+        from poc.sandbox.cube_binding import NativeCubeTransport
+        native=MagicMock()
+        native.sandbox_id="sandbox-native"
+        native.get_info.return_value={
+            "sandboxID":"sandbox-native",
+            "metadata":{"harness_execution_id":"ex"},
+        }
+        native.files.read.return_value="from-guest"
+        with patch.dict(os.environ,{
+            "CUBE_API_URL":"http://127.0.0.1:3000",
+            "CUBE_TEMPLATE_ID":"tpl-synthetic",
+        }):
+            with patch("cubesandbox.Sandbox.create",return_value=native) as create:
+                with patch("cubesandbox.Sandbox.list",return_value=[
+                    {"sandboxID":"sandbox-native","metadata":{}}
+                ]) as listing:
+                    with patch("cubesandbox.Sandbox.connect",return_value=native) as connect:
+                        transport=NativeCubeTransport()
+                        self.assertEqual(
+                            transport.create(metadata={"harness_execution_id":"ex"}),
+                            "sandbox-native")
+                        create.assert_called_once_with(metadata={"harness_execution_id":"ex"})
+                        self.assertEqual(len(transport.list()),1)
+                        listing.assert_called_once_with()
+                        sb=transport.connect("sandbox-native")
+                        connect.assert_called_once_with("sandbox-native")
+                        self.assertEqual(transport.inspect(sb),{
+                            "sandboxID":"sandbox-native",
+                            "metadata":{"harness_execution_id":"ex"},
+                        })
+                        self.assertEqual(transport.read(sb,"/workspace/abc"),
+                                         "from-guest")
+
     def test_native_create_propagates_frozen_metadata_not_caller_claim(self):
         self.gateway.allocate(self.execution,"worker-A",7)
         metadata=self.transport.metadata[self.transport.created[0]]
