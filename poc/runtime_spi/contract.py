@@ -148,7 +148,8 @@ class AgentRuntimeDispatcher:
                 raise RuntimeAdmissionDenied("Stale or cross-scope SandboxGrant")
 
     async def execute(self, request: RunRequest, *,
-                      cancellation: CancelSignal | None = None) -> list[TypedEvent]:
+                      cancellation: CancelSignal | None = None,
+                      on_stream_event: Callable[[TypedEvent],None] | None = None) -> list[TypedEvent]:
         self._authorize(request)
         adapter = self._adapters.get(request.runtime)
         if adapter is None:
@@ -161,8 +162,13 @@ class AgentRuntimeDispatcher:
             if any(not isinstance(x, str) or not isinstance(v, str)
                    for x, v in payload.items()):
                 raise RuntimeAdmissionDenied("Typed event payload must be string map")
-            events.append(TypedEvent(request.context.run_id, len(events) + 1,
-                                     kind, adapter.name, payload))
+            evt=TypedEvent(request.context.run_id,len(events)+1,kind,adapter.name,payload)
+            if payload.get('mode') == 'provider_stream':
+                if kind != 'response.output_text.delta' or on_stream_event is None:
+                    raise RuntimeAdmissionDenied('Provider stream requires trusted event sink')
+                on_stream_event(evt)
+            else:
+                events.append(evt)
 
         def state(kind: str, data: dict[str, str] | None = None):
             events.append(TypedEvent(request.context.run_id, len(events) + 1,
