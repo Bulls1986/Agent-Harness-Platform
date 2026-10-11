@@ -22,4 +22,6 @@ DEV-M2 Typed SSE 和 M3 领域事实；可与 M5/M6 并行；任务编号：Conv
 
 ## Status
 
-**PLANNED · 只有规划产物，全部实现/真实验收 Tasks 尚未启动。**
+**ACTIVE · 授权 Run 详情/事件读取边界单元切片已开发，DEV-M7 整体 OPEN。**
+
+该切片仅提供受信任网关身份、当前授权策略与 Run 所属关系的注入式合同；尚未对接真实企业 IdP、PostgreSQL Run 归属事实、会话写入、SSE/OSS 授权和现网 UI。不得将单元测试通过解释为平台 API 的生产准入。
