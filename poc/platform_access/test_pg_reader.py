@@ -72,6 +72,23 @@ class PostgresAuthorizedRunTests(unittest.TestCase):
         self.current = None
         self.assertEqual(self.client.get("/api/runs/" + self.run_a).status_code, 401)
 
+    def test_postgres_rejects_in_place_owner_reassignment(self):
+        # HTTP auth reads binding before payload. DB-level immutable owner
+        # facts prevent another connection swapping the scope between reads.
+        with self.assertRaises(Exception):
+            with self.db.tx() as c:
+                c.execute("UPDATE harness_run SET project_scope=%s WHERE id=%s",
+                          ("project-C", self.run_a))
+        with self.assertRaises(Exception):
+            with self.db.tx() as c:
+                c.execute("UPDATE harness_run SET project_scope=%s,"
+                          "initiator_principal_id=%s WHERE id=%s",
+                          ("project-A", "user-A", self.legacy))
+        binding = PgRunReader(PgFacts()).binding(self.run_a)
+        self.assertEqual(binding.project_scope, "project-A")
+        with self.assertRaises(KeyError):
+            PgRunReader(self.db).binding(self.legacy)
+
     def test_owner_fact_is_insert_only_and_scoping_must_be_complete(self):
         self.db.dispatch(self.run_a + ":segment-0:create:v1")
         bound = PgRunReader(PgFacts()).binding(self.run_a)
