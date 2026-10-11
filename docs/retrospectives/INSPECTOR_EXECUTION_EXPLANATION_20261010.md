@@ -29,6 +29,6 @@
 
 ## 4. 遗留限制（继续 OPEN）
 
-真实 LiteLLM/LLM 语义输出、Token SSE、审批、非幂等 Receipt 对账、Cube Session/Worker Fencing、100 并发、旧 PDLC 数据迁移均不在本次范围。用户可见的业务结果展示规范也需要在正式 Portal 的协议设计中进一步深化，本次只验证**固定模型输出的两个 SDK 接力 POC**。
+真实 LiteLLM/LLM 语义输出、Token SSE、审批、非幂等 Receipt 对账、Cube Session/Worker Fencing、100 并发、旧 外部业务应用 数据迁移均不在本次范围。用户可见的业务结果展示规范也需要在正式 Portal 的协议设计中进一步深化，本次只验证**固定模型输出的两个 SDK 接力 POC**。
 
 **此复盘承诺：后续每条业务/Agent POC，都把“用户是否能读懂输入、执行与最终结果”作为测试先行的验收条件，而不仅是技术 API/日志正确。**

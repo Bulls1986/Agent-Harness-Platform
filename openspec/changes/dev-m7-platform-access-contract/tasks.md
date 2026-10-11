@@ -1,6 +1,6 @@
 # DEV-M7 统一 API、Chat 与用户交互 · Tasks
 
-> 状态：**ACTIVE（仅授权只读子切片单测）**，DEV-M7 全阶段仍 OPEN。工期、Owner 和 Sprint 需要在真实代码/团队容量基线上评估；所有勾选项以完整真实门禁为准。
+> 状态：**ACTIVE（仅授权只读子切片单测）**，DEV-M7 全阶段仍 OPEN。工期、Owner 和 Sprint 需要在真实代码/团队容量基线上评估；所有勾选项以完整真实门禁为准。正式外部消费方接入以 DEV-CONSUMER-02 为前置，不把消费方业务逻辑并入 Harness。
 
 > 2026-10-11 过程证据：`poc/platform_access/test_authorized_reads.py` 从缺失实现的 Red（ModuleNotFoundError）开始，新增受信任 `SecurityContext` / 持久事实 `RunBinding` / `RunReader` / 外部 Policy 的注入式边界；8 项 HTTP 单测 Green（含跨项目、权限撤销、身份 Header 伪造、非法游标、缺省配置拒绝）；新增独立 CI 工作流 `dev-m7-access.yml`。**尚缺**真实 Gateway/IAM、PG 绑定、SSE 权限、ArtifactRef、真实 UI、CI/Live 证据；故 1.1～2.3 均保持未勾选。
 

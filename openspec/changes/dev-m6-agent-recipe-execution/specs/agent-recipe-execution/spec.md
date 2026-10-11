@@ -8,7 +8,7 @@ Recipe/Plan JSON/YAML 版本、跨 SDK A→B→C、Artifact/Evidence 引用、�
 
 #### Scenario: 交付成功
 - **WHEN** 阶段依赖满足且真实系统验收执行
-- **THEN** 真实 PDLC 需求→Coding→测试串联，后继只接收已验证结果，审批前工具不可执行，失败可恢复。
+- **THEN** 真实 外部业务应用 需求→Coding→测试串联，后继只接收已验证结果，审批前工具不可执行，失败可恢复。
 
 ### Requirement: 必须覆盖正常流程与失败路径
 

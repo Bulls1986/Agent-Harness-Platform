@@ -56,6 +56,6 @@ OpenSpec 4/4 规划文件（Proposal/四能力 Specs/Design/Tasks）经 `openspe
 
 - HC-02：Provider 原生 Idempotency/Lookup + ACK 丢失主动 Reconciliation；并发 Outbox Dispatcher/Inbox 去重；真实非幂等 Tool Intent/Receipt 对账。
 - HC-03：Hatchet Worker A→B + 真 Cube Session/Workspace/Lease/Fencing，同 Scope reconnect，旧 Owner 拒绝，OpenCode FS/Shell/PTY/Git 安全隔离。
-- 真正 Token SSE + Last-Event-ID、durable WAITING_APPROVAL/INPUT、真实模型 LiteLLM 通路、100 Active Runs 资源测量与 PDLC M0–M4 迁移。
+- 真正 Token SSE + Last-Event-ID、durable WAITING_APPROVAL/INPUT、真实模型 LiteLLM 通路、100 Active Runs 资源测量与 外部业务应用 M0–M4 迁移。
 
 **最终证据结论：最小模型闭环本地成功，GitHub CI run 38037718378 成功；本项目仍处于集成 POC（LIMITED GO），不等于生产可用。**

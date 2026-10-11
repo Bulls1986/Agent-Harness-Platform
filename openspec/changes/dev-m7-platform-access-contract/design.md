@@ -6,7 +6,7 @@ Harness PG 持有业务 Run/Plan/Step/Attempt、验证、审批、Receipt/UNKNOW
 
 ## Interfaces and dependencies
 
-DEV-M2 Typed SSE 和 M3 领域事实；可与 M5/M6 并行。映射 Conversation/Turn/Run 接口；DEV-PDLC-02 前置。对外仅使用已授权的 ExecutionContext/Resource Reference，不复刻企业 IAM/OSS/备份/MCP 治理。
+DEV-M2 Typed SSE 和 M3 领域事实；可与 M5/M6 并行。映射 Conversation/Turn/Run 接口；DEV-CONSUMER-02 前置。对外仅使用已授权的 ExecutionContext/Resource Reference，不复刻企业 IAM/OSS/备份/MCP 治理。
 
 ## Implementation slice
 

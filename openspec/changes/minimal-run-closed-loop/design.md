@@ -15,7 +15,7 @@ The repository already has independent real Hatchet Embedded and AgentRuntime PO
 - **Mandatory local Run Inspector**: browser submits a real Run and reads PG-backed states, per-Step evidence, Workflow Binding and ordered timeline, including browser reload.
 
 **Non-Goals:**
-- Production-grade Portal/API, storage schema, HA, queues, CPU capacity, login/SSO, real streaming, approval, non-idempotent Tool execution, Cube/secret integration or PDLC migration. A localhost-only debugging API/Inspector **is** required.
+- Production-grade Portal/API, storage schema, HA, queues, CPU capacity, login/SSO, real streaming, approval, non-idempotent Tool execution, Cube/secret integration or 外部业务应用 migration. A localhost-only debugging API/Inspector **is** required.
 - A second workflow queue/engine, SDK internals monkey-patching, cross-DB 2PC or exact-once side-effect guarantees.
 
 ## Decisions
@@ -45,7 +45,7 @@ Only `model` capability is requested. Model-only is a legitimate HC-03 path with
 ### 6. Run Inspector: local HTTP API + static UI, no second Control Plane
 A small FastAPI adapter serves the Inspector on `127.0.0.1` only. `POST /api/runs` persists Run+Outbox in PG then asynchronously dispatches via a **single shared Hatchet Worker/Engine** (not a process per Session); `GET /api/runs`, `GET /api/runs/{id}`, `GET /api/runs/{id}/events?after=N` query PG Task Facts/Event directly. The page uses lightweight polling for real state updates and can reload after browser/server restart. Render model output as text; do not render raw HTML. Distinguish `runtime.run.completed` from the single authoritative `run.completed` business event. Failure before creation returns a visible HTTP error, while dispatch ACK uncertainty renders `BLOCKED_UNKNOWN` without duplicate submission. Do not call this real Token SSE.
 
-The UI is a debug tool, not a replacement PDLC Portal: no multi-user identity, secrets, arbitrary Shell, external API access or published internet listener. Separate the UI's read/query mechanism from the Hatchet API and keep all platform business facts in `harness_poc`.
+The UI is a debug tool, not a replacement 外部业务应用 Portal: no multi-user identity, secrets, arbitrary Shell, external API access or published internet listener. Separate the UI's read/query mechanism from the Hatchet API and keep all platform business facts in `harness_poc`.
 
 ## Runtime topology
 

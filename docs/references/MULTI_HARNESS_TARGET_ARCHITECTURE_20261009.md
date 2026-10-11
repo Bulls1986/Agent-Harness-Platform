@@ -23,7 +23,7 @@
 
 ```mermaid
 flowchart TB
-  UI["Portal / PDLC / API"] --> ROUTER["Intent Router + Agent Catalog"]
+  UI["Portal / 外部业务应用 / API"] --> ROUTER["Intent Router + Agent Catalog"]
   ROUTER --> CP["Platform Control Plane\nRun · Step · Attempt · Approval\nRecoveryPoint · Task Facts · Receipt"]
   CP --> DUR["Process/Durable SPI / Hatchet Adapter\nPlatform ID ↔ Provider Workflow Binding"]
   DUR --> HAT["Hatchet Engine / Durable DAG / Queue\nA→B Worker 安全恢复已分项实测"]

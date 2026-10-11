@@ -6,7 +6,7 @@ Harness PG 持有业务 Run/Plan/Step/Attempt、验证、审批、Receipt/UNKNOW
 
 ## Interfaces and dependencies
 
-DEV-M3/M4/M5 相关真实 Gate。映射 HC-01/02/03 + DEV-PDLC-04。对外仅使用已授权的 ExecutionContext/Resource Reference，不复刻企业 IAM/OSS/备份/MCP 治理。
+DEV-M3/M4/M5 相关真实 Gate。映射 HC-01/02/03 + DEV-CONSUMER-04。对外仅使用已授权的 ExecutionContext/Resource Reference，不复刻企业 IAM/OSS/备份/MCP 治理。
 
 ## Implementation slice
 
@@ -20,4 +20,4 @@ Recipe/Plan JSON/YAML 版本、跨 SDK A→B→C、Artifact/Evidence 引用、�
 
 ## Exit gate
 
-真实 PDLC 需求→Coding→测试串联，后继只接收已验证结果，审批前工具不可执行，失败可恢复。。测试 Red/Green/Refactor、真实端到端、CI/架构、OpenSpec 完整核对及复盘均须留下可检索证据。阶段与生产 GO 明确区分。
+真实 外部业务应用 需求→Coding→测试串联，后继只接收已验证结果，审批前工具不可执行，失败可恢复。。测试 Red/Green/Refactor、真实端到端、CI/架构、OpenSpec 完整核对及复盘均须留下可检索证据。阶段与生产 GO 明确区分。

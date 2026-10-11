@@ -1,8 +1,8 @@
 ## 范围 / Owner
 
-改动类型：[ ] 文档 / POC [ ] Adapter / Recipe [ ] Domain / SPI [ ] 安全 / 恢复 [ ] 技术或部署选型 [ ] 存量 PDLC 迁移
+改动类型：[ ] 文档 / POC [ ] Adapter / Recipe [ ] Domain / SPI [ ] 安全 / 恢复 [ ] 技术或部署选型 [ ] 存量 外部业务应用 迁移
 
-业务目的与 Owner（Harness / 旧 PDLC / 企业外围平台）：
+业务目的与 Owner（Harness / 旧 外部业务应用 / 企业外围平台）：
 
 ## 架构核对（必填）
 
@@ -11,7 +11,7 @@
 - [ ] AgentRuntime / Process / Sandbox / Model 独立；Provider 仅止于 Adapter（不适用说明）：
 - [ ] 检查 Scope、Lease、Credential、Sandbox、非幂等 Tool、UNKNOWN → Reconciliation：
 - [ ] 检查 Task Facts / OSS ArtifactRef / RecoveryPoint / 冻结版本与回滚：
-- [ ] 检查存量 PDLC API/历史/资产与同一副作用单 Writer：
+- [ ] 检查存量 外部业务应用 API/历史/资产与同一副作用单 Writer：
 
 ## 验证和风险（必填）
 

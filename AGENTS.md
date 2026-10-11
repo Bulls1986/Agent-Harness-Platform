@@ -3,6 +3,10 @@
 本文件定义 Agent、Coding Assistant、自动化工具以及人工协作者在本仓库中的统一工作原则。  
 适用于仓库根目录及全部子目录；若未来某个子目录存在更具体的 `AGENTS.md`，则以更深层文件的补充约束为准，但不得违反本文件的核心架构原则。
 
+## 数据与工程隔离硬约束
+
+**本仓库只存通用 Agent Harness 实现和平台合同。** 禁止引入企业业务消费者的私有源码、内部仓库地址/本地目录、业务 Schema、专有 API、生产数据/运行态或迁移盘点成果。业务应用必须独立建仓，单向通过版本化 Harness Public API/SDK 消费平台，**Harness 不反向依赖任何业务应用**。如需展示接入样例，只能使用非真实业务的通用、合成测试数据。
+
 # 1. 项目目标
 
 本仓库建设的是企业级、厂商无关的 **Agent Harness Platform**。
@@ -664,3 +668,10 @@ Correctness
 - 没有把“讨论建议”描述成“正式架构决策”。
 
 如果无法完全完成，应明确说明已完成部分、剩余风险与阻塞点，不得伪造收口。
+
+## Business-consumer repository and confidentiality boundary (MANDATORY)
+
+- Agent Harness Platform is an independent, reusable execution product. Private vertical applications depend on its published API/SDK, never the reverse.
+- **Do not add any private business consumer's source code, actual internal API inventory, schemas, database/OSS/session samples, group/repository addresses, deployment details, credentials or migration plans to this repository, including docs, OpenSpec, issues, PR descriptions or commit messages.**
+- External consumer integration tests use synthetic data and a generic test client only. Actual business migration is managed and versioned solely in the consumer's authorized private repository.
+- Before publishing, inspect staged changes and CI artifacts for consumer data leaks. A clean working tree is not proof that old Git history or PR caches are clean; historical disclosure needs explicit repository-owner remediation.

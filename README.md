@@ -1,15 +1,15 @@
 # Agent Harness Platform
 
-**现有 OpenCode PDLC 平台的下一代执行架构：保留已建能力、支持无感迁移，新增可组合的专业 Agent 与任务串联。** Coding 能力继续复用 OpenCode，平台层不再与单一 Agent SDK 绑定。
+**独立企业级 Agent Harness：为多个业务系统提供可组合的 Agent Runtime、可信执行、任务编排与恢复能力。** Coding 能力继续复用 OpenCode，平台层不再与单一 Agent SDK 绑定。
 
-> **项目阶段：正式研发实施（Implementation），非 POC 阶段，生产准入仍为 NO-GO。** 状态核对截至 **2026-10-11**。DEV-M0 架构决策已冻结、DEV-M1/M2 开发切片已交付：Docker PostgreSQL/真实 Hatchet、双 SDK、LiteLLM Responses、模型文本 SSE/PG 游标回放与模型级取消已通过实际联调及 CI；**完整 Run/Plan/Replan、ACK 丢失与非幂等 Receipt、Cube 可信接管、审批、PDLC 迁移和上线 Gate 仍待正式研发验收**。当前 Process/Durable SPI 实施基线为 Hatchet + PostgreSQL，DBOS 已按许可证结论排除。
+> **项目阶段：正式研发实施（Implementation），非 POC 阶段，生产准入仍为 NO-GO。** 状态核对截至 **2026-10-11**。DEV-M0 架构决策已冻结、DEV-M1/M2 开发切片已交付：Docker PostgreSQL/真实 Hatchet、双 SDK、LiteLLM Responses、模型文本 SSE/PG 游标回放与模型级取消已通过实际联调及 CI；**完整 Run/Plan/Replan、ACK 丢失与非幂等 Receipt、Cube 可信接管、审批、外部业务应用 迁移和上线 Gate 仍待正式研发验收**。当前 Process/Durable SPI 实施基线为 Hatchet + PostgreSQL，DBOS 已按许可证结论排除。
 > **阅读说明：** 本 README 是项目的**总体方案与项目入口**。正式语义遵循已 Accepted 的 [Architecture Contracts](docs/references/README.md)；正在比较的技术方案、具体实现、历史实验和风险以所链接的专题及 [Backlog](docs/ARCHITECTURE_BACKLOG.md) 为准。本文不将候选方案擅自升级为正式 ADR。
 
 > **当前架构选型与分层图权威增量：** [Hatchet Process/Durable 架构与职责/恢复/部署边界](docs/references/HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md)（候选实施基线，非生产 Accepted ADR）。**Control Plane 自研边界已按 [ADR-031：薄应用/领域控制层](docs/references/THIN_HARNESS_CONTROL_PLANE_DECISION_20261010.md) 收敛**：Hatchet 是技术执行状态/队列/调度权威；Harness 保留必要 Run/Step/Attempt 业务事实、Approval/Receipt/授权/业务终态和状态投影，不再造第二套技术执行状态机。
 
-> **架构阶段最终三合同（ADR-032 / ARCH-TODO-030：DECIDED）**：[HC-01 Workflow Mapping / Replan](docs/references/HATCHET_WORKFLOW_MAPPING_CONTRACT_20261010.md) · [HC-02 Outbox / 状态投影 / 非幂等 Receipt 一致性](docs/references/HARNESS_HATCHET_CONSISTENCY_CONTRACT_20261010.md) · [HC-03 Worker / ExecutionContext / Cube 可信绑定](docs/references/HATCHET_WORKER_SANDBOX_BINDING_CONTRACT_20261010.md)。**这三份冻结接口与安全语义，非真实集成验收 PASS。**第 4 项旧 PDLC API/会话/数据盘点已转 [Development Backlog](docs/DEVELOPMENT_BACKLOG.md) 中的 DEV-PDLC-01～05，不阻碍架构阶段收口。
+> **架构阶段最终三合同（ADR-032 / ARCH-TODO-030：DECIDED）**：[HC-01 Workflow Mapping / Replan](docs/references/HATCHET_WORKFLOW_MAPPING_CONTRACT_20261010.md) · [HC-02 Outbox / 状态投影 / 非幂等 Receipt 一致性](docs/references/HARNESS_HATCHET_CONSISTENCY_CONTRACT_20261010.md) · [HC-03 Worker / ExecutionContext / Cube 可信绑定](docs/references/HATCHET_WORKER_SANDBOX_BINDING_CONTRACT_20261010.md)。**这三份冻结接口与安全语义，非真实集成验收 PASS。**第 4 项旧 外部业务应用 API/会话/数据盘点已转 [Development Backlog](docs/DEVELOPMENT_BACKLOG.md) 中的 DEV-CONSUMER-01，不阻碍架构阶段收口。
 
-> **正式研发里程碑计划（项目管理主入口）**：[DEV-M0～M9 计划、依赖/并行顺序、退出门禁及 PDLC-M0～M4](docs/DEVELOPMENT_MILESTONES.md)。**OpenSpec 分阶段实施**：DEV-M3～M9 的 Proposal / Specs / Design / Tasks 已分别建档，规划校验通过，代码实现进度不由文档 4/4 推断；详见计划 §4。原 [minimal-run-closed-loop](openspec/changes/minimal-run-closed-loop/) 为历史已验收开发切片，原始代码与 [Compose](compose.yaml) 继续保留。
+> **正式研发里程碑计划（项目管理主入口）**：[DEV-M0～M9 计划、依赖/并行顺序、退出门禁及 外部消费者互通 Gate](docs/DEVELOPMENT_MILESTONES.md)。**OpenSpec 分阶段实施**：DEV-M3～M9 的 Proposal / Specs / Design / Tasks 已分别建档，规划校验通过，代码实现进度不由文档 4/4 推断；详见计划 §4。原 [minimal-run-closed-loop](openspec/changes/minimal-run-closed-loop/) 为历史已验收开发切片，原始代码与 [Compose](compose.yaml) 继续保留。
 
 > **M1 真实模型业务 Agent（LIMITED LIVE PASS）**：[OpenSpec 需求和任务](openspec/changes/archive/2026-10-11-real-model-agent-closed-loop/) · [真实模型与 Run Inspector 使用方法](poc/closed_loop/README.md#m1-real-litellm-responses-model-explicit-opt-in) · [测试与失败复盘](docs/retrospectives/REAL_MODEL_AGENT_CLOSED_LOOP_20261011.md)。Pydantic AI → OpenAI Agents SDK 已通过真实 LiteLLM Responses + PG 端到端，**真实模型文本 Token SSE、PG 游标重放与模型-only 取消已 LIMITED LIVE PASS；Cube、Tool Receipt、审批与生产仍 NO-GO**。
 
@@ -21,7 +21,7 @@
 
 ### 当前建设现状：从一个 Coding Agent 扩展到了多种业务场景
 
-企业内部已建设基于 **OpenCode** 的 PDLC 平台，产品、研发、测试、文档及业务等 Agent **目前统一使用 OpenCode 实现**。这一选择有充分的起步价值：OpenCode 本身是 Coding Agent，在代码阅读、文件修改、Shell、Git、代码执行和研发工具集成方面有成熟能力，帮助现有 PDLC 快速形成可用的 Agent 体验。
+企业内部已建设基于 **OpenCode** 的 外部业务应用 平台，产品、研发、测试、文档及业务等 Agent **目前统一使用 OpenCode 实现**。这一选择有充分的起步价值：OpenCode 本身是 Coding Agent，在代码阅读、文件修改、Shell、Git、代码执行和研发工具集成方面有成熟能力，帮助现有 外部业务应用 快速形成可用的 Agent 体验。
 
 但随着应用范围从研发编码扩展到需求分析、结构化文档处理、业务决策、系统协作和审批流程，**OpenCode 以 Coding 为中心的设计逐渐显现适配成本**：一些非 Coding Agent 并不需要完整的文件/Shell 执行环境，却要围绕 OpenCode 的交互和执行模型做额外补充；要实现跨 Agent 编排、持久任务状态及统一治理，还需要持续增强平台外围能力。这不是否定 OpenCode 的编码优势，而是说明**单一 Coding Agent 不适合承担所有业务 Agent 的平台底座职责**。
 
@@ -29,7 +29,7 @@
 
 | Agent 技术 | 相对擅长的方向 | 在新平台中的定位 |
 |---|---|---|
-| **OpenCode 2** | 代码库分析与修改、Shell/Git、Coding Skills 和研发工具链 | **继续保留**，作为现有 PDLC 的 Coding Runtime |
+| **OpenCode 2** | 代码库分析与修改、Shell/Git、Coding Skills 和研发工具链 | **继续保留**，作为现有 外部业务应用 的 Coding Runtime |
 | **Pydantic AI** | 类型化输入/输出、结构化数据校验、轻量业务 Agent 与工具调用 | 通用业务、文档抽取、规则化结果处理的候选 Runtime |
 | **OpenAI Agents SDK** | 工具调用、Agent Handoff、轻量多 Agent 协作与公开扩展接口 | 通用及协作类 Agent 的可选 Runtime |
 | **Microsoft Agent Framework（MAF）** | 显式 Workflow/Executor、复杂流程控制与既有 Microsoft 集成 | 工作流型 Agent 和已有系统接入的可选 Runtime |
@@ -42,11 +42,11 @@
 2. **难以发挥专业 SDK 的优势：** Agent 与 OpenCode 的运行模型绑定过深，即使另一套 SDK 更适合某种业务，也难以低成本接入、替换和升级。
 3. **缺少平台级任务串联：** 多个 Agent 不只是互相调用一下工具，还需要明确的任务步骤、输入输出交接、验证、审批、失败处理和恢复；这些不能只靠 Prompt/Skill 隐式约定。
 4. **执行资源与任务状态耦合：** 轻量业务 Agent 与需要 Shell/Git 的 Coding Agent 采用同样重的执行环境不经济；简单共享宿主机又难以实现工作空间和权限隔离。
-5. **已有建设不能丢：** 现有 PDLC 的界面、项目、Agent/Skill/MCP 配置、用户会话和业务资产必须平滑保留。新技术架构如果要求用户重新建立这些内容，就没有达到平台替换的业务目标。
+5. **已有建设不能丢：** 现有 外部业务应用 的界面、项目、Agent/Skill/MCP 配置、用户会话和业务资产必须平滑保留。新技术架构如果要求用户重新建立这些内容，就没有达到平台替换的业务目标。
 
 ### 我们的答案
 
-**以兼容现有 PDLC 为前提，将平台执行控制从 OpenCode 中解耦：保留其擅长的 Coding 能力，允许不同 Agent 选择合适的 SDK，并由统一 Harness 负责任务串联、状态、恢复和隔离。**
+**以兼容现有 外部业务应用 为前提，将平台执行控制从 OpenCode 中解耦：保留其擅长的 Coding 能力，允许不同 Agent 选择合适的 SDK，并由统一 Harness 负责任务串联、状态、恢复和隔离。**
 
 可以把它理解为一套**任务调度台 + 执行记录簿 + 安全工作间租用系统**：
 
@@ -57,7 +57,7 @@
 
 **最终目标：** 平台可通过配置 Recipe **串联不同类型的 Agent，形成可验证、可暂停和可恢复的任务**；普通会话共享 Worker，重资源阶段才按需占用隔离沙箱，各 Agent 仅在授权范围内交接工作空间与证据。
 
-**第一期交付原则：存量 PDLC 功能、资产与用户体验不退化，同时提供平台级跨 Agent 串联。** 这是两项独立验收要求，不能仅凭 SDK/Cube 技术 POC 通过就宣布已完成迁移。详见[现有 PDLC 替换与无感迁移设计](docs/references/PDLC_REPLACEMENT_MIGRATION_20261010.md)。
+**第一期交付原则：存量 外部业务应用 功能、资产与用户体验不退化，同时提供平台级跨 Agent 串联。** 这是两项独立验收要求，不能仅凭 SDK/Cube 技术 POC 通过就宣布已完成迁移。详见[现有 外部业务应用 替换与无感迁移设计](docs/DEVELOPMENT_MILESTONES.md)。
 
 ### 当前实际结论
 
@@ -70,7 +70,7 @@
 | 两个 Agent SDK 能在统一平台 Run Contract 下运行吗？ | **开发切片 LIVE PASS**：Pydantic AI/OpenAI Agents SDK 真实 LiteLLM Responses、Hatchet DAG + 独立 PG、持久业务结果与 Inspector；不代表 M3～M6 全功能 |
 | Hatchet 多 Engine / PostgreSQL 下 Worker A 强杀、B 接手原 Workflow 吗？ | **真实限定 PASS**：安全步骤、A 不重启、已完成步骤不重复；尚未验证平台同 Run + Cube + 非幂等 Tool 全链 |
 | 统一 Agent 运行、真实模型 Token SSE、Tool Receipt、租约接管是否端到端完成？ | **模型-only 真实 Token SSE + PG 游标/取消已开发验收；非幂等 Tool Receipt、Cube 真实租约接管及审批未完成** |
-| 可以进入集成开发吗？ | **已经进入正式开发阶段；下一步 DEV-M3/M5 与 PDLC-M0 并行推进** |
+| 可以进入集成开发吗？ | **已经进入正式开发阶段；下一步 DEV-M3/M5 与 外部业务应用-M0 并行推进** |
 | 可以宣布企业生产上线了吗？ | **不可以（NO-GO）** |
 
 ## 2. 这套平台具体怎样工作？
@@ -94,7 +94,7 @@
 
 ### 平台核心业务能力：跨 Agent 串联
 
-**业务目标已经明确：在无感替换现有 PDLC 的同时，让不同专业 Agent 能按步骤串起来完成一项任务。** 首个真实验收应选择现有 PDLC 的需求分析 Agent → 代码实现 Agent → 验证 Agent；同样的机制也能支持文档抽取 → 数据核对 → 业务提交。**PDLC 是优先迁移与验收场景，但串联机制不能写死为 PDLC 专用流程。**
+**平台目标：为独立业务消费者提供稳定对接，并，让不同专业 Agent 能按步骤串起来完成一项任务。** 首个真实验收应选择现有 外部业务应用 的需求分析 Agent → 代码实现 Agent → 验证 Agent；同样的机制也能支持文档抽取 → 数据核对 → 业务提交。**外部业务应用 是优先迁移与验收场景，但串联机制不能写死为 外部业务应用 专用流程。**
 
 ```mermaid
 flowchart LR
@@ -122,7 +122,7 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    U["用户 / PDLC / AI 门户 / 企业 API"]
+    U["用户 / 外部业务应用 / AI 门户 / 企业 API"]
     API["API + Responses-compatible 事件协议\nConversation / Turn / Run"]
     CP["Harness 控制平面\nRecipe / Agent 串联 → Plan / Step / Verify\nPolicy / Approval / Recovery / Version"]
     SPI["AgentRuntime SPI\n能力匹配 · Adapter 选择 · Typed Events"]
@@ -190,22 +190,22 @@ flowchart TB
 
 #### 3.1.1 业务架构（Business Architecture）
 
-**两条相互独立的业务目标：** A. 取代现有以 OpenCode 为核心的 PDLC 平台执行架构，兼容现有用户体验、项目、会话、Agent/Skill/Prompt/MCP 等资产；B. 新增专业 Agent 可配置串联，先验收产品 → 研发 → 测试，再扩展文档/业务场景。当前存量专业 Agent 均使用 OpenCode，并非已经运行在多套 SDK 上。
+**两条相互独立的业务目标：** A. 取代现有以 OpenCode 为核心的 外部业务应用 平台执行架构，兼容现有用户体验、项目、会话、Agent/Skill/Prompt/MCP 等资产；B. 新增专业 Agent 可配置串联，先验收产品 → 研发 → 测试，再扩展文档/业务场景。当前存量专业 Agent 均使用 OpenCode，并非已经运行在多套 SDK 上。
 
 ```mermaid
 flowchart TB
   subgraph ACT["参与者"]
     USER["产品 / 研发 / 测试 / 文档 / 业务用户"]
-    OPS["PDLC 运营与资产维护"]
+    OPS["外部业务应用 运营与资产维护"]
   end
   subgraph VALUE["业务价值域"]
-    MIG["原 PDLC 无感迁移\n界面 · 会话 · 项目 · Agent 资产"]
+    MIG["原 外部业务应用 无感迁移\n界面 · 会话 · 项目 · Agent 资产"]
     FLOW["专业 Agent 协作\n需求 → 编码 → 测试"]
     REUSE["复用到其他业务\n文档 → 核对 → 业务提交"]
     AUD["可验证、审批及任务级恢复"]
   end
   subgraph OWN["系统归属"]
-    OLD["现有 PDLC 业务 Owner\n需求 / Story / Project"]
+    OLD["现有 外部业务应用 业务 Owner\n需求 / Story / Project"]
     NEW["Harness 执行控制 Owner\nRun / Step / Verification"]
     EXT["企业既有能力\nIAM / Git / MCP / 知识库"]
   end
@@ -216,14 +216,14 @@ flowchart TB
   EXT -. "授权/资源引用" .-> NEW
 ```
 
-业务价值链为：接收意图 → 保留原产品能力 → 根据 Recipe 串联专业 Agent → 结构化成果交接 → Verification/Approval → 完成或安全恢复 → 回传可追溯 Evidence。迁移采用 M0–M4 灰度、单一 Writer 和回退门禁；**旧 PDLC 等价回归及新 Agent 串联业务 E2E 尚未验收**。
+业务价值链为：接收意图 → 保留原产品能力 → 根据 Recipe 串联专业 Agent → 结构化成果交接 → Verification/Approval → 完成或安全恢复 → 回传可追溯 Evidence。迁移采用 M0–M4 灰度、单一 Writer 和回退门禁；**旧 外部业务应用 等价回归及新 Agent 串联业务 E2E 尚未验收**。
 
 #### 3.1.2 逻辑架构（Logical Architecture）
 
 ```mermaid
 flowchart TB
   subgraph L1["L1 业务接入层"]
-    PORT["PDLC UI / Portal / Enterprise API"]
+    PORT["外部业务应用 UI / Portal / Enterprise API"]
     FACADE["Legacy API Facade / 路由"]
   end
   subgraph L2["L2 交互协议层"]
@@ -270,8 +270,8 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-  subgraph LEG["既有 PDLC 与兼容层"]
-    UI["既有 PDLC UI"]
+  subgraph LEG["既有 外部业务应用 与兼容层"]
+    UI["既有 外部业务应用 UI"]
     F["Legacy Facade\n历史 ID / 路由所有权"]
     OLD["旧 OpenCode 执行端\n未迁移会话"]
   end
@@ -358,7 +358,7 @@ flowchart TB
 
 #### 3.1.5 数据架构（Data Architecture）
 
-平台拥有 Task Facts 与 Metadata，OSS/S3 承载大 Payload；**Hatchet Engine 使用独立 Workflow/Queue History Schema**，平台只存 Provider Workflow/Task ID Binding 与状态核对事实；旧 PDLC 业务数据、Git Revision 和 SDK 原生 Checkpoint 归各自 Owner。
+平台拥有 Task Facts 与 Metadata，OSS/S3 承载大 Payload；**Hatchet Engine 使用独立 Workflow/Queue History Schema**，平台只存 Provider Workflow/Task ID Binding 与状态核对事实；旧 外部业务应用 业务数据、Git Revision 和 SDK 原生 Checkpoint 归各自 Owner。
 
 ```mermaid
 flowchart TB
@@ -376,7 +376,7 @@ flowchart TB
   PG["PostgreSQL\n任务状态 / Event / 版本 / Bindings"]
   OSS["OSS / S3\n文件 / Patch / 测试报告 / Evidence"]
   GIT["Git Server / Repository Workspace\nRevision Set"]
-  EXT["旧 PDLC 业务库 / 历史会话"]
+  EXT["旧 外部业务应用 业务库 / 历史会话"]
   NATIVE["Runtime Checkpoint / SandboxRef\nOpaque Provider Reference"]
   HP["Provider Workflow / Task ID\nOpaque Binding（非业务 ID）"]
   HPG["PostgreSQL Hatchet 独立 Schema\nQueue / Engine History"]
@@ -397,7 +397,7 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-  U["浏览器 / PDLC / API Client"]
+  U["浏览器 / 外部业务应用 / API Client"]
   subgraph EDGE["企业接入区"]
     LB["Internal Gateway / Legacy Route / TLS"]
   end
@@ -454,7 +454,7 @@ flowchart TB
   F --> F1["Typed Event / Token SSE / Replay\nTopology Participant / OTel Correlation"]
 ```
 
-第一期 P0 必须独立通过：① 原 PDLC 真实功能、资产、历史、API、权限回归；② 一个 Run 内至少两个不同 Runtime 按 Recipe 交接 Artifact/Evidence，验证失败阻断下游、审批等待和任务级恢复安全。功能图**不**包含企业 IAM、MCP Marketplace、计费、镜像安全或运维监控产品的自建任务。
+第一期 P0 必须独立通过：① 原 外部业务应用 真实功能、资产、历史、API、权限回归；② 一个 Run 内至少两个不同 Runtime 按 Recipe 交接 Artifact/Evidence，验证失败阻断下游、审批等待和任务级恢复安全。功能图**不**包含企业 IAM、MCP Marketplace、计费、镜像安全或运维监控产品的自建任务。
 
 #### 3.1.8 运行架构（Runtime Architecture）
 
@@ -538,7 +538,7 @@ Runtime State、Workspace State、Sandbox State 彼此独立；**Hatchet 的引�
 
 | 不变式 | 核心视图 | 当前状态 |
 |---|---|---|
-| 原 PDLC 无感兼容和跨 Agent 串联分别验收 | 业务/应用/功能 | 业务目标已确认，真实 E2E OPEN |
+| 原 外部业务应用 无感兼容和跨 Agent 串联分别验收 | 业务/应用/功能 | 业务目标已确认，真实 E2E OPEN |
 | Conversation → Turn → Run → Plan(vN) → Step → Attempt，Run 终态不重开 | 逻辑/数据/运行 | Accepted Contract |
 | AgentRuntime、Process/Durable、SandboxProvider 三个 SPI 相互独立 | 逻辑/应用/技术 | Accepted 边界；Process/Durable 当前首选 Hatchet Adapter（未生产 Accepted） |
 | Control Plane 才能最终裁决 Run 状态 | 逻辑/应用/运行 | Accepted Contract |
@@ -757,11 +757,11 @@ python -B poc/compatibility/verify_stack.py --profile cube_e2b_native
 
 ## 9. 下一阶段怎么集成？按门禁推进，而不是一次建设所有外围平台
 
-**实施输入已冻结（ADR-032）：** Run↔Hatchet Workflow Segment/Task、Outbox/Inbox 与 UNKNOWN 对账、Worker→ExecutionContext→Cube Lease/Fencing。现在按 [Development Backlog](docs/DEVELOPMENT_BACKLOG.md) 的 DEV-HC-01～03 进入集成开发；**旧 PDLC 实码盘点作为 DEV-PDLC-01～05 留给后续开发**。所有 LIVE POC 和生产 Gate 依然必须通过。
+**实施输入已冻结（ADR-032）：** Run↔Hatchet Workflow Segment/Task、Outbox/Inbox 与 UNKNOWN 对账、Worker→ExecutionContext→Cube Lease/Fencing。现在按 [Development Backlog](docs/DEVELOPMENT_BACKLOG.md) 的 DEV-HC-01～03 进入集成开发；**旧 外部业务应用 实码盘点作为 DEV-CONSUMER-01 留给后续开发**。所有 LIVE POC 和生产 Gate 依然必须通过。
 
 | 顺序 | 交付重点 | 完成标准（必须用证据证明） | 状态 |
 |---|---|---|---|
-| **P0 / 029** | **现有 OpenCode PDLC 无感替换（开发阶段 M0–M4）** | 真实现网功能/API/历史会话/项目/Agent与 Skill/MCP/Workspace 清单；原入口和权限兼容、灰度接管、禁止副作用双写，回退演练通过 | **业务目标确定；现网源码与数据迁移尚未验收** |
+| **P0 / 029** | **现有 OpenCode 外部业务应用 无感替换（开发阶段 M0–M4）** | 真实现网功能/API/历史会话/项目/Agent与 Skill/MCP/Workspace 清单；原入口和权限兼容、灰度接管、禁止副作用双写，回退演练通过 | **业务目标确定；现网源码与数据迁移尚未验收** |
 | **P0 / 025** | **跨 Agent 串联 + AgentRuntime SPI + 执行 API** | 一个 Run 中至少两个不同 Runtime 按 Recipe/Step 串联，Artifact/Evidence 交接可追踪；失败阻断/重试/审批暂停和真正 Token SSE | **Tool 接力真机通过；统一业务串联待集成** |
 | **P0 / 025–027** | SandboxProvider/Execution Lease 集成 | 从可信 Scope 签发 Lease、绑定 Workspace、同 Sandbox 接力；未知/过期/跨 Scope 拒绝；无执行需求不申请 Sandbox | **原生 Cube 功能已过；平台授权集成未过** |
 | **P0 / 026** | E2B 版本兼容与原生 SDK 续连 | 固定 2.40 已验组合；补官方 `connect(same_id)`、Pydantic Harness E2B Coder 和生产 DNS/TLS 契约；2.53 明确不支持或升级 Cube | **2.40 最小 LIVE PASS / 后续 OPEN** |
@@ -781,7 +781,7 @@ python -B poc/compatibility/verify_stack.py --profile cube_e2b_native
 
 **需要业务方最终明确的取舍**（不阻断现有架构/POC 收口）：
 
-1. **业务目标已确认：替换既有 OpenCode PDLC 并实现已有能力无感迁移，同时新增可复用的跨 Agent 串联。** 需要从旧 PDLC 的现网源码和正式功能盘点中确定迁移等价基线及第一个真实串联验收任务，不能只使用新建 Demo 证明成功。
+1. **业务目标已确认：替换既有 OpenCode 外部业务应用 并实现已有能力无感迁移，同时新增可复用的跨 Agent 串联。** 需要从旧 外部业务应用 的现网源码和正式功能盘点中确定迁移等价基线及第一个真实串联验收任务，不能只使用新建 Demo 证明成功。
 2. **恢复目标到什么粒度？** 当前 Accepted 定位为任务级恢复，但需要业务确认“从最近 Step/RecoveryPoint 继续”是否足够，还是某些交互式 Coding 场景必须做到更细粒度恢复。
 3. **100 人并发的含义？** 是同时保持 100 个逻辑 Session，还是同时有 100 个执行模型/代码/测试的活动任务？两者决定非常不同的资源与容量规划；未测之前不填容量结论。
 
