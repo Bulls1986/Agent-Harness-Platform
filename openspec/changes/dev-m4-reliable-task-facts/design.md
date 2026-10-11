@@ -28,6 +28,13 @@ PG transactional Outbox/Inbox、Provider 查询/ACK-loss Reconciliation、Tool I
 - 与 M3/旧 POC 的负例联合验证：存在任何非 PURE Tool Intent 的 Run 不允许由 `ReplanV2.promote` 走 PURE 路径；冻结 Replan Intent 后不能新登记/Dispatch Tool；旧模型-only `complete` / `acknowledge_cancel` 不能忽略已记录非 PURE Tool 后宣称无副作用业务终态。
 - 此切片不提供企业身份/审批、真实 Lease/Fencing 颁发或替换 Tool Runner，不承诺外部 Tool Exactly Once，也不构成完整 Hatchet Worker SIGKILL/A→B 接管、工具结果确认策略、非 PURE 多 Plan Recovery/生产门禁 PASS。
 
+### 第三开发切片：真实 Hatchet Native Retry 与 Tool Receipt 恢复
+
+- Hatchet SDK 1.42.1 / Engine v0.110.5 中 `task(retries=1)` 提供技术重试，Harness 不自建补投 Scheduler。首次 Native Task Attempt 持久记录 Tool Intent/Dispatch；不受外部幂等保护的另一 PostgreSQL 接收 Tool 写入，在外部 Commit 后 Tool 子进程遭受 SIGKILL，Hatchet Task 明确失败，由 Provider 自身执行 Native Retry。
+- Task Retry 的第二次实际调用只允许查询原执行的 UNKNOWN 结果；PG 可信 Owner / Fencing 从 A/7→B/8 的逻辑交接在服务端时钟确认 Lease 过期、同 Run/Plan/Provider/Execution 和 UNKNOWN 后 CAS 完成。两次 Attempt 共用原有冻结 Tool Intent / Outcome，不重复触发写入。
+- Receipt 最终事务增加当前 Recovery Owner、Epoch 与 Lease 再校验（Run/Intent/Owner 行锁）；旧 A 和两名并发争抢者无法提交冲突 Outcome。若外部无/多条证据或 Lease 过期，保持 UNKNOWN。
+- **明确限制**：真实 SIGKILL 发生在独立 Tool 子进程，而非 Hatchet Worker A；新 Native Task Attempt 的 Owner B 是平台逻辑执行者，**未证明物理 Worker B 实际接管**。没有真实 Cube Workspace/Isolation/OCI、审批和外部 Policy，不能关闭 DEV-M4/M5 退出 Gate。
+
 ## Test-first and failure injection
 
 正常验收：Provider Workflow 已接受而 Harness 创建调用超时 → 进入 BLOCKED_UNKNOWN，查询 Provider 并对账，不盲目重复创建。
