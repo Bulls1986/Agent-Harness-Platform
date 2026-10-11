@@ -76,14 +76,15 @@ async def _run_model_step(db, run_id: str, name: str, adapter, request):
         events=await AgentRuntimeDispatcher(adapter).execute(
             request,cancellation=signal,
             on_stream_event=write_chunk if adapter.live_stream else None)
-        if events[-1].type == 'run.cancelled':
-            db.acknowledge_cancel(run_id)
+        # Cancellation can race with the PG event sink. A late token may
+        # have been rejected, turning the SDK attempt into run.failed; once
+        # Dispatcher has awaited that SDK task, Worker may still confirm stop.
+        if await asyncio.to_thread(db.cancel_requested,run_id):
+            if db.run_state(run_id) == 'CANCEL_REQUESTED':
+                db.acknowledge_cancel(run_id)
             raise RuntimeError('Operator cancellation acknowledged')
         if events[-1].type != 'run.completed':
             raise RuntimeError('Model SDK did not complete: '+events[-1].type)
-        if await asyncio.to_thread(db.cancel_requested,run_id):
-            db.acknowledge_cancel(run_id)
-            raise RuntimeError('Operator cancellation acknowledged')
         return events
     finally:
         watcher.cancel()
@@ -183,7 +184,14 @@ def execute(run_id: str, prompt: str, *, command: str | None = None) -> dict:
         db.unknown(command)  # ACK could have been lost: do not resubmit.
         raise
     db.bind(command, ref.workflow_run_id)
-    result = hatchet.runs.get_run_ref(ref.workflow_run_id).result()
+    try:
+        result = hatchet.runs.get_run_ref(ref.workflow_run_id).result()
+    except Exception:
+        if db.run_state(run_id) == 'CANCELLED':
+            return {'outcome':'CANCELLED','domain_run_id':run_id,
+                    'provider_workflow_id':ref.workflow_run_id,
+                    'model_mode':cfg.mode,'token_sse':'PROVIDER_STREAM_CANCELLED'}
+        raise
     if not isinstance(result, dict):
         raise RuntimeError("Hatchet did not return authoritative workflow result")
     # Verify committed actual Step data BEFORE writing the parent business
