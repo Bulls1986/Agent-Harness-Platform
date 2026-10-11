@@ -50,9 +50,11 @@ async def execute_v2(input: SegmentInput, ctx: Context) -> dict:
         raise RuntimeError("Unexpected next Plan version")
     # A task may be claimed before the trigger call returns the real provider
     # workflow ID. It does no work until the trusted PG binding is confirmed.
+    # Prepare the schema projection once; retry only the read-only admission.
+    replan = ReplanV2(PgFacts())
     for _ in range(80):
         try:
-            ReplanV2(PgFacts()).admit(input.run_id, 2, ctx.workflow_run_id)
+            replan.admit(input.run_id, 2, ctx.workflow_run_id)
             break
         except UnsafeDispatch:
             await asyncio.sleep(0.25)
