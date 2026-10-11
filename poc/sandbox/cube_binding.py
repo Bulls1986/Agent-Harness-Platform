@@ -223,12 +223,13 @@ class CubeBinding:
                           (execution_id,)).fetchone()
             # An UNKNOWN creation ACK can be reconciled by B after
             # the expired A lease; it is NEVER permission to create again.
-            if (not row or row[9] not in ("ACTIVE","BLOCKED_UNKNOWN")
+            if (not row or row[9] not in ("ACTIVE","BLOCKED_UNKNOWN","CREATING")
                     or row[10] is not True
                     or row[6]!=expected_epoch or row[5]==new_owner
                     or row[2:5]!=(scope,workspace,environment_digest)
                     or (row[9]=="ACTIVE" and not row[7])
-                    or (row[9]=="BLOCKED_UNKNOWN" and row[7] is not None)):
+                    or (row[9] in ("BLOCKED_UNKNOWN","CREATING")
+                        and row[7] is not None)):
                 raise UnsafeDispatch("Sandbox takeover requires expired matching Scope/Workspace")
             run=c.execute("SELECT state FROM harness_run WHERE id=%s FOR UPDATE",
                           (row[1],)).fetchone()
@@ -237,7 +238,9 @@ class CubeBinding:
             c.execute(
                 "UPDATE harness_cube_binding SET owner_id=%s,fencing_epoch=%s,"
                 "lease_expires_at=now()+(%s * interval '1 second'),"
-                "binding_generation=binding_generation+1 "
+                "binding_generation=binding_generation+1,"
+                "state=CASE WHEN state='CREATING' THEN 'BLOCKED_UNKNOWN' "
+                "ELSE state END "
                 "WHERE execution_id=%s",
                 (new_owner,expected_epoch+1,lease_seconds,execution_id),
             )
