@@ -12,7 +12,8 @@
 4. 新增 `HatchetSegmentLookup`：即使 Provider 原生过滤被忽略，也对每个返回的 `additional_metadata` 的 Command Key/Run/Plan Version 做 **本地精确匹配**，读取 Provider `metadata.id`，并分页至最后一页；若分页上限/异常，保留 UNKNOWN。单元负例覆盖跨页多候选、忽略过滤、元数据不匹配、Native ID 缺失及列表不可用。
 5. 添加本地严格匹配和完整分页后，[真实 PG/Hatchet CI 38142456717](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38142456717) **SUCCESS**：34 项 PG/API/Model/Stream/M3/M4 合同测试 PASS、8 项架构合同 PASS，正常 v2 创建与模拟 ACK 丢失后原生查询补绑两条实际 Workflow 验证 PASS。
 6. 真实 ACK 丢失 E2E：Platform Run `m3-hatchet-34134ed70df840379f9754fe75671c35`；初始 v1 Provider `b528c54c-56d4-4d5e-8dbb-9cbe044b11c6`（原生 COMPLETED），新 v2 Provider `aa7f7f8a-235b-464a-a63c-7ff6b07f2307`。创建 ACK 人为丢弃后先进入 BLOCKED_UNKNOWN；Hatchet 查询精确补绑至同一个 Provider ID，最终 Segment `CONFIRMED`，Plan Version=2，事件数 9。返回 `simulated_creation_ack_loss=true`；旧 Worker Cancel 与非幂等 Tool/Receipt 均明确 `NOT_TESTED`。
-7. PR 最后提交的 CI、OpenSpec Strict/门禁审查证据以最终 Head 对应的 GitHub Actions 为准，不能把子切片成功上升为整阶段 Gate。
+7. 增加真实 PostgreSQL 双 Reconciler 并发冲突测试：两个对账者在同一 `BLOCKED_UNKNOWN` Segment 下收到不同 Provider 候选，PG CAS/行锁只允许其中一个写入有效 Binding，领域对账事件仅发生一次。[CI run 38142745445](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38142745445) SUCCESS；[Architecture Guard 38142745286](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38142745286) SUCCESS。
+8. PR 最后提交的 CI、OpenSpec Strict/门禁审查证据以最终 Head 对应的 GitHub Actions 为准；不把子切片成功上升为整阶段 Gate。
 
 ## 安全与局限
 
