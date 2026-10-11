@@ -51,7 +51,8 @@ def create_app(
             raise HTTPException(503, 'Real model configuration missing/invalid') from None
         # Only non-sensitive metadata: never return endpoint/key/authorization.
         return {'mode': cfg.mode, 'model_id': cfg.model_id,
-                'real_token_sse': 'NOT_TESTED'}
+                'real_token_sse': ('MODEL_TEXT_AVAILABLE_LIMITED_POC'
+                                   if cfg.mode=='live' else 'NO_UPSTREAM_LOCAL')}
 
     @app.get("/", include_in_schema=False)
     def home():
