@@ -57,6 +57,8 @@ jobs:
           python -B poc/verify_repo_navigation.py
       - name: Real Engine and two SDKs in one PG-backed business Run
         run: python -B -m poc.closed_loop.hatchet_pg_live
+      - name: Real Hatchet v1-to-v2 PURE Replan and independent Segment gate
+        run: python -B -m poc.closed_loop.verify_replan_v2_hatchet
       - name: Real HTTP Inspector submit and persistent refresh / process restart
         run: |
           set -euo pipefail
