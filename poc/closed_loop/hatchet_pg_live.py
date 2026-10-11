@@ -58,6 +58,37 @@ def runtime_context(run_id: str, runtime: str) -> ExecutionContext:
     )
 
 
+async def _run_model_step(db, run_id: str, name: str, adapter, request):
+    import asyncio
+    from poc.runtime_spi.contract import CancelSignal
+    signal=CancelSignal()
+    async def watch_cancel():
+        while not signal.cancelled:
+            if await asyncio.to_thread(db.cancel_requested,run_id):
+                signal.cancel()
+                return
+            await asyncio.sleep(0.4)
+    watcher=asyncio.create_task(watch_cancel())
+    def write_chunk(evt):
+        # Called by public SDK on each upstream text fragment, not post-run.
+        db.append_stream_delta(run_id,name,evt.data['delta'],evt.runtime)
+    try:
+        events=await AgentRuntimeDispatcher(adapter).execute(
+            request,cancellation=signal,
+            on_stream_event=write_chunk if adapter.live_stream else None)
+        if events[-1].type == 'run.cancelled':
+            db.acknowledge_cancel(run_id)
+            raise RuntimeError('Operator cancellation acknowledged')
+        if events[-1].type != 'run.completed':
+            raise RuntimeError('Model SDK did not complete: '+events[-1].type)
+        if await asyncio.to_thread(db.cancel_requested,run_id):
+            db.acknowledge_cancel(run_id)
+            raise RuntimeError('Operator cancellation acknowledged')
+        return events
+    finally:
+        watcher.cancel()
+        try: await watcher
+        except asyncio.CancelledError: pass
 @workflow.task(execution_timeout=timedelta(minutes=4))
 async def pydantic_step(input: LoopInput, ctx: Context) -> dict[str, str]:
     from pydantic_ai import Agent
@@ -76,12 +107,9 @@ async def pydantic_step(input: LoopInput, ctx: Context) -> dict[str, str]:
         return ModelResponse(parts=[TextPart("pydantic-sdk-real-run")])
 
     agent = make_pydantic_agent(cfg) if cfg.mode == 'live' else Agent(FunctionModel(model))
-    adapter = PydanticRuntimeAdapter(agent)
-    events = await AgentRuntimeDispatcher(adapter).execute(
-        RunRequest(runtime_context(input.run_id, "pydantic"), "pydantic", input.prompt)
-    )
-    if events[-1].type != "run.completed":
-        raise RuntimeError("Pydantic SDK Step did not complete")
+    adapter = PydanticRuntimeAdapter(agent,live_stream=cfg.mode=='live')
+    events = await _run_model_step(db,input.run_id,'pydantic',adapter,
+        RunRequest(runtime_context(input.run_id, 'pydantic'),'pydantic',input.prompt))
     result = events[-1].data["result"]
     if cfg.mode == 'live':
         # Verification Gate: never release Step B on malformed model content.
@@ -126,13 +154,9 @@ async def openai_step(input: LoopInput, ctx: Context) -> dict[str, str]:
 
     agent = (make_openai_agent(cfg) if cfg.mode == 'live'
              else Agent(name="closed-loop", model=LocalModel()))
-    adapter = OpenAIAgentsRuntimeAdapter(agent)
-    events = await AgentRuntimeDispatcher(adapter).execute(
-        RunRequest(runtime_context(input.run_id, "openai-agents"),
-                   "openai-agents", parent)
-    )
-    if events[-1].type != "run.completed":
-        raise RuntimeError("OpenAI Agents Step did not complete")
+    adapter = OpenAIAgentsRuntimeAdapter(agent,live_stream=cfg.mode=='live')
+    events = await _run_model_step(db,input.run_id,'openai',adapter,
+        RunRequest(runtime_context(input.run_id,'openai-agents'),'openai-agents',parent))
     result = events[-1].data["result"]
     if cfg.mode == 'live':
         draft = parse_requirements(parent)
@@ -170,6 +194,9 @@ def execute(run_id: str, prompt: str, *, command: str | None = None) -> dict:
         parse_requirements(observed['pydantic'])
         if not isinstance(observed['openai'], str) or not observed['openai'].startswith('【需求分析】'):
             raise ValueError('Missing verified live business report')
+    if db.cancel_requested(run_id):
+        if db.run_state(run_id)=='CANCEL_REQUESTED': db.acknowledge_cancel(run_id)
+        raise RuntimeError('Run cancelled')
     outputs = db.complete(run_id, verified_outputs=observed if cfg.mode == 'live' else None)
     snapshot = db.snapshot(run_id)
     assert snapshot["state"] == "COMPLETED"
