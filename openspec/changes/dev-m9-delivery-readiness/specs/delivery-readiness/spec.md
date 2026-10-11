@@ -8,7 +8,7 @@
 
 #### Scenario: 交付成功
 - **WHEN** 阶段依赖满足且真实系统验收执行
-- **THEN** Harness 平台安全隔离、可靠恢复、真实容量、部署/回滚 Gate 全部 PASS 后才允许 Production GO；特定外部业务应用的等价性、迁移和上线不构成平台 Gate。
+- **THEN** Harness 平台安全隔离、可靠恢复、真实容量、部署/回滚 Gate 全部 PASS 后才允许 Production GO；特定私有应用的等价性、迁移和上线不构成平台 Gate。
 
 ### Requirement: 必须覆盖正常流程与失败路径
 
