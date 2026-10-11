@@ -6,7 +6,7 @@ Harness PG 持有业务 Run/Plan/Step/Attempt、验证、审批、Receipt/UNKNOW
 
 ## Interfaces and dependencies
 
-DEV-M2 Typed SSE 和 M3 领域事实；可与 M5/M6 并行。映射 Conversation/Turn/Run 接口；DEV-CONSUMER-02 前置。对外仅使用已授权的 ExecutionContext/Resource Reference，不复刻企业 IAM/OSS/备份/MCP 治理。
+DEV-M2 Typed SSE 和 DEV-M3 持久 Run 所属事实构成完整 API 的内部依赖；当前可信身份由外部 Gateway/IAM Adapter 提供，可并行完成访问合同与回归。DEV-API-01 负责 M7 公共 API；下游 DEV-M8 独立合成客户端须依赖该版本化 API，不反向约束 M7；任何私有业务消费者都不构成前置。对外仅使用已授权的 ExecutionContext/Resource Reference，不复刻企业 IAM/OSS/备份/MCP 治理。
 
 ## Implementation slice
 
