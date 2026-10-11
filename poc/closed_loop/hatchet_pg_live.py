@@ -6,6 +6,7 @@ no token-level streaming, no cross-worker failover in this one run.
 from __future__ import annotations
 
 import argparse
+from datetime import timedelta
 import json
 import os
 import threading
@@ -57,7 +58,7 @@ def runtime_context(run_id: str, runtime: str) -> ExecutionContext:
     )
 
 
-@workflow.task()
+@workflow.task(execution_timeout=timedelta(minutes=4))
 async def pydantic_step(input: LoopInput, ctx: Context) -> dict[str, str]:
     from pydantic_ai import Agent
     from pydantic_ai.messages import ModelResponse, TextPart
@@ -89,7 +90,7 @@ async def pydantic_step(input: LoopInput, ctx: Context) -> dict[str, str]:
     return {"output": result}
 
 
-@workflow.task(parents=[pydantic_step])
+@workflow.task(parents=[pydantic_step], execution_timeout=timedelta(minutes=4))
 async def openai_step(input: LoopInput, ctx: Context) -> dict[str, str]:
     from agents import Agent
     from agents.models.interface import Model, ModelResponse
@@ -217,8 +218,12 @@ def main():
     status = 0
     try:
         print(json.dumps(execute(run_id, args.prompt), sort_keys=True), flush=True)
-    except Exception:
+    except Exception as exc:
         status = 1
+        try:
+            PgFacts().report_execution_error(run_id, type(exc).__name__)
+        except Exception:
+            pass
         traceback.print_exc()
     finally:
         hatchet.stop_embedded()
