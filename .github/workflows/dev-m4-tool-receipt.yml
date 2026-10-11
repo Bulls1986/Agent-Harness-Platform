@@ -7,12 +7,16 @@ on:
       - 'poc/closed_loop/nonidempotent_fault_worker.py'
       - 'poc/closed_loop/test_tool_receipt_fault_pg.py'
       - 'poc/closed_loop/verify_hatchet_tool_receipt_retry.py'
+      - 'poc/closed_loop/tool_recovery_owner.py'
+      - 'poc/closed_loop/test_tool_recovery_owner_pg.py'
       - 'openspec/changes/dev-m4-reliable-task-facts/**'
       - '.github/workflows/dev-m4-tool-receipt.yml'
   push:
     branches: [main]
     paths:
       - 'poc/closed_loop/verify_hatchet_tool_receipt_retry.py'
+      - 'poc/closed_loop/tool_recovery_owner.py'
+      - 'poc/closed_loop/test_tool_recovery_owner_pg.py'
       - 'poc/closed_loop/tool_receipt.py'
       - 'poc/closed_loop/external_ledger_demo.py'
       - 'poc/closed_loop/nonidempotent_fault_worker.py'
@@ -68,6 +72,6 @@ jobs:
           print("Harness DB and a separate unprotected external ledger DB created")
           PY
       - name: Real external ledger write then SIGKILL and Receipt reconciliation
-        run: python -B -m unittest poc.closed_loop.test_tool_receipt_fault_pg -v
+        run: python -B -m unittest poc.closed_loop.test_tool_receipt_fault_pg poc.closed_loop.test_tool_recovery_owner_pg -v
       - name: Real Hatchet-native Task retry reconciles Receipt without Tool replay
         run: python -B -m poc.closed_loop.verify_hatchet_tool_receipt_retry
