@@ -13,6 +13,8 @@
 1. Red：`python -m unittest poc.platform_access.test_authorized_reads -v`；因 `authorized_reads` 尚不存在，导入失败（符合测试先行）。
 2. Green：同一命令运行 5 项成功，增加 fail-closed 反例后运行 8 项成功。
 3. 测试包括合法 Run/事件游标、越项目拒绝、权限撤销重验、无身份和伪造 Header、不存在与未授权响应一致、非法游标、未显式允许不放行、Run ID 绑定不一致。
+4. 分支同步最新 `origin/main` 后重新运行：授权读取 8/8、正式架构与里程碑回归 18/18、OpenSpec Strict PASS、架构 Guard PASS。
+5. GitHub PR #65 的 [DEV-M7 授权读取 CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38137992463) 与 [Architecture Guard CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38137992419) 均为 **PASS**（对应合并同步提交 `9be738d`）。
 
 ## 失败根因与措施
 
@@ -24,7 +26,7 @@
 
 - 这仍是 Memory Reader 的 HTTP Unit/Contract 测试；真实 PostgreSQL、Gateway 认证与现网 Policy Adapter 均 **NOT_TESTED**。
 - SSE 订阅中途撤权、OSS ArtifactRef、Conversation/Turn 关系、实际 UI、真实模型/Tool/Approval 的协议映射 **OPEN**。
-- 只有 GitHub Actions 运行真正完成并得到绿色证据后才可声明 CI PASS；新工作流文件本身不等于 CI PASS。
+- 两条 PR CI 已通过，但只覆盖授权 HTTP 单测、架构静态/基础回归；真实 IAM/PG/权限动态 E2E **尚无 CI PASS 证据**。
 - 不对 DEV-M7 的 OpenSpec 全阶段、生产部署或与任何外部系统的迁移作关闭判断。
 
 ## 经验与下一步
