@@ -2,9 +2,9 @@
 
 > 状态：**ACTIVE（授权只读单测 + PostgreSQL Run 归属/不可变性真实集成子切片）**，DEV-M7 全阶段仍 OPEN。工期、Owner 和 Sprint 需要在真实代码/团队容量基线上评估；所有勾选项以完整真实门禁为准。DEV-M7 实施项为 DEV-API-01；M8（DEV-CONSUMER-01）只作为下游合成客户端合同验证，不是 M7 前置，不把消费方业务逻辑并入 Harness。
 
-> 2026-10-11 过程证据：`poc/platform_access/test_authorized_reads.py` 从缺失实现的 Red（ModuleNotFoundError）开始，新增受信任 `SecurityContext` / 持久事实 `RunBinding` / `RunReader` / 外部 Policy 的注入式边界；8 项 HTTP 单测 Green（含跨项目、权限撤销、身份 Header 伪造、非法游标、缺省配置拒绝）；新增独立 CI 工作流 `dev-m7-access.yml`。**尚缺**真实 Gateway/IAM、PG 绑定、SSE 权限、ArtifactRef、真实 UI、CI/Live 证据；故 1.1～2.3 均保持未勾选。
+> 2026-10-11 过程证据：`poc/platform_access/test_authorized_reads.py` 从缺失实现的 Red（ModuleNotFoundError）开始，新增受信任 `SecurityContext` / 持久事实 `RunBinding` / `RunReader` / 外部 Policy 的注入式边界；8 项 HTTP 单测 Green（含跨项目、权限撤销、身份 Header 伪造、非法游标、缺省配置拒绝）；新增独立 CI 工作流 `dev-m7-access.yml`。**当时尚缺**真实 Gateway/IAM、PG 绑定、SSE 权限、ArtifactRef、真实 UI、CI/Live 证据；PG 绑定后续由 A.2 子切片补足，整阶段仍有其他真实门禁 OPEN；故 1.1～2.3 均保持未勾选。
 
-> CI 更新：PR #65 上 [访问控制单测工作流](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38137992463) 和 [架构门禁工作流](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38137992419) 已 PASS；这里的「CI/Live 证据尚缺」具体指**真实 Gateway + PostgreSQL + SSE/Artifact/用户端的集成 CI 与 Live Gate**，不是新增单元工作流。阶段仍 OPEN。
+> CI 更新：PR #65 上 [访问控制单测工作流](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38137992463) 和 [架构门禁工作流](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38137992419) 已 PASS；这里的「CI/Live 证据尚缺」具体指**真实 Gateway/IAM + PostgreSQL 授权组合、SSE/Artifact/用户端的完整集成 CI 与 Live Gate**，不是新增单元工作流。阶段仍 OPEN。
 
 ## 已完成、独立验收的开发子切片（不替代整阶段 Gate）
 
