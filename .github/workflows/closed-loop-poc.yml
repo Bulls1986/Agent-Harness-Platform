@@ -6,6 +6,7 @@ on:
       - 'poc/closed_loop/**'
       - 'compose.yaml'
       - 'openspec/changes/minimal-run-closed-loop/**'
+      - 'openspec/changes/real-model-agent-closed-loop/**'
       - '.github/workflows/closed-loop-poc.yml'
 
 permissions:
@@ -50,7 +51,7 @@ jobs:
           PY
       - name: Verify OpenSpec, architecture guards and PG/API TDD contracts
         run: |
-          python -B -m unittest poc.closed_loop.test_facts_pg poc.closed_loop.test_inspector_pg -v
+          python -B -m unittest poc.closed_loop.test_facts_pg poc.closed_loop.test_inspector_pg poc.closed_loop.test_real_model -v
           python -B -m unittest tests.test_architecture_guardrails -v
           python -B poc/verify_repo_navigation.py
       - name: Real Engine and two SDKs in one PG-backed business Run
