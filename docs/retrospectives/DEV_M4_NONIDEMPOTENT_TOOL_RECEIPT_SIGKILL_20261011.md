@@ -17,6 +17,14 @@
 3. 回归包括外部已提交与未提交两个 Crash 点、外部产生两条同键写入时拒绝确认、Owner/Plan/Fencing/Attempt 漂移、伪造 Receipt、不重复派发/无自动下游放行、重连/并发。
 4. 最终 CI 证据请以 PR #70 最后 Head 的工作流结果为准，不预先用早期 Green 代表最终提交通过。独立架构 CI 同步检查 G01～G20。
 
+## 跨阶段故障补测与架构修复
+
+5. 引入真正的 Non-PURE Intent 后检查 M3 PURE Replan 发现错误放行风险：现有 `model_mode=deterministic_local_model` 不等于“本 Run 所有 Execution 均 PURE”。[Red CI 38143686671](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38143686671) 实测 **2 项 FAIL**：已登记外部 Tool 仍可在 Provider COMPLETED 后提升 PURE Plan，且已冻结 Replan 的 Run 仍能新登记 Tool。
+6. 修复 `ReplanV2.promote`：在持久 Run 行锁事务下检查是否存在任何非 PURE Tool Intent（即使 Receipt 已确认也不支持借此进入 PURE Replan）；`ToolReceiptJournal` 在冻结 Replan Intent 后拒绝新登记或派发 Tool，形成跨 M3/M4 串行化边界。
+7. 进一步审计旧模型-only Run 的 `complete/acknowledge_cancel`：若只核对两个旧模型 Step，则可能无视独立外部副作用，错误写入“完成”或“无外部 Tool 的取消确认”。[Red CI 38143855808](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38143855808) 两条真实 PG 负例 FAIL；现修改 `PgFacts` 在原有 Run 行锁事务中检测本 Run 是否存在非 PURE Intent，存在即拒绝 PURE-only 终态/取消确认。
+8. 修复后的 [Green CI 38143916845](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38143916845) **11/11 实际 PostgreSQL + 子进程 SIGKILL 测试 PASS，无 SKIPPED**，Architecture Guard 同轮 PASS。新增与原有模型/PG/Hatchet 闭环回归以最终 PR Head 为准。
+9. 本轮新增 CI 强制对 `dev-m4-reliable-task-facts` 执行 OpenSpec 1.12.0 `validate --strict`；最终执行状态以最新 Head 的 GitHub Actions 为准，不冒称已通过。
+
 ## 设计与故障复盘
 
 - **没有外部副作用 ≠ 已证实未执行**：独立账本查询的“无匹配”可能源自事务/可见性、网络、检索延迟；不能据此自动生成新 Attempt。
