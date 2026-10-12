@@ -7,6 +7,7 @@ on:
       - 'compose.yaml'
       - 'openspec/changes/minimal-run-closed-loop/**'
       - 'openspec/changes/real-model-agent-closed-loop/**'
+      - 'openspec/changes/dev-inspector-capability-verification/**'
       - 'poc/runtime_spi/**'
       - '.github/workflows/closed-loop-poc.yml'
 
@@ -52,9 +53,20 @@ jobs:
           PY
       - name: Verify OpenSpec, architecture guards and PG/API TDD contracts
         run: |
-          python -B -m unittest poc.closed_loop.test_facts_pg poc.closed_loop.test_inspector_pg poc.closed_loop.test_real_model poc.closed_loop.test_stream_sse_pg poc.closed_loop.test_plan_guard_pg poc.closed_loop.test_replan_v2_pg poc.closed_loop.test_replan_ack_pg poc.closed_loop.test_hatchet_segment_lookup -v
+          npx --yes @fission-ai/openspec@1.12.0 validate dev-inspector-capability-verification --strict
+          python -B -m unittest poc.closed_loop.test_facts_pg poc.closed_loop.test_inspector_capabilities_pg poc.closed_loop.test_inspector_pg poc.closed_loop.test_real_model poc.closed_loop.test_stream_sse_pg poc.closed_loop.test_plan_guard_pg poc.closed_loop.test_replan_v2_pg poc.closed_loop.test_replan_ack_pg poc.closed_loop.test_hatchet_segment_lookup -v
           python -B -m unittest tests.test_architecture_guardrails -v
           python -B poc/verify_repo_navigation.py
+      - name: Check capability tab browser JavaScript syntax
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html = Path('poc/closed_loop/inspector.html').read_text()
+          assert html.count('<script>') == html.count('</script>') == 1
+          Path('/tmp/harness-inspector.js').write_text(
+              html.split('<script>',1)[1].split('</script>',1)[0])
+          PY
+          node --check /tmp/harness-inspector.js
       - name: Real Engine and two SDKs in one PG-backed business Run
         run: python -B -m poc.closed_loop.hatchet_pg_live
       - name: Real Hatchet v1-to-v2 PURE Replan and independent Segment gate
