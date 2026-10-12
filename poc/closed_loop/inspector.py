@@ -7,6 +7,7 @@ enqueue a REAL Hatchet run, not a parallel task scheduler.
 from __future__ import annotations
 
 from pathlib import Path
+import re
 from typing import Callable
 from uuid import uuid4
 
@@ -41,6 +42,27 @@ def create_app(
             return facts_factory()
         except Exception:
             raise HTTPException(503, "Harness PostgreSQL unavailable") from None
+
+    @app.get("/api/verification/scenarios")
+    def capability_scenarios():
+        from .capability_inspector import catalog
+        return catalog()
+
+    @app.get("/api/verification/evidence/{run_id}")
+    def capability_evidence(run_id: str):
+        from .capability_inspector import evidence
+        # POC Run identifiers are bounded and path-safe; never infer a
+        # capability's success from an arbitrary URL, prompt or fake event.
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", run_id):
+            raise HTTPException(422, "Invalid Run ID")
+        try:
+            return evidence(facts(), run_id)
+        except KeyError:
+            raise HTTPException(404, "Unknown Run") from None
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(503, "Unable to read authoritative capability evidence") from None
 
     @app.get('/api/config')
     def get_model_config():
