@@ -21,6 +21,7 @@ import signal
 import subprocess
 import sys
 import threading
+import tempfile
 import time
 import traceback
 from uuid import uuid4
@@ -148,15 +149,21 @@ def cube_task(input: CubeInput, ctx: Context) -> dict:
     }
 
 
-def launch(role: str) -> subprocess.Popen:
+def launch(role: str, diagnostics: dict[str, str]) -> subprocess.Popen:
     env = dict(os.environ, HARNESS_M5_FLEET_ROLE=role)
-    return subprocess.Popen(
-        [sys.executable, "-B", "-m",
-         "poc.sandbox.verify_hatchet_cube_worker_takeover", "worker"],
-        env=env, stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        start_new_session=True,
-    )
+    # Synthetic-only test logs are printed on failure; never leak runtime
+    # environment/secrets, and never suppress Worker startup exceptions.
+    path = os.path.join(tempfile.gettempdir(),
+                        "harness-m5-" + role + "-" + uuid4().hex + ".log")
+    diagnostics[role] = path
+    with open(path, "w", encoding="utf-8") as log:
+        return subprocess.Popen(
+            [sys.executable, "-B", "-m",
+             "poc.sandbox.verify_hatchet_cube_worker_takeover", "worker"],
+            env=env, stdin=subprocess.DEVNULL,
+            stdout=log, stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
 
 
 def wait_for_a(binding: CubeBinding, execution: str, a: subprocess.Popen,
@@ -176,7 +183,9 @@ def wait_for_a(binding: CubeBinding, execution: str, a: subprocess.Popen,
             except Exception:
                 pass
         time.sleep(.35)
-    raise RuntimeError("Worker A never persisted expected native Guest proof")
+    fact = binding.get(execution)
+    raise RuntimeError("Worker A never persisted expected native Guest proof: "
+                       + f"binding_state={fact.state} native_id={fact.sandbox_id}")
 
 
 def verify() -> dict:
@@ -193,7 +202,8 @@ def verify() -> dict:
     digest = "sha256:synthetic-frozen-image"
     command = db.create(run_id, prompt="synthetic Cube physical Worker failover")
     db.dispatch(command)
-    a = launch("worker-A")
+    diagnostics: dict[str, str] = {}
+    a = launch("worker-A", diagnostics)
     b = None
     sid = None
     success = False
@@ -220,7 +230,7 @@ def verify() -> dict:
         if a.returncode != -signal.SIGKILL:
             raise RuntimeError("A physical OS process was not SIGKILLed")
         print("PHYSICAL_CUBE_WORKER_A_SIGKILL", a.pid, sid, flush=True)
-        b = launch("worker-B")
+        b = launch("worker-B", diagnostics)
         out = hatchet.runs.get_run_ref(ref.workflow_run_id).result()
         if not isinstance(out, dict) or len(out) != 1:
             raise RuntimeError("No true native Hatchet task result")
@@ -268,6 +278,21 @@ def verify() -> dict:
                 except ProcessLookupError:
                     pass
                 proc.wait(timeout=8)
+        if not success:
+            for role, path in diagnostics.items():
+                try:
+                    with open(path, encoding="utf-8", errors="replace") as log:
+                        tail = log.readlines()[-100:]
+                    print("SYNTHETIC_" + role + "_STARTUP_DIAGNOSTIC_BEGIN", flush=True)
+                    print("".join(tail)[-9000:], flush=True)
+                    print("SYNTHETIC_" + role + "_STARTUP_DIAGNOSTIC_END", flush=True)
+                except OSError:
+                    print("SYNTHETIC_" + role + "_DIAGNOSTIC_UNAVAILABLE", flush=True)
+        for path in diagnostics.values():
+            try:
+                os.remove(path)
+            except OSError:
+                pass
         if not success and sid:
             # ONLY emergency cleanup for an isolated synthetic test.
             # Do not use this Host privileged path from the Harness runtime.
