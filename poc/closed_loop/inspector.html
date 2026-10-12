@@ -69,16 +69,16 @@ code{overflow-wrap:anywhere;font-size:12px}#message{min-height:2.4em}
 <p class="lead">查看真实 Agent 执行过程与平台能力验证。原双 Agent 接力演示保持不变；“能力验证”单独解释每个场景的用途、要证明的能力、验收证据与边界。</p>
 </header>
 <nav class="tabbar" role="tablist" aria-label="Inspector 页面">
-<button id="tab-agent-demo" class="tab" type="button" role="tab" aria-selected="true" aria-controls="view-agent-demo" tabindex="0">双 Agent 演示</button>
+<button id="tab-agent-demo" class="tab" type="button" role="tab" aria-selected="true" aria-controls="view-agent-demo" tabindex="0">需求分析与独立审核 · 双 Agent</button>
 <button id="tab-capabilities" class="tab" type="button" role="tab" aria-selected="false" aria-controls="view-capabilities" tabindex="-1">能力验证</button>
 </nav>
 <section id="view-agent-demo" role="tabpanel" aria-labelledby="tab-agent-demo">
 <section class="panel intro" aria-labelledby="about-title">
-<h2 id="about-title">这个演示验证什么</h2>
+<h2 id="about-title">需求分析与独立审核 · 这个演示验证什么</h2>
 <p><strong>输入 → 节点 A（Pydantic AI）→ 节点 B（OpenAI Agents SDK）→ Harness 最终结果。</strong>
-Hatchet 负责两个节点的调度；Harness 保存业务 Run、每步输入输出、技术关联和最终状态。</p>
-<div class="pipeline"><span class="chip">提交输入</span><span class="arrow">→</span><span class="chip">节点 A · SDK 调用</span><span class="arrow">→</span><span class="chip">节点 B · 结果接力</span><span class="arrow">→</span><span class="chip">Run 结果</span></div>
-<p class="notice" id="mode-notice" style="margin-top:14px"><strong>重要：</strong>默认模式使用确定性本地模型，只有显式启用 Live 后才会调用真实 LiteLLM。真实 Token SSE、Cube、审批与非幂等工具未验收。</p>
+Hatchet 负责两个节点的调度；Harness 保存业务 Run、每步输入输出、技术关联和最终状态。真实模型模式下，节点 A 生成结构化需求（功能、业务规则、验收标准），节点 B 对其进行独立审核（结论 PASS / NEEDS_WORK、发现的问题、风险和改进建议），最终生成一份需求分析与审核报告。</p>
+<div class="pipeline"><span class="chip">提交输入</span><span class="arrow">→</span><span class="chip">节点 A · 需求分析</span><span class="arrow">→</span><span class="chip">节点 B · 独立审核</span><span class="arrow">→</span><span class="chip">Run 结果</span></div>
+<p class="notice" id="mode-notice" style="margin-top:14px"><strong>重要：</strong>默认模式只验证跨 SDK 调度、输出持久化和接力合同，不会根据输入生成真实需求报告；配置 Live 后才会执行真实需求分析和独立审核。Cube、审批与非幂等 Tool 是独立能力。</p>
 </section>
 <div class="layout">
 <aside>
@@ -86,7 +86,7 @@ Hatchet 负责两个节点的调度；Harness 保存业务 Run、每步输入输
 <h2>开始一次演示</h2>
 <label for="prompt">提交给节点 A 的输入</label>
 <textarea id="prompt">Review a short product requirement</textarea>
-<p class="caption" id="prompt-note">输入会保存到本地 POC PostgreSQL 用于执行回看；请勿填写密码或敏感资料。默认确定性模型的返回内容不会随输入语义变化。</p>
+<p class="caption" id="prompt-note">输入会保存到本地 POC PostgreSQL 用于执行回看；请勿填写密码或敏感资料。默认确定性模型的返回内容不会随输入语义变化。真实模型模式下才会输出结构化需求分析与独立审核报告。</p>
 <button id="start" type="button">执行完整链路</button>
 <p id="message" class="muted" role="status" aria-live="polite"></p>
 </section>
