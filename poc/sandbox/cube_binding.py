@@ -396,6 +396,18 @@ class CubeBinding:
             PgFacts.event(c,row[0],"sandbox.binding.released",
                           {"execution_id":execution_id})
             if quarantined:
+                # Destroy ACK terminates the Guest, not an external Tool
+                # Receipt. Never leave the parent Run apparently RUNNING
+                # after its only trusted execution environment is gone.
+                changed=c.execute(
+                    "UPDATE harness_run SET state='BLOCKED_UNKNOWN' "
+                    "WHERE id=%s AND state='RUNNING'",(row[0],))
+                if changed.rowcount!=1:
+                    raise UnsafeDispatch("Quarantined Run was no longer active")
+                PgFacts.event(c,row[0],"run.blocked_unknown",{
+                    "execution_id":execution_id,
+                    "reason":"NATIVE_GUEST_QUARANTINED_EXTERNAL_EFFECT_UNKNOWN",
+                    "may_retry_original_tool":False})
                 PgFacts.event(c,row[0],"sandbox.guest.quarantine.contained",{
                     "execution_id":execution_id,
                     "guest_terminated_by":"native_provider_destroy_ack",

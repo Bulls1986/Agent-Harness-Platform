@@ -479,10 +479,25 @@ class CubePgBindingTests(unittest.TestCase):
         self.assertEqual(self.transport.killed,[sid])
         self.assertEqual(self.binding.get(self.execution).state,"RELEASED")
         self.assertEqual(self.binding.get_guest_effect(effect)["state"],"DISPATCHED")
+        self.assertEqual(self.db.run_state(self.rid),"BLOCKED_UNKNOWN")
+        self.assertTrue(any(
+            event["type"]=="run.blocked_unknown"
+            for event in self.db.snapshot(self.rid)["events"]))
         self.assertEqual(len(self.transport.created),1)
         with self.assertRaises(UnsafeDispatch):
             self.binding.takeover(
                 self.execution,7,"worker-B",self.scope,self.workspace,self.digest)
+
+    def test_native_guest_effect_is_non_pure_even_without_m4_tool_journal(self):
+        self.gateway.allocate(self.execution,"worker-A",7)
+        effect=self.binding.begin_guest_effect(
+            self.execution,"worker-A",7,"OPENCODE_SHELL","sha256:required")
+        with self.db.tx() as c:
+            self.assertTrue(PgFacts.has_non_pure_tool_intent(c,self.rid))
+        self.binding.confirm_guest_effect(
+            self.execution,"worker-A",7,effect,"sha256:verified")
+        with self.db.tx() as c:
+            self.assertTrue(PgFacts.has_non_pure_tool_intent(c,self.rid))
 
     def test_quarantine_wrong_native_identity_keeps_release_uncertain(self):
         sid=self.gateway.allocate(self.execution,"worker-A",7)

@@ -110,6 +110,8 @@ def main():
         contained=True
         if binding.get(execution_id).state!="RELEASED":
             raise UnsafeDispatch("Provider Destroy ACK not committed")
+        if db.run_state(run_id)!="BLOCKED_UNKNOWN":
+            raise UnsafeDispatch("Quarantined parent Run falsely remains executable")
         with db.tx() as c:
             rows=c.execute(
                 "SELECT state FROM harness_cube_guest_effect "
@@ -138,6 +140,7 @@ def main():
             "provider_destroy_ack": "RELEASED",
             "native_guest_absent_after_destroy": True,
             "unknown_external_tool_effect": "RECONCILIATION_REQUIRED",
+            "parent_run_state": "BLOCKED_UNKNOWN",
             "native_session_recovery": "NOT_ALLOWED_GUEST_DESTROYED",
         },sort_keys=True),flush=True)
     finally:

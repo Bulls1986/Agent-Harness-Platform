@@ -31,6 +31,10 @@ SandboxProvider→Cube Scope/Lease/Fencing/WorkspaceRef 绑定、按需分配释
 - **WHEN** 旧 Owner 或其他 Scope 访问 Workspace/执行 Shell
 - **THEN** Fencing 和执行权限拒绝，禁止宿主 Shell 旁路
 
+#### Scenario: OpenCode Native Tool 结果未知且原 Guest 必须销毁
+- **WHEN** 原生 OpenCode Guest Shell 已开始运行，但 HTTP ACK 不明、Worker Lease 过期、PG Guest Effect 仍为 DISPATCHED
+- **THEN** B MUST NOT 接管或重派此工具；可信隔离流程 MUST 复核原 Scope/Workspace/Environment 和 Native Cube ID/可信元数据，再经 Provider Destroy ACK 验证原 Guest 被销毁，并在 PG 同一事务记录父 Run BLOCKED_UNKNOWN；未知外部 Tool Effect 继续留存等待独立对账。没有 Destroy ACK 时状态必须继续不确定；不得把销毁当作业务成功或外部效果回滚。
+
 ### Requirement: 未验证的结果不可升级为阶段完成
 
 若真实测试失败、SKIPPED、BLOCKED 或缺失，里程碑 SHALL 标注证据不足与 OPEN；禁止把规划 4/4 误认作代码交付或生产上线。
