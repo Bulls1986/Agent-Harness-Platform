@@ -3,8 +3,8 @@
 > 状态：**ACTIVE · 真实 Cube/Worker B03 联合接管已 PASS，其他 DEV-M5 阶段退出条件仍 OPEN**。工期、Owner 和 Sprint 需要在真实代码/团队容量基线上评估；所有勾选项以运行证据为准。来源 DEV-HC-03 / HC-03。
 
 ## 0. 前置与需求冻结
-- [ ] 0.1 审阅原有 Accepted ADR/HC 与 G01–G20，识别事实 Owner、安全边界和阻断依赖；OpenSpec 四类规划材料 Strict PASS。
-- [ ] 0.2 确认代表性真实业务/失败样本、环境及测试数据，记录本阶段交付与不做范围。
+- [x] 0.1 复核 Accepted ADR/HC-01/02/03 与 G01–G20，保留 Domain/Process/Sandbox Owner 与拒绝 Host Shell 等硬约束；DEV-M5 OpenSpec Strict 验收。证据：docs/retrospectives/DEV_M5_PHASE_EXIT_AUDIT_20261012.md。
+- [x] 0.2 冻结本阶段代表性真实故障机制、合成载荷/环境和不做范围，不复制私有业务消费者代码或数据；真实 Worker SIGKILL、Cube Create ACK-loss、Scope/Lease、模型-only 和 OpenCode Guest 样本在复盘明确。证据：docs/retrospectives/DEV_M5_PHASE_EXIT_AUDIT_20261012.md。
 
 ## 已完成的可独立验收切片（不替代后续任务）
 - [x] A.1 在纯逻辑 TrustedExecutionGate 中验证不可信 Claim 与可信 ExecutionRecord/Workspace/Scope/Lease/Fencing/Capability 的负例，缺 Sandbox 时 Shell/Files/Git Fail Closed；**证据**：docs/retrospectives/DEV_M3_M5_FIRST_SLICE_20261011.md（TDD Red→Green、PR #61，CI 38132324088）。未执行 Cube Allocate/Bind/Release 或 Worker A→B 实机接管。
@@ -25,12 +25,12 @@
 - [x] B.3 Worker Takeover 受控执行子切片 PASS：Inspector 经操作员认证的可信服务端发起固定 B03，真实 OS/Cube/PG 验证通过、持久证据可重启后查询。新 Evidence proof-c7b82a4c3c6d4a4d963e5aee8fbf52e5、新 Run m5-joint-8b90c55281864cfe8f055cb1de6fbb8d。见 docs/retrospectives/DEV_M5_INSPECTOR_TRUSTED_SCENARIO_20261012.md；其他场景与生产 IAM 保持 OPEN。
 - [x] B.3a 首个受控 HTTP 执行合同（代码与负例）：固定 B03 Native Verifier，不接受客户端 Shell/任意命令；服务端显式 opt-in、操作员认证、来源边界、单活运行、独立证据 ID、原生输出校验、脱敏持久化、失败/未知禁止假 PASS。**证据**：docs/retrospectives/DEV_M5_INSPECTOR_TRUSTED_SCENARIO_20261012.md；真实 HTTP→Hatchet→Cube 联合 Gate 另见 B.3b，已 PASS。
 - [x] B.3b Inspector HTTP→真实 Hatchet Worker A SIGKILL→B Retry→原 Cube Guest/PG Fencing 实机 PASS；新 Evidence proof-c7b82a4c3c6d4a4d963e5aee8fbf52e5、Run m5-joint-8b90c55281864cfe8f055cb1de6fbb8d、Workflow 2a4c51a8-8ade-43cb-b6f9-41a9958babbf、Sandbox 73d702e69a374e778bcae3ed79d1625a、A PID 226263 (-9)、B PID 227114 (Retry=1)、PG Epoch 8/RELEASED、Guest 连续性与重启 Inspector 后 GET 证明；E2E 退出码 0。**证据**：docs/retrospectives/DEV_M5_INSPECTOR_TRUSTED_SCENARIO_20261012.md。
-- [ ] 1.1 先写无 ExecutionContext、越权、旧 Lease/Fencing 的拒绝测试；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
+- [x] 1.1 TDD 无可信 ExecutionContext、跨 Scope、过期 Lease、旧 Fencing、操作名伪造权限和未知 Capability 拒绝；先 RED 后 GREEN，Runtime 6/6、可信 Gate 6/6、真实 PG Cube Binding 15/15；无授权时 Adapter 不被执行。证据：docs/retrospectives/DEV_M5_PHASE_EXIT_AUDIT_20261012.md。
 - [x] 1.2 完成真实 Cube Provider Allocate/Bind/Release 与 WorkspaceRef；**实机证据**：docs/retrospectives/DEV_M5_JOINT_WORKER_CUBE_IMPLEMENTATION_20261012.md。PG+Cube Live Run `m5-cube-live-4a8d7bf5d1a7470b9de6e4d699ab65dc`，Sandbox `c51b673619e0404da77913dda4e7eaf4`；真实 PG B/8 重连、Guest 原文件逐字一致及 RELEASED；同 Run Hatchet Worker 联合 B03 另见 B.2。范围不包含 OpenCode Shell/Git 或 in-flight Guest Fencing。
-- [ ] 1.3 OpenCode Shell/Files/Git 和 Worker A→B 实机接管；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
-- [ ] 1.4 模型-only 0 Sandbox、资源释放、跨 Scope 安全/CI/复盘；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
+- [ ] 1.3 OpenCode Shell/Files/Git 真实 Cube Guest 路由、受信任会话/Worktree/环境冻结、Worker A→B 恢复和在途 Guest Fencing；Guest 探针首次真实看到 OpenCode 文件存在，但完整 Native Tool E2E 尚无 PASS，不得使用 Host Shell 替代。证据与后续门禁：docs/retrospectives/DEV_M5_PHASE_EXIT_AUDIT_20261012.md。
+- [x] 1.4 模型-only 0 Sandbox、资源释放、跨 Scope 安全/CI/复盘：真实 Cube Provider Inventory Before/After = 0，PASS_REAL_PROVIDER_ZERO_SANDBOX；原真实 B03 Destroy ACK RELEASED；Scope/Lease 真实 PG 15/15 与新增单元 3/3，已纳入 CI。仅 POC/本地资源合同，不冒充生产容量。证据：docs/retrospectives/DEV_M5_PHASE_EXIT_AUDIT_20261012.md。
 
 ## 2. 阶段 Gate 与复盘
 - [ ] 2.1 复验 拒绝过期及越权 的拒绝/故障合同，正例、负例和真实集成全部 PASS；无 SKIPPED 冒充通过。
-- [ ] 2.2 记录故障根因、设计修正、测试覆盖、可复用护栏及风险，完成复盘与 Backlog 状态更新。
+- [x] 2.2 记录 WSL/Compose、Hatchet SDK、Cube Native 身份/ACK 和 Runtime 操作能力错配的根因、Red→Green 测试与风险；架构 Backlog 明确保留 OpenCode Guest/在途 Fencing 等未完硬门禁。证据：docs/retrospectives/DEV_M5_PHASE_EXIT_AUDIT_20261012.md。
 - [ ] 2.3 代码 PR/CI、架构审查通过，确认无后续生产门禁被错误关闭后，勾选 Tasks 并归档该 OpenSpec。

@@ -3,12 +3,16 @@ on:
   pull_request:
     paths:
       - 'poc/sandbox/**'
+      - 'poc/runtime_spi/**'
+      - 'tests/test_m5_*'
       - 'openspec/changes/dev-m5-sandbox-worker-binding/**'
       - '.github/workflows/dev-m5-cube-binding.yml'
   push:
     branches: [main]
     paths:
       - 'poc/sandbox/**'
+      - 'poc/runtime_spi/**'
+      - 'tests/test_m5_*'
       - 'openspec/changes/dev-m5-sandbox-worker-binding/**'
       - '.github/workflows/dev-m5-cube-binding.yml'
   workflow_dispatch:
@@ -49,6 +53,9 @@ jobs:
           python -B -m unittest discover -s tests -p test_native_cube_transport.py -v
           python -B -m unittest discover -s tests -p test_m5_cube_connect_identity.py -v
           python -B -m unittest discover -s tests -p test_m5_joint_evidence.py -v
+          python -B -m unittest discover -s tests -p test_m5_runtime_admission_security.py -v
+          python -B -m unittest discover -s tests -p test_m5_zero_sandbox_live_contract.py -v
+          python -B -m unittest discover -s tests -p test_m5_opencode_prerequisites.py -v
       - name: Compile genuine Cube smoke and require fail-closed when no endpoint
         run: |
           python -m py_compile poc/sandbox/verify_cube_sdk_smoke.py

@@ -24,6 +24,11 @@ jobs:
         run: python -B -m unittest discover -s tests -p "test_development_milestone_plan.py" -v
       - name: DEV-M5 trusted execution admission negative contracts
         run: python -B -m unittest discover -s tests -p "test_trusted_execution_gate.py" -v
+      - name: DEV-M5 operation/capability anti-spoofing and resource contracts
+        run: |
+          python -B -m unittest discover -s tests -p "test_m5_runtime_admission_security.py" -v
+          python -B -m unittest discover -s tests -p "test_m5_zero_sandbox_live_contract.py" -v
+          python -B -m unittest discover -s tests -p "test_m5_opencode_prerequisites.py" -v
       - name: Architecture docs and import boundaries
         run: python -B scripts/check_architecture_guardrails.py
       - name: Current architecture navigation and local Markdown link targets
