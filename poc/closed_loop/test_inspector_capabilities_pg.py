@@ -86,7 +86,7 @@ class CapabilityTabTests(unittest.TestCase):
     def test_unknown_run_rejected_and_bad_ids_not_executed(self):
         self.assertEqual(self.client.get("/api/verification/evidence/missing-"+uuid4().hex).status_code,404)
         self.assertEqual(self.client.get("/api/verification/evidence/"+("a"*280)).status_code,422)
-        self.assertEqual(self.client.post("/api/verification/scenarios/worker-takeover/start").status_code,405)
+        self.assertEqual(self.client.post("/api/verification/scenarios/worker-takeover/start").status_code,404)
 
     def test_single_new_tab_in_existing_inspector_and_safe_dom(self):
         html=self.client.get("/")
@@ -97,6 +97,8 @@ class CapabilityTabTests(unittest.TestCase):
         self.assertIn('id="view-capabilities"',page)
         self.assertIn('role="tablist"',page)
         self.assertIn("能力验证",page)
+        self.assertIn("需求分析与独立审核",page)
+        self.assertIn("结构化需求",page)
         self.assertIn("使用场景",page)
         self.assertIn("证明什么能力",page)
         self.assertIn("实际验收证据",page)
