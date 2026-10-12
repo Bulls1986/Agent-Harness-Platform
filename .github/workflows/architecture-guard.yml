@@ -18,12 +18,22 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Install minimal PG and typed-model imports used by native guard tests
+        run: python -m pip install 'psycopg[binary]>=3.2,<4' 'pydantic>=2.9,<3'
       - name: Negative guardrail regression tests
         run: python -B -m unittest discover -s tests -p "test_architecture_guardrails.py" -v
       - name: Formal development milestone plan and OpenSpec phase regression
         run: python -B -m unittest discover -s tests -p "test_development_milestone_plan.py" -v
       - name: DEV-M5 trusted execution admission negative contracts
         run: python -B -m unittest discover -s tests -p "test_trusted_execution_gate.py" -v
+      - name: DEV-M5 operation/capability anti-spoofing and resource contracts
+        run: |
+          python -B -m unittest discover -s tests -p "test_m5_runtime_admission_security.py" -v
+          python -B -m unittest discover -s tests -p "test_m5_zero_sandbox_live_contract.py" -v
+          python -B -m unittest discover -s tests -p "test_m5_opencode_prerequisites.py" -v
+          python -B -m unittest discover -s tests -p "test_m5_opencode_guest_http.py" -v
+          python -B -m unittest discover -s tests -p "test_m5_opencode_bound_guest.py" -v
+          python -B -m unittest discover -s tests -p "test_m5_physical_opencode_evidence.py" -v
       - name: Architecture docs and import boundaries
         run: python -B scripts/check_architecture_guardrails.py
       - name: Current architecture navigation and local Markdown link targets

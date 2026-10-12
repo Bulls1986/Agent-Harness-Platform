@@ -58,6 +58,19 @@ The first screen explains **what is being verified**, its scope and the exact tw
 
 Cube/故障注入/外部 Tool 尚**未**在这个无生产认证的 Inspector 中开放“一键执行”；当前只能查看运行结果，或通过各自有权限的开发/CI 实机 Gate 执行。后续若要从 Tab 启动这些演示，必须先集成受信任的服务端执行器、回传证据和适当的访问控制，不能直接从浏览器触发宿主机 Shell 或 SIGKILL。
 
+**2026-10-12 B.3a 增量**：原 Worker A→B + 真 Cube 联合 B03 已在独立原生 CLI 实机通过。现在 Inspector 能够在**服务端明确 opt-in**后，仅为 Worker Takeover 提供操作员凭证授权的固定可信运行器；默认仍完全只读，Cube-only 和 Receipt 仍不开放启动。该受控入口目前只完成 API/客户端代码与离线安全合同，尚不能宣称新 HTTP→真实 Cube E2E PASS。
+
+在受信任的 Linux 开发环境中，必须独立完成基础环境（Hatchet/PG/Cube）、loopback 绑定与 Operator 秘钥分发，然后在启动 Inspector 服务端之前配置：
+
+```sh
+export HARNESS_INSPECTOR_NATIVE_B03_ENABLED=1
+export HARNESS_INSPECTOR_EVIDENCE_DIR=/var/lib/harness-inspector/native-evidence
+# HARNESS_INSPECTOR_SCENARIO_TOKEN 从批准的机密存储注入，长度至少 32 ASCII 字符。
+# 同时必须配置 CUBE_API_URL、CUBE_TEMPLATE_ID 和两个独立 PG URL。
+```
+
+Inspector 执行接口为 POST /api/verification/scenarios/worker-takeover/runs，随后 GET /api/verification/executions/{execution_id}；两者都要求 X-Inspector-Scenario-Token 请求头。默认不开通，任何单独 PG Run 读取仍返回 verified=false；只有真实 Native B03 关联证明经过后端验收，才会在**受控执行证据**中标记 PASSED。未确认或异常运行记 BLOCKED_UNKNOWN，并保留独占锁供人工对账。仓库提供 poc/closed_loop/verify_trusted_scenario_api_live.py 用于后续授权的真实 Linux API-to-Cube 端到端验收。
+
 ## What the browser shows
 
 - Submit prompt to **create a real** Platform Run and PG Outbox, dispatch on **one shared Hatchet Engine/Worker**.

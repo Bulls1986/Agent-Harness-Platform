@@ -54,6 +54,8 @@ jobs:
       - name: Verify OpenSpec, architecture guards and PG/API TDD contracts
         run: |
           npx --yes @fission-ai/openspec@1.12.0 validate dev-inspector-capability-verification --strict
+          python -B -m unittest tests.test_trusted_scenario_runner -v
+          python -B -m unittest tests.test_native_provider_terminal_poll -v
           python -B -m unittest poc.closed_loop.test_facts_pg poc.closed_loop.test_inspector_capabilities_pg poc.closed_loop.test_inspector_pg poc.closed_loop.test_real_model poc.closed_loop.test_stream_sse_pg poc.closed_loop.test_plan_guard_pg poc.closed_loop.test_replan_v2_pg poc.closed_loop.test_replan_ack_pg poc.closed_loop.test_hatchet_segment_lookup -v
           python -B -m unittest tests.test_architecture_guardrails -v
           python -B poc/verify_repo_navigation.py

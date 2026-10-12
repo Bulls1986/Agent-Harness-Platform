@@ -963,3 +963,11 @@ MAF SkillsProvider
 - **退出条件**：同口径 G1/G2/G3/G6 真实复跑证据与 CI、部署差异及风险；任一完整硬门禁仍 PARTIAL/GAP 则**生产 NO-GO**。P1 要明确 Adopt / Conditional / Reject 和业务成本。最终形成独立新的 Accepted Production ADR，同步 `docs/ARCHITECTURE.md` / `docs/POC.md` 后，本条才能 CLOSED。
 
 **架构边界：** Task Facts 和业务终态始终归 Harness；Temporal History/Checkpoint 不复制、不新建重复 Scheduler；MXC 属独立 P2 候选，不成为本项硬门禁。
+
+---
+
+## ARCH-TODO-026 · M5 Guest Runtime 最终准入
+
+**状态：OPEN / P0**。2026-10-12 阶段复审确认：已经验收真实 Cube/PG/Hatchet Worker 接管与 Inspector 受控 API，模型-only 真 Provider 零沙箱，新增 Operation/Capability 匹配拒绝。完整 OpenCode Guest 仍未验收。
+
+**剩余准入**：公开 OpenCode API 的实际 Session 和 Tool 行为必须路由到获 PG Scope/Owner/Lease/Fencing 授权的原 Cube Guest，不能用宿主环境代替；跨 Worker 恢复后 Guest 文件/Git 与 Worktree 隔离、版本冻结、取消/超时/UNKNOWN Receipt、在途执行撤销必须有实际正负例。同 Run Gate 全部通过后才能完成 M5 2.1、审查合并和 2.3 归档。受影响 G02/G03/G05/G06/G08/G09/G14/G19/G20；正式生产 IAM、跨宿主 HA、OCI 与 100 Active Runs 继续归生产准入阶段。详情见 docs/retrospectives/DEV_M5_PHASE_EXIT_AUDIT_20261012.md。

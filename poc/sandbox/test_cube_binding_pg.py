@@ -8,6 +8,8 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
 import unittest
+from threading import Event
+from unittest.mock import patch
 from poc.closed_loop.facts import PgFacts, UnsafeDispatch
 from poc.sandbox.cube_binding import CubeBinding, CubeWorkspaceGateway
 
@@ -124,6 +126,19 @@ class CubePgBindingTests(unittest.TestCase):
             self.gateway.write(self.execution,"worker-A",7,
                                "/workspace/../etc/forbidden","x")
         self.assertEqual(len(self.transport.connected),baseline)
+
+    def test_cube_connect_returns_wrong_provider_identity_must_fail_closed(self):
+        sid=self.gateway.allocate(self.execution,"worker-A",7)
+        self.assertEqual(self.binding.get(self.execution).sandbox_id,sid)
+        # A faulty or compromised Provider could return another native Guest
+        # despite being asked to connect the PG-authorized sandbox locator.
+        self.transport.connect=lambda _requested: "another-cube-id"
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.read(
+                self.execution,"worker-A",7,"/workspace/secret.txt")
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.write(
+                self.execution,"worker-A",7,"/workspace/secret.txt","x")
 
     def test_cube_create_succeeds_but_pg_bind_ack_fails_no_second_create(self):
         # Crash-window: Cube MicroVM exists, but Harness PG binding ACK
@@ -257,7 +272,9 @@ class CubePgBindingTests(unittest.TestCase):
                         self.assertEqual(
                             transport.create(metadata={"harness_execution_id":"ex"}),
                             "sandbox-native")
-                        create.assert_called_once_with(metadata={"harness_execution_id":"ex"})
+                        create.assert_called_once_with(
+                            template="tpl-synthetic",timeout=300,
+                            metadata={"harness_execution_id":"ex"})
                         self.assertEqual(len(transport.list()),1)
                         listing.assert_called_once_with()
                         sb=transport.connect("sandbox-native")
@@ -355,6 +372,192 @@ class CubePgBindingTests(unittest.TestCase):
             self.gateway.read(self.execution,"worker-B",8,
                               "/workspace/proof.txt")
         self.assertEqual(len(self.transport.created),1)
+
+    def test_unresolved_guest_effect_blocks_takeover_even_after_lease_expires(self):
+        """B must not reuse a Guest while A's async Shell may still run."""
+        sid=self.gateway.allocate(self.execution,"worker-A",7)
+        effect=self.binding.begin_guest_effect(
+            self.execution,"worker-A",7,"OPENCODE_SHELL","sha256:test-intent")
+        with self.db.tx() as c:
+            c.execute("UPDATE harness_cube_binding "
+                      "SET lease_expires_at=now()-interval '1 second' "
+                      "WHERE execution_id=%s",(self.execution,))
+        with self.assertRaises(UnsafeDispatch):
+            self.binding.takeover(
+                self.execution,7,"worker-B",
+                self.scope,self.workspace,self.digest)
+        self.assertEqual(self.binding.get(self.execution).sandbox_id,sid)
+        self.assertEqual(self.binding.get(self.execution).fencing_epoch,7)
+        self.assertEqual(self.binding.get_guest_effect(effect)["state"],"DISPATCHED")
+
+    def test_confirmed_guest_effect_allows_normal_fenced_handoff(self):
+        self.gateway.allocate(self.execution,"worker-A",7)
+        effect=self.binding.begin_guest_effect(
+            self.execution,"worker-A",7,"OPENCODE_SHELL","sha256:verified")
+        self.binding.confirm_guest_effect(
+            self.execution,"worker-A",7,effect,"sha256:receipt")
+        self.assertEqual(self.binding.get_guest_effect(effect)["state"],"CONFIRMED")
+        with self.db.tx() as c:
+            c.execute("UPDATE harness_cube_binding "
+                      "SET lease_expires_at=now()-interval '1 second' "
+                      "WHERE execution_id=%s",(self.execution,))
+        b=self.binding.takeover(
+            self.execution,7,"worker-B",self.scope,self.workspace,self.digest)
+        self.assertEqual(b.fencing_epoch,8)
+
+    def test_guest_effect_wrong_owner_cannot_confirm_or_release(self):
+        self.gateway.allocate(self.execution,"worker-A",7)
+        effect=self.binding.begin_guest_effect(
+            self.execution,"worker-A",7,"OPENCODE_SHELL","sha256:unknown")
+        with self.assertRaises(UnsafeDispatch):
+            self.binding.confirm_guest_effect(
+                self.execution,"worker-B",7,effect,"sha256:fake")
+        with self.assertRaises(UnsafeDispatch):
+            self.binding.confirm_guest_effect(
+                self.execution,"worker-A",8,effect,"sha256:fake")
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.release(self.execution,"worker-A",7)
+        self.assertEqual(self.binding.get(self.execution).state,"ACTIVE")
+
+    def test_actual_http_dispatch_race_blocks_worker_b_and_unknown_result(self):
+        """Fake HTTP controls timing; PG lock/fence is genuine (not a Guest PASS)."""
+        from poc.sandbox.opencode_bound_guest import BoundOpenCodeGuest
+        started, finish = Event(), Event()
+        self.gateway.allocate(self.execution,"worker-A",7)
+        agent=BoundOpenCodeGuest(
+            self.gateway,password="synthetic-only-private-secret-long-enough")
+        def suspended_http(*args,**kwargs):
+            started.set()
+            if not finish.wait(8):
+                raise TimeoutError("Synthetic HTTP transport expired")
+            return {"data":{"synthetic":True}}
+        with patch("poc.sandbox.opencode_bound_guest._guest_http",
+                   side_effect=suspended_http):
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                running=pool.submit(
+                    agent.native_shell,self.execution,"worker-A",7,
+                    "ses_realABC","/api",
+                    "printf first > /workspace/m5-opencode/a.txt")
+                try:
+                    self.assertTrue(started.wait(5))
+                    with self.db.tx() as c:
+                        c.execute(
+                            "UPDATE harness_cube_binding SET "
+                            "lease_expires_at=now()-interval '1 second' "
+                            "WHERE execution_id=%s",(self.execution,))
+                    with self.assertRaises(UnsafeDispatch):
+                        self.binding.takeover(
+                            self.execution,7,"worker-B",
+                            self.scope,self.workspace,self.digest)
+                finally:
+                    finish.set()
+                with self.assertRaises(UnsafeDispatch):
+                    running.result(timeout=10)
+        with self.assertRaises(UnsafeDispatch):
+            self.binding.takeover(
+                self.execution,7,"worker-B",
+                self.scope,self.workspace,self.digest)
+        self.assertEqual(self.binding.get(self.execution).fencing_epoch,7)
+
+    def test_trusted_quarantine_containment_destroys_original_guest_but_never_retries(self):
+        sid=self.gateway.allocate(self.execution,"worker-A",7)
+        effect=self.binding.begin_guest_effect(
+            self.execution,"worker-A",7,"OPENCODE_SHELL","sha256:unsafe-inflight")
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.quarantine_unresolved(
+                self.execution,"worker-A",7,self.scope,self.workspace,self.digest)
+        with self.db.tx() as c:
+            c.execute("UPDATE harness_cube_binding "
+                      "SET lease_expires_at=now()-interval '1 second' "
+                      "WHERE execution_id=%s",(self.execution,))
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.quarantine_unresolved(
+                self.execution,"worker-A",7,"different-scope",self.workspace,self.digest)
+        self.assertEqual(self.transport.killed,[])
+        self.gateway.quarantine_unresolved(
+            self.execution,"worker-A",7,self.scope,self.workspace,self.digest)
+        self.assertEqual(self.transport.killed,[sid])
+        self.assertEqual(self.binding.get(self.execution).state,"RELEASED")
+        self.assertEqual(self.binding.get_guest_effect(effect)["state"],"DISPATCHED")
+        self.assertEqual(self.db.run_state(self.rid),"BLOCKED_UNKNOWN")
+        self.assertTrue(any(
+            event["type"]=="run.blocked_unknown"
+            for event in self.db.snapshot(self.rid)["events"]))
+        self.assertEqual(len(self.transport.created),1)
+        with self.assertRaises(UnsafeDispatch):
+            self.binding.takeover(
+                self.execution,7,"worker-B",self.scope,self.workspace,self.digest)
+
+    def test_native_guest_effect_is_non_pure_even_without_m4_tool_journal(self):
+        self.gateway.allocate(self.execution,"worker-A",7)
+        effect=self.binding.begin_guest_effect(
+            self.execution,"worker-A",7,"OPENCODE_SHELL","sha256:required")
+        with self.db.tx() as c:
+            self.assertTrue(PgFacts.has_non_pure_tool_intent(c,self.rid))
+        self.binding.confirm_guest_effect(
+            self.execution,"worker-A",7,effect,"sha256:verified")
+        with self.db.tx() as c:
+            self.assertTrue(PgFacts.has_non_pure_tool_intent(c,self.rid))
+
+    def test_quarantine_wrong_native_identity_keeps_release_uncertain(self):
+        sid=self.gateway.allocate(self.execution,"worker-A",7)
+        self.binding.begin_guest_effect(
+            self.execution,"worker-A",7,"OPENCODE_SHELL","sha256:unsafe-effect")
+        with self.db.tx() as c:
+            c.execute("UPDATE harness_cube_binding "
+                      "SET lease_expires_at=now()-interval '1 second' "
+                      "WHERE execution_id=%s",(self.execution,))
+        self.transport.inspect=lambda _: {
+            "sandboxID":"other-native-cube","metadata":{}}
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.quarantine_unresolved(
+                self.execution,"worker-A",7,self.scope,self.workspace,self.digest)
+        self.assertEqual(self.binding.get(self.execution).state,"RELEASING")
+        self.assertNotIn(sid,self.transport.killed)
+
+    def test_quarantine_accepts_native_provider_augmentation_but_not_identity_override(self):
+        sid=self.gateway.allocate(self.execution,"worker-A",7)
+        self.binding.begin_guest_effect(
+            self.execution,"worker-A",7,"OPENCODE_SHELL","sha256:inflight")
+        original_inspect=self.transport.inspect
+        def supplemented_info(native):
+            info=original_inspect(native)
+            info["metadata"]={
+                **info["metadata"],
+                "cube_provider_runtime":"synthetic-extra",
+                "cube_created_at":"synthetic-timestamp",
+            }
+            return info
+        self.transport.inspect=supplemented_info
+        with self.db.tx() as c:
+            c.execute("UPDATE harness_cube_binding "
+                      "SET lease_expires_at=now()-interval '1 second' "
+                      "WHERE execution_id=%s",(self.execution,))
+        self.gateway.quarantine_unresolved(
+            self.execution,"worker-A",7,self.scope,self.workspace,self.digest)
+        self.assertEqual(self.transport.killed,[sid])
+        self.assertEqual(self.binding.get(self.execution).state,"RELEASED")
+
+    def test_quarantine_native_critical_metadata_override_stays_unknown(self):
+        sid=self.gateway.allocate(self.execution,"worker-A",7)
+        self.binding.begin_guest_effect(
+            self.execution,"worker-A",7,"OPENCODE_SHELL","sha256:inflight")
+        original_inspect=self.transport.inspect
+        def forged_info(native):
+            info=original_inspect(native)
+            info["metadata"]={
+                **info["metadata"],"harness_scope":"forged-scope"}
+            return info
+        self.transport.inspect=forged_info
+        with self.db.tx() as c:
+            c.execute("UPDATE harness_cube_binding "
+                      "SET lease_expires_at=now()-interval '1 second' "
+                      "WHERE execution_id=%s",(self.execution,))
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.quarantine_unresolved(
+                self.execution,"worker-A",7,self.scope,self.workspace,self.digest)
+        self.assertEqual(self.binding.get(self.execution).state,"RELEASING")
+        self.assertNotIn(sid,self.transport.killed)
 
 
 if __name__=="__main__":

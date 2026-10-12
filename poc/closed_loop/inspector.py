@@ -16,6 +16,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, field_validator
 
 from .facts import PgFacts
+from .trusted_scenario_runner import TrustedScenarioRunner
 
 
 class RunCreate(BaseModel):
@@ -33,6 +34,7 @@ def create_app(
     *,
     facts_factory: Callable[[], PgFacts] = PgFacts,
     submit: Callable[[str, str, str], object] | None = None,
+    trusted_runner: TrustedScenarioRunner | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Harness Run Inspector (Local POC)", version="0.1.0")
     index = Path(__file__).with_name("inspector.html")
@@ -46,7 +48,58 @@ def create_app(
     @app.get("/api/verification/scenarios")
     def capability_scenarios():
         from .capability_inspector import catalog
-        return catalog()
+        result = catalog()
+        # Never mutate the module-global static catalog for other app instances.
+        result["scenarios"] = [dict(scene) for scene in result["scenarios"]]
+        if trusted_runner is not None:
+            for scene in result["scenarios"]:
+                if scene["id"] == "worker-takeover":
+                    scene["availability"] = "EXECUTABLE_OPERATOR_AUTH"
+                    scene["limitations"] = (
+                        scene["limitations"] +
+                        " 仅显式授权的 Linux 开发机可触发；需要现场确认运行权限，"
+                        "完整 OpenCode/生产安全与容量门禁仍未证明。"
+                    )
+        return result
+
+    def require_operator(request: Request) -> TrustedScenarioRunner:
+        if trusted_runner is None:
+            raise HTTPException(503, "Privileged scenario runner disabled")
+        # The HTTP service is meant to be bound only to 127.0.0.1. A
+        # browser-supplied Host header alone cannot establish local authority.
+        if request.client and request.client.host not in (
+                "127.0.0.1", "::1", "testclient"):
+            raise HTTPException(403, "Local operator only")
+        origin = request.headers.get("origin")
+        if origin and origin.rstrip("/") not in (
+                str(request.base_url).rstrip("/"),
+                "http://127.0.0.1:8765", "http://localhost:8765"):
+            raise HTTPException(403, "Cross-origin execution forbidden")
+        if not trusted_runner.authorized(
+                request.headers.get("X-Inspector-Scenario-Token")):
+            raise HTTPException(403, "Operator authorization required")
+        return trusted_runner
+
+    @app.post("/api/verification/scenarios/worker-takeover/runs",
+              status_code=202)
+    def start_native_scenario(request: Request):
+        runner = require_operator(request)
+        try:
+            proof_id = runner.start()
+        except RuntimeError:
+            raise HTTPException(409, "A native execution is active or requires reconciliation") from None
+        except Exception:
+            raise HTTPException(503, "Unable to persist trusted execution") from None
+        return {"execution_id": proof_id, "status": "RUNNING",
+                "verified": False}
+
+    @app.get("/api/verification/executions/{execution_id}")
+    def native_execution_evidence(execution_id: str, request: Request):
+        runner = require_operator(request)
+        try:
+            return runner.get(execution_id)
+        except KeyError:
+            raise HTTPException(404, "Unknown authorized execution") from None
 
     @app.get("/api/verification/evidence/{run_id}")
     def capability_evidence(run_id: str):

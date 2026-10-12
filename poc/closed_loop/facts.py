@@ -135,6 +135,19 @@ class PgFacts:
         Test POC schema may not have the new M4 journal installed yet.
         Run row must be locked by the caller to serialize intent insertions.
         """
+        # Native OpenCode Shell is also an external side effect. It must not
+        # be ignored just because the optional M4 Tool Intent journal was
+        # never installed for this synthetic Run.
+        if c.execute(
+            "SELECT to_regclass('harness_cube_guest_effect') IS NOT NULL"
+        ).fetchone()[0]:
+            if c.execute(
+                "SELECT 1 FROM harness_cube_guest_effect AS effect "
+                "JOIN harness_cube_binding AS binding "
+                "ON binding.execution_id=effect.execution_id "
+                "WHERE binding.run_id=%s LIMIT 1", (rid,),
+            ).fetchone():
+                return True
         if not c.execute(
             "SELECT to_regclass('harness_tool_intent') IS NOT NULL"
         ).fetchone()[0]:

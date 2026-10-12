@@ -30,6 +30,15 @@ def validate_milestones(root: Path) -> list[str]:
             errors.append(f"milestone missing in plan: {code}")
     for code, (change_name, capability) in PHASES.items():
         base = root / "openspec" / "changes" / change_name
+        archive_root = root / "openspec" / "changes" / "archive"
+        archives = sorted(archive_root.glob("*-" + change_name))
+        if base.is_dir() and archives:
+            errors.append(f"{code} duplicate active and archived stage")
+        archived = not base.is_dir() and len(archives) == 1
+        if not base.is_dir() and len(archives) > 1:
+            errors.append(f"{code} ambiguous archived stage")
+        if archived:
+            base = archives[0]
         required = [
             ".openspec.yaml", "proposal.md", "design.md", "tasks.md",
             f"specs/{capability}/spec.md",
@@ -40,7 +49,11 @@ def validate_milestones(root: Path) -> list[str]:
         tasks = base / "tasks.md"
         if tasks.is_file():
             body = tasks.read_text(encoding="utf-8")
-            if not re.search(r"(?m)^- \[ \] ", body):
+            if archived and re.search(r"(?m)^- \[ \] ", body):
+                errors.append(f"{code} unfinished archived stage")
+            elif archived and not re.search(r"(?m)^- \[[xX]\] ", body):
+                errors.append(f"{code} empty archived stage without checked evidence")
+            elif not archived and not re.search(r"(?m)^- \[ \] ", body):
                 errors.append(f"{code} missing open implementation tasks")
             for line in body.splitlines():
                 if not re.match(r"^- \[[xX]\] ", line):
@@ -53,6 +66,10 @@ def validate_milestones(root: Path) -> list[str]:
                         f"{code} incorrectly claims implemented tasks are done "
                         "without locally verifiable evidence"
                     )
+        if archived and not (
+            root / "openspec" / "specs" / capability / "spec.md"
+        ).is_file():
+            errors.append(f"{code} archived stage missing canonical spec")
         if change_name not in text:
             errors.append(f"{code} missing OpenSpec plan navigation")
     readme = root / "README.md"
@@ -132,6 +149,41 @@ class MilestonePlanTests(unittest.TestCase):
             self.assertEqual(validate_milestones(root), [])
 
 
+
+    def test_archived_stage_requires_all_tasks_done_and_canonical_spec(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "docs/retrospectives").mkdir(parents=True)
+            (root / "docs/retrospectives/proof.md").write_text("real evidence")
+            (root / "docs/DEVELOPMENT_MILESTONES.md").write_text(
+                " ".join(f"DEV-M{i}" for i in range(10)) + " " +
+                " ".join(name for name, _ in PHASES.values()))
+            (root / "README.md").write_text(
+                "正式研发实施 docs/DEVELOPMENT_MILESTONES.md",
+                encoding="utf-8")
+            for code, (name, cap) in PHASES.items():
+                base = root / "openspec/changes"
+                if code == "DEV-M5":
+                    base = base / ("archive/2026-10-12-" + name)
+                else:
+                    base = base / name
+                for rel in (".openspec.yaml", "proposal.md", "design.md",
+                            "tasks.md", f"specs/{cap}/spec.md"):
+                    path = base / rel
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    task = ("- [x] proof; docs/retrospectives/proof.md\n"
+                            if code == "DEV-M5" else "- [ ] work\n")
+                    path.write_text(task if rel == "tasks.md" else "document")
+            spec = root / "openspec/specs/sandbox-worker-binding/spec.md"
+            spec.parent.mkdir(parents=True)
+            spec.write_text("accepted")
+            self.assertEqual(validate_milestones(root), [])
+            archived_tasks = (root / "openspec/changes/archive/"
+                              "2026-10-12-dev-m5-sandbox-worker-binding/tasks.md")
+            archived_tasks.write_text("- [ ] unfinished\n")
+            self.assertTrue(any(
+                "unfinished archived stage" in error
+                for error in validate_milestones(root)))
 
     def test_m7_active_slice_and_api_owner_stay_in_sync(self):
         milestones = (ROOT / "docs/DEVELOPMENT_MILESTONES.md").read_text(encoding="utf-8")
