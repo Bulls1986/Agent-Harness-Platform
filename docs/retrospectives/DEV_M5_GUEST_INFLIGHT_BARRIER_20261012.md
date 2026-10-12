@@ -22,4 +22,8 @@ PG 在途工具接管屏障已完成 Red→Green，并在真实 PostgreSQL 16 �
 
 ## 明确未满足的硬门禁
 
+## PR Head CI 首轮回归根因与修复
+
+提交 66a2aa9 后，Architecture Guard 与 DEV-M5 PG/SDK 两个 Workflow 第一次均 FAILED，而 Inspector Closed Loop SUCCESS。读取 GitHub Actions 的**实际失败日志**可知不是产品行为回归：新增负例导入的 poc.closed_loop.facts 需要 psycopg，而架构最小环境没有安装；真实 Native Worker 证据校验模块导入 pydantic，而 PG/SDK 最小环境没有安装。已在对应 Workflow 显式补充 psycopg[binary] 与 pydantic 版本上界，重新以本地 41/41、PG 19/19 和严格 OpenSpec 执行验证；修复后仍须以最新远端 Head CI 结果为准。
+
 本轮只验证了受控入口的 Pending-Effect 安全阻断。OpenCode Shell 可能创建 detached process 或在终态 marker 之后仍存在其他进程；后台子进程强制撤销、Guest 层进程终止/隔离，以及 UNKNOWN Native Tool Receipt 的可证明对账恢复流程均没有完整实机证明。必须保留 DISPATCHED 并由受信任操作员结合原 Cube 进程与外部回执对账。没有可验证的终止证据前不得允许 B 接管，不得释放 Sandbox，更不得宣布 M5 全阶段完成。
