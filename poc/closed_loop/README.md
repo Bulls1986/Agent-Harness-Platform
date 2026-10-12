@@ -49,6 +49,8 @@ The first screen explains **what is being verified**, its scope and the exact tw
 
 新增的「能力验证」Tab 用场景而不是 JSON 为主线，针对四项能力逐一展示：
 
+Inspector 在 `mode=live` 时把原演示 Tab 明确命名为「真实 LLM · 产品需求设计与独立评审」，由产品 Agent 解析需求、评审 Agent 独立审核并展示报告；`mode=local` 时命名为「双 Agent SDK 接力 · 固定输出」。页面模式来自服务端 `/api/config`，不会用固定输出冒充真实模型；仅当用户未修改输入框默认占位内容时注入非敏感中文示例。
+
 - **双 Agent 跨 SDK 接力**：业务场景是产品分析与独立审核；证明跨 Agent SDK 调度、持久化节点数据和最终结果。这一项可以从原 Tab 直接执行。
 - **Cube Workspace 恢复**：业务场景是研发/测试 Agent 中断后续跑，证明同一 Sandbox ID / WorkspaceRef、旧 Owner 失效、新 Owner Guest 文件内容保持；实际 Cube Guest 和释放必须由真实运行器证明。
 - **Hatchet Worker A→B 故障接管**：业务场景是 Worker 异常退出后任务恢复；必须有真实 PID、A SIGKILL 退出码 -9、B 不同 PID、同 Workflow Native Retry、原 Cube 数据与 Epoch 才能算 PASS。该联合实机 Gate 尚未通过。
