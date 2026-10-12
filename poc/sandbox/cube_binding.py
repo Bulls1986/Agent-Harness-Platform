@@ -381,7 +381,14 @@ class CubeWorkspaceGateway:
         sbid=self.binding.mark_releasing(execution_id,owner,epoch)
         try:
             sb=self.transport.connect(sbid)
+            native_id=sb if isinstance(sb,str) else getattr(sb,"sandbox_id",None)
+            if native_id != sbid:
+                # Never kill another Guest or record a false Destroy ACK.
+                # Keep RELEASING pending operator/provider reconciliation.
+                raise UnsafeDispatch("Cube destroy blocked: wrong native Sandbox identity")
             self.transport.kill(sb)
+        except UnsafeDispatch:
+            raise
         except Exception:
             # RELEASING is not an ACK: remain blocked, never make a second
             # sandbox while destroy confirmation is uncertain.

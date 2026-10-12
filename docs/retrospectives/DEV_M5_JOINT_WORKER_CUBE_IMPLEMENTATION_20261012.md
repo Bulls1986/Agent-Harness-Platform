@@ -38,3 +38,7 @@
 继续采用 Red→Green 补上受信任 SDK connect 返回实例身份校验：旧实现虽以 PG 中的 Sandbox ID 调用 Native Connect，却没有核对原生 SDK 返回的 Sandbox ID，错误的 Provider 返回对象可能在有效 Owner Permit 下被读写。新增 tests/test_m5_cube_connect_identity.py 首次运行 3 个错误 Native ID 子例全部失败；修改 CubeWorkspaceGateway._attach 对返回的 Native ID 做精确比较，缺 ID / 错 ID 均在 Guest 数据调用之前 UnsafeDispatch，正确 ID 正例仍可读取，Green 2/2 PASS。对应 PG 合同增加恶意 Fake Transport 测例，须待真实 PG CI 执行后判定。
 
 常规 dev-m5-cube-binding 工作流现明确执行 Immutable Template、Native Connect identity、Joint Evidence 三组纯单测及原有真实 PG/Fake Cube 合同；专用真实 Cube Workflow 也包含这些安全负例。**本次后续提交的最终 Head CI 仍需核验**，且不能把任何普通 PG/Fake Cube CI 成功视作真实 Cubes/Worker 联合 PASS。
+
+其后发现资源释放同样缺少对 Native Connect 返回身份的最终核对，错误的 SDK 返回对象可能导致删除另一 Sandbox 并误将原 Sandbox 记录为已 RELEASED。新增 Destroy 负例首次 Red（2 个错误身份场景 FAIL）；Release 在 Kill 前核对原生实例 ID，不符合则保持 RELEASING 等待对账，正确实例才 Kill 并确认 ACK；Green 共 4/4，组合离线回归 16/16 PASS。Native 连接、Destroy 均不能把 Provider Locator 当作授权依据。
+
+上一阶段 PR Head 2ae054e 的 Architecture Guards CI 38225131623 **SUCCESS** 与 DEV-M5 Real PG/Fake Cube CI 38225131595 **SUCCESS** 已核实；因此 B.1 模板与 SDK 参数合同子切片有可核查的远端结果。最新释放身份保护仍须在新 Head 单独复验。真实 Hatchet + Cube 联合 Gate 在 Cube API 不可访问情况下仍无可计入的 PASS 证据。
