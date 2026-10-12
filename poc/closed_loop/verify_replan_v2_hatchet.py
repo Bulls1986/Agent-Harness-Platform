@@ -22,6 +22,7 @@ from poc.closed_loop.plan_guard import PlanGuard
 from poc.closed_loop.replan_v2 import ReplanV2
 from poc.closed_loop.segment_reconcile import SegmentReconciler
 from poc.closed_loop.hatchet_segment_lookup import HatchetSegmentLookup
+from poc.closed_loop.native_completion_gate import await_native_completed
 
 
 hatchet = Hatchet.from_embedded(ClientConfig(embedded=EmbeddedHatchetConfig(
@@ -84,7 +85,13 @@ def execute(*, simulate_ack_loss: bool = False) -> dict:
         raise RuntimeError("True v1 Provider did not return replan verdict")
     guard.request_replan(run_id, 1, "sha256:pure-m3-v2", "verified replan needed")
     replan = ReplanV2(db)
-    native = hatchet.runs.get_status(ref1.workflow_run_id)
+    # The native result may precede the observable terminal Workflow status
+    # by a short engine/DB propagation delay. Never weaken ReplanV2.promote:
+    # observe actual typed COMPLETED before its independent domain recheck.
+    native = await_native_completed(
+        hatchet.runs.get_status, ref1.workflow_run_id,
+        timeout_secs=30, poll_interval_secs=0.25,
+    )
     key = replan.promote(run_id, hatchet.runs.get_status)
     if db.snapshot(run_id)["plan_version"] != 2:
         raise RuntimeError("PG did not atomically promote to Plan v2")

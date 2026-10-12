@@ -16,6 +16,8 @@ from fastapi.testclient import TestClient
 from poc.closed_loop.inspector import create_app
 from poc.closed_loop.trusted_scenario_runner import TrustedScenarioRunner
 
+INSPECTOR_EVIDENCE_DEADLINE_SECONDS = 840
+
 
 def verify() -> dict:
     with tempfile.TemporaryDirectory(prefix="ahp-b3-native-") as root:
@@ -38,7 +40,10 @@ def verify() -> dict:
         if response.status_code != 202:
             raise AssertionError("Native physical scenario not admitted")
         execution_id = response.json()["execution_id"]
-        deadline = time.monotonic() + 250
+        # A native Cube Create alone can take 300 seconds. HTTP verification
+        # must outlive the trusted 780-second backend run, not tear down the
+        # evidence directory while a valid native execution is still active.
+        deadline = time.monotonic() + INSPECTOR_EVIDENCE_DEADLINE_SECONDS
         while time.monotonic() < deadline:
             result = client.get(
                 "/api/verification/executions/" + execution_id,

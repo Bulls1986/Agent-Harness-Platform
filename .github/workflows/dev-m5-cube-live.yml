@@ -34,8 +34,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install pinned SDK major and real PG client
-        run: python -m pip install 'psycopg[binary]>=3.2,<4' 'cubesandbox==0.7.0' 'hatchet-sdk==1.42.1'
+      - name: Install pinned SDK major, real PG client and Inspector HTTP contracts
+        run: python -m pip install 'psycopg[binary]>=3.2,<4' 'cubesandbox==0.7.0' 'hatchet-sdk==1.42.1' 'fastapi>=0.115,<1' 'httpx>=0.27,<1'
       - name: Offline fail-closed adapter and joint-evidence contracts
         run: |
           python -B -m unittest discover -s tests -p test_native_cube_transport.py -v
@@ -44,6 +44,8 @@ jobs:
           python -B -m unittest discover -s tests -p test_m5_live_worker_time_budget.py -v
           python -B -m unittest discover -s tests -p test_m5_hatchet_task_registration.py -v
           python -B -m unittest discover -s tests -p test_m5_worker_diagnostics.py -v
+          python -B -m unittest discover -s tests -p test_trusted_scenario_runner.py -v
+          python -B -m unittest discover -s tests -p test_m5_inspector_live_budget.py -v
       - name: Strict DEV-M5 OpenSpec validation
         run: npx --yes @fission-ai/openspec@1.12.0 validate dev-m5-sandbox-worker-binding --strict
       - name: Fail closed if real Cube endpoint and template unavailable
@@ -64,3 +66,5 @@ jobs:
           PY
       - name: Real same-Run Hatchet Worker A SIGKILL / B native retry and original Cube Guest
         run: timeout --signal=KILL 780s python -B -m poc.sandbox.verify_hatchet_cube_worker_takeover controller
+      - name: Real authenticated Inspector API to Hatchet/PG/Cube and durable evidence restart
+        run: timeout --signal=KILL 930s python -B -m poc.closed_loop.verify_trusted_scenario_api_live

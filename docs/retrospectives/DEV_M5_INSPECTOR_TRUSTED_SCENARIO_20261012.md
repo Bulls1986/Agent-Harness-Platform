@@ -45,6 +45,12 @@
 
 限制：E2E 是在真正的 ASGI HTTP 路由上运行，使用 TestClient 而不是用户手工点击浏览器，也不是生产认证/容器长期运行验收；Cube-only、非幂等 Tool Receipt 的独立演示执行、OpenCode 完整 Guest/in-flight fencing 和整个 DEV-M5 安全容量门禁仍 OPEN。新远端 PR Head CI 需复验。
 
+### B.3b 事后超时预算复盘与 CI 复现门禁
+
+实机成功后检查发现可信 Native Verifier 等待上限为 780 秒，但 Inspector E2E Runner 仅等待 250 秒。真实 Cube MicroVM Create 单独允许约 300 秒，慢启动可使 E2E 提前停止查询与销毁临时证据目录，造成错误失败和不确定状态。
+
+新增 tests/test_m5_inspector_live_budget.py 先 Red（缺少共享预算），再把后端 Native Timeout 固定为 780 秒、API E2E 证据等待扩展到 840 秒，并由合同测试保证差额至少 30 秒；本地 Green，针对性合同回归 17/17 PASS。专用 dev-m5-cube-live.yml 的真实环境 Gate 在原 B03 实机检查之后再跑 Inspector 新 API-to-Cube E2E，增加 FastAPI/httpx 依赖并将本阶段外部 watchdog 设置 930 秒。此真实 Gate 仍要求供应方 READY 模板及实际 Cube API，不会通过 Fake Cube 冒充。
+
 此功能仅限本地可信运维实验，不是企业 IAM、会话授权、审批隔离、生产故障注入或 100 Active Runs 验收。Console Host 本身应仅监听 loopback，不应经公网暴露操作员入口；Token 由受信任部署环境提供及轮换，证据目录需受文件系统 ACL 保护。服务重启期间的不确定任务保留锁，按独立 Cube/PG 事实人工对账后才可恢复，并未尝试自动补发危险任务。
 
 后续优先项是扩展 Cube-only、非幂等 Tool 的独立可信执行器与验证合同，而不是让多个场景复用 Worker Takeover 的 PASS。

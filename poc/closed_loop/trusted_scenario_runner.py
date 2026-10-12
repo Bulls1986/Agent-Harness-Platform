@@ -22,6 +22,7 @@ from uuid import uuid4
 
 
 _ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
+NATIVE_B03_TIMEOUT_SECONDS = 780
 _PUBLIC_FIELDS = (
     "outcome", "run_id", "execution_id", "workflow_run_id",
     "worker_a_pid", "worker_a_exit_code", "worker_b_pid",
@@ -77,7 +78,7 @@ def run_native_b03() -> dict:
             shell=False, start_new_session=True,
         )
         try:
-            exit_code = process.wait(timeout=780)
+            exit_code = process.wait(timeout=NATIVE_B03_TIMEOUT_SECONDS)
         except subprocess.TimeoutExpired:
             # The verifier owns its own synthetic native Worker children.
             # Terminate the entire private verifier process group rather than
