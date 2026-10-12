@@ -38,6 +38,12 @@ SandboxProvider→Cube Scope/Lease/Fencing/WorkspaceRef 绑定、按需分配释
 - `CREATING` Worker A 失联并且 PG Server-clock Lease 到期时，Worker B 只可经 Scope/Workspace/Environment 一致性和 Owner/Epoch CAS 把它转入 `BLOCKED_UNKNOWN` 并核实既有原生 Cube；绑定的 `binding_generation` 递增不改变原创建标识。
 - 真 PostgreSQL + Fake Cube Transport 执行 Red→Green 故障合同；官方真实 Python Cube SDK 的 `create/list/connect/get_info` 参数由 Mock SDK 单元测试确认。**这些结果不能计入真实 Cube MicroVM Gate**；物理 Hatchet A→B+Cube Guest 数据保持、OCI/Guest Fencing、跨 Scope/Principal/Repo 仍需独立实机验收。
 
+### 第六开发切片：真实 Cube Native SDK MicroVM 创建/重连的首个实机证据
+
+- 使用已经运行的单节点 CubeSandbox，而不是仅根据 Docker 容器清单推断服务不存在。前置检验 Cube API /health、CubeMaster/Cubelet Node Ready、模板真实 READY Replica。API 启动时与模板副本未健康的创建失败均属于红色环境诊断证据，不得冒称创建成功。
+- 官方 Cube Python SDK `Sandbox.create(template=...)` 真正创建 MicroVM；Guest SDK `files.write/read`；通过 `Sandbox.connect(same_native_id)` 建立第二个 SDK 连接，并读取同一原字节；执行原生 `kill` 收到销毁确认。测试不使用 Fake Cube、Docker 代替 Sandbox、Host Shell 文件回退。
+- 已两次完成真实本地 MicroVM Smoke 并记录匿名真实 Sandbox ID（2026-10-12，详见 `docs/retrospectives/DEV_M5_REAL_CUBE_MICROVM_SMOKE_20261012.md`）。常规 PG 合同 CI 仍无法代替真实 Cube 实机；仅当真正携带 Harness PG 权威 Binding/Fencing、真实物理 Hatchet Worker A→B、Guest Workspace 数据保持及跨 Scope/旧授权拒绝后，才可以评估正式 1.2/1.3/2.x 退出 Gate。
+
 ## Test-first and failure injection
 
 正常验收：Worker A 在授权 Cube 中工作后中断 → Worker B 持有新 Lease 绑定同一 Workspace，恢复操作和已有文件。
