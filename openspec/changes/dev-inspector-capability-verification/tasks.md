@@ -13,5 +13,5 @@
 - [ ] 1.4 后续可信 Worker/Cube 联合 Gate 真通过之后，接入由受信任后端运行的演示执行器、真实 OS/Cube/Guest 原生证据与终态，不得从无认证页面直接放行特权操作。
 
 ## 2. 门禁
-- [ ] 2.1 本 Tab 的真实 PG 合同、原 Inspector Black-box、Architecture Guards、Strict OpenSpec 在最终 Head 的 CI 全部 PASS 后，才可合并本 UI 子切片。
+- [x] 2.1 本 Tab 的真实 PG 合同、原 Inspector Black-box、Architecture Guards、Strict OpenSpec 均通过，新增 TDD 失败与整改已复盘：`docs/retrospectives/INSPECTOR_CAPABILITY_TAB_20261012.md`。完成文档后最终 Head CI 仍须复验再合并。
 - [ ] 2.2 M5 联合实机/Guest Fencing/Production IAM 未通过前，仍保持 OPEN/NO-GO。
