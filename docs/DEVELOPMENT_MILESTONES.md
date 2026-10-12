@@ -19,6 +19,14 @@
 
 **依赖方向：外部业务消费者 → 受版本管理的 Harness 公共 API/SDK → Harness Domain/AgentRuntime → Hatchet/Cube。** 业务系统独立发布和维护，不得导入 Harness 内部源码、操作 Harness PG 或挪用技术执行权威；Harness 更不包含业务系统专属实现。
 
+## 2026-10-12 阶段状态冻结与下一执行切片
+
+当前事实必须按 **独立切片** 与 **联合门禁** 分开统计：M0 冻结；M1 基础闭环与 M2 部分真实 SSE/模型切片 PASS；M3/M4/M5/M7 均为 ACTIVE / 完整退出 Gate OPEN；M6/M8/M9 尚未完成正式验收。**Production NO-GO**。Inspector 8765 的原「需求分析→独立审核」可发起 Demo（确定性模型为默认配置）；「能力验证」Tab 展示四场景的用途与只读证据，不能把 PG 证据、旧 Worker 独立实验或 Cube 独立实验标作同一 Run 的真实联合 PASS。
+
+**下一优先级 P0 / DEV-M5-B03**：首先验证真 `NativeCubeTransport` 使用冻结的模板配置；以同一个 Harness Run / Execution 和原生 Hatchet Workflow ID 证明：独立 A Worker 获授权后创建**真实** Cube MicroVM、写入 Guest Workspace→操作系统真实 SIGKILL A→原生 Hatchet Retry 由独立 B 领取→Harness PG 按服务器时间授予 B 新 Fencing Epoch→B 以原 Sandbox ID 重连，读取原始 Guest 字节→拒绝 A 旧 Epoch 与错误 Scope→B 销毁 Sandbox 并确认 ACK。缺任一真实证据即 **BLOCKED / OPEN**，不以两个单独脚本拼接为 PASS。范围只使用合成数据；不包括生产 IAM、跨宿主 HA、OpenCode 完整 Guest、in-flight Guest Fencing。
+
+**并行 P1 / Inspector**：复用同一可信 Scenario Runner / Evidence API 合同作为未来统一入口，不开放无认证的浏览器特权 SIGKILL/Cube 启动路径；正式运行器和真实证据交付之前，相关三个场景维持只读。后续顺序：M3/M4 正式领域与恢复合同 → M7 公共 API → M6 Recipe → M8 合成消费者 → M9 生产准入。
+
 ## 工作波次
 
 第一波：M3 领域事实、M5 可信执行并行；M4 故障负例可以并行准备。第二波：M4 集成与 M7 API/SDK；第三波：M6 多 Agent Recipe 与 M8 独立合成客户端联调；最终 M9 的平台生产故障与安全门禁。Owner、工期与上线日期需根据真实资源独立基线化，不虚构排期。

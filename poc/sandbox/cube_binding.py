@@ -394,9 +394,13 @@ class NativeCubeTransport:
             raise RuntimeError("Real CUBE_API_URL and CUBE_TEMPLATE_ID required")
         from cubesandbox import Sandbox
         self.sdk=Sandbox
+        # Freeze the real, pre-approved template at Adapter construction.
+        # Do not rely on SDK defaults or mutable process environment at create.
+        self.template=os.environ["CUBE_TEMPLATE_ID"]
 
     def create(self,*,metadata):
-        sandbox=self.sdk.create(metadata=metadata)
+        sandbox=self.sdk.create(
+            template=self.template,timeout=300,metadata=dict(metadata))
         return sandbox.sandbox_id
 
     def list(self):

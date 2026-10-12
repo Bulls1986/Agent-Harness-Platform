@@ -1,0 +1,32 @@
+# DEV-M5-B03 · 同 Run Hatchet 物理 Worker 与 Cube 联合故障实施复盘（2026-10-12）
+
+## 当前判定
+
+**CODE_READY / LIVE BLOCKED，DEV-M5 OPEN，Production NO-GO。** 已增加联合实机入口、Fail-Closed 证据合同及显式 CI Gate，但**未取得**同一 Run 的 Cube 与物理 Worker 联合实测 PASS。此前各自通过的 Hatchet Worker 与 Cube MicroVM 实验不可拼接为本次验收。
+
+## 目标和边界
+
+单个 Harness Run/Execution/Native Hatchet Workflow 中：A 真实 Worker 获准创建 Cube MicroVM 并写入 Guest 合成字节，实际 OS 进程组 SIGKILL（-9）；Hatchet Native Retry 由独立 B Worker 领取，Harness PG 在 Lease 到期后以事务 CAS 交接 Epoch 7→8；B 通过新 Native Cube SDK 连接**原 Sandbox ID**、读取原 Guest 字节；旧 Owner/错误 Scope 拒绝；最后真实 destroy ACK → RELEASED。保留全部 Run/Workflow/Execution/Provider/OS PID、Native Retry 与 Guest 证据。
+
+## Red → Green 与回归
+
+1. **Native SDK 参数遗漏已修复**：之前 NativeCubeTransport 仅检查 CUBE_TEMPLATE_ID，但创建时调用 Sandbox.create 仅携带 Metadata，真实 SDK 可能使用默认模板。新增无 PG 的单元测试首先 RED（1/2 FAIL），再冻结 Adapter 实例的模板并显式传入 template/timeout/metadata 后 **2/2 PASS**。原有真实 PG/Fake Cube Adapter 调用断言同步更新，PG 测试本轮尚未实测。
+2. **联合证据验收合同**：新增纯断言校验同 Run、同 Workflow、不同 OS PID、真实 SIGKILL (-9)、B Native Retry、同 Sandbox ID、原 Guest 字节、Epoch 7→8、旧 Epoch 与 Scope 拒绝、Release ACK。新模块缺失先 RED，随后单元测试 **3/3 PASS**。该断言只保证证据格式及一致性，不能代替实机运行。
+3. **真实代码入口**：新增 poc/sandbox/verify_hatchet_cube_worker_takeover.py，沿用 Hatchet SDK、PgFacts、CubeBinding、CubeWorkspaceGateway，不自建第二套 Scheduler；真实 A 在 Guest 文件写读校验后持久记确认事件，控制端才能杀 A，B 通过 Hatchet Retry 和 PG Fencing 取得原 Workspace。测试为加快故障注入会在确认杀死 A 后把 PG Lease 设为过期，这不是生产 TTL/Heartbeat 策略的验收。
+4. **CI 编排**：更新 dev-m5-cube-live.yml，明确两独立 PG 数据库、官方 Cube/固定 Hatchet SDK、Strict OpenSpec、离线负例、真实 SDK Smoke、PG Cube Gate，以及本次真实物理 A→B + Cube 联合 Gate。没有 Cube Endpoint/Template 时必须失败，不能跳过后宣称通过。
+
+## 本轮实测范围
+
+- Native SDK 参数测试 Red 失败、Green 2/2 PASS；联合证据合同 Red 缺模块、Green 3/3 PASS。
+- Milestone Regression 7/7 PASS；Python py_compile PASS；DEV-M5 OpenSpec Strict VALID。
+- 显式运行联合脚本，因缺 CUBE_API_URL、CUBE_TEMPLATE_ID、HARNESS_POC_DATABASE_URL、HATCHET_POC_DATABASE_URL 返回 M5_JOINT_LIVE_GATE_NOT_RUN 和非零退出：**Fail-Closed 测试成功，但 Live Gate NOT_TESTED**。
+- 当前默认 WSL Python 未装 cubesandbox/hatchet_sdk/psycopg，CubeAPI localhost:3000 健康接口无法连接（HTTP 000）。本轮没有清理或强行启动未知环境；没有产生本次真实 Run/Provider/Guest ID。
+- PR Head CI、真实 PG + Cube + Hatchet 的联合链路 **尚无 PASS 证据**。
+
+## 遗留风险、经验与后续门禁
+
+修复的直接原因是原有 Fake Cube 测试没有覆盖真正 SDK Create 的模板参数；新增 SDK 参数合同保护真实创建选项。此前独立技术实验不代表组合功能可靠；现在强制**同 Run 的关联真实事实**以防误判。
+
+后续在授权的 Linux、真实 READY Cube、两独立 PostgreSQL/Hatchet 数据库上运行联合 Gate，确认全部 Native/Guest/OS/Fencing/Destroy 证据，再进行 Head CI/架构 Guard/复盘。失败时维持 OPEN 或 UNKNOWN，禁止盲目新建第二 Sandbox 或 Host Shell 回退。
+
+**尚未验证**生产 IAM、Guest in-flight Fencing、OpenCode Guest 全链、真实 OCI digest、跨宿主 HA、100 Active Runs。Inspector 暂不暴露未经认证的故障注入和 Cube 特权执行端点。

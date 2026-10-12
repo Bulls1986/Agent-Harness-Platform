@@ -20,6 +20,9 @@
 - [x] A.6 **真实 Cube MicroVM 原生 SDK 最小生命周期 Demo**：在已有运行中的 CubeMaster/Cubelet/CubeAPI 和 READY 模板上，官方 `cubesandbox==0.7.0` 实际创建 2 次独立 Sandbox（均真实返回 ID），Guest 文件写入/读回、Native `Sandbox.connect(same_id)` 新 SDK 实例读取原字节、`kill()` 确认成功；运行退出码 0，未使用 Fake Transport。可复现脚本 `poc/sandbox/verify_cube_sdk_smoke.py`，证据 `docs/retrospectives/DEV_M5_REAL_CUBE_MICROVM_SMOKE_20261012.md`。**仅 SDK 实机 Smoke PASS**；Harness PG+真 Cube 以及真实 Hatchet A→B+Cube 联合测试尚未通过，1.2/1.3/2.x 保持 OPEN。
 
 ## 1. TDD 与集成开发
+- [ ] B.1（2026-10-12 启动）真实 Native Cube Create 显式传入已冻结模板；先增加无 PG 的 SDK 参数负例，验证缺模板拒绝、调用方元数据不可变、未配置不触发 Provider 请求；红绿测试与 CI 证据追加到独立复盘。
+- [ ] B.2 实机联合 B03：同 Run、同 Hatchet Workflow、真实 Worker A SIGKILL→B 原生 Retry；真实 Cube ID、同 Guest 字节、PG A/7→B/8、旧 Owner/Scope 拒绝、销毁回执；独立进程 PID/退出码/Provider IDs、Guest 证据及全套失败路径可查询。未实测只可记为 CODE_READY/NOT_TESTED，禁止 PASS。
+- [ ] B.3 联合场景的权限边界和证据出口：Inspector 未来只能经可信后端受控发起，静态场景目录/只读 PG 不能判定真实联合 Gate。
 - [ ] 1.1 先写无 ExecutionContext、越权、旧 Lease/Fencing 的拒绝测试；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
 - [ ] 1.2 完成真实 Cube Provider Allocate/Bind/Release 与 WorkspaceRef；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
 - [ ] 1.3 OpenCode Shell/Files/Git 和 Worker A→B 实机接管；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。

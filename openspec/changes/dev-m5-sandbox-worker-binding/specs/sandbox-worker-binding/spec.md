@@ -23,6 +23,10 @@ SandboxProvider→Cube Scope/Lease/Fencing/WorkspaceRef 绑定、按需分配释
 - **WHEN** Worker A 在授权 Cube 中工作后中断
 - **THEN** Worker B 持有新 Lease 绑定同一 Workspace，恢复操作和已有文件
 
+#### Scenario: 真实物理 Worker 与真实 Cube 统一故障门禁（DEV-M5-B03）
+- **WHEN** 真实 Hatchet Worker A 已为同一 Run/Execution 在真实 Cube Guest 写入数据，A 进程组被操作系统 SIGKILL，Hatchet 将原 Workflow Task Retry 分配给独立 B 进程
+- **THEN** B MUST 通过 PG Fencing 更新 Owner Epoch，使用原生 Cube SDK 连接持久化的**原 Sandbox ID**并验证原 Guest 字节；旧 A Epoch/错误 Scope 的访问 MUST 在可信执行边界拒绝；Provider ACK 确认资源释放，记录 OS PID/exit code、Workflow/Run/Execution/Provider ID 和实际 Guest 证据；拆开的 Worker 与 Cube 两项 PASS 不能替代本场景。
+
 #### Scenario: 拒绝过期及越权
 - **WHEN** 旧 Owner 或其他 Scope 访问 Workspace/执行 Shell
 - **THEN** Fencing 和执行权限拒绝，禁止宿主 Shell 旁路

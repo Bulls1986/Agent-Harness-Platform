@@ -6,7 +6,7 @@ permissions:
 jobs:
   real-cube-microvm:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 22
     services:
       postgres:
         image: postgres:16-alpine
@@ -22,6 +22,9 @@ jobs:
           --health-retries 15
     env:
       HARNESS_POC_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+      HATCHET_POC_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/hatchet_poc
+      HATCHET_CLIENT_EMBEDDED_VERSION: 'v0.110.5'
+      HATCHET_CLIENT_EMBEDDED_CHECKSUM: '18ddacae0005042bd982328bcb8d370cca6907352a1ab2a3c8406001d31e7dee'
       CUBE_API_URL: ${{ vars.CUBE_API_URL }}
       CUBE_TEMPLATE_ID: ${{ vars.CUBE_TEMPLATE_ID }}
       CUBE_PROXY_NODE_IP: ${{ vars.CUBE_PROXY_NODE_IP }}
@@ -32,7 +35,13 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install pinned SDK major and real PG client
-        run: python -m pip install 'psycopg[binary]>=3.2,<4' 'cubesandbox>=0.6,<1'
+        run: python -m pip install 'psycopg[binary]>=3.2,<4' 'cubesandbox==0.7.0' 'hatchet-sdk==1.42.1'
+      - name: Offline fail-closed adapter and joint-evidence contracts
+        run: |
+          python -B -m unittest discover -s tests -p test_native_cube_transport.py -v
+          python -B -m unittest discover -s tests -p test_m5_joint_evidence.py -v
+      - name: Strict DEV-M5 OpenSpec validation
+        run: npx --yes @fission-ai/openspec@1.12.0 validate dev-m5-sandbox-worker-binding --strict
       - name: Fail closed if real Cube endpoint and template unavailable
         shell: bash
         run: |
@@ -42,3 +51,12 @@ jobs:
         run: python -B -m poc.sandbox.verify_cube_sdk_smoke
       - name: Harness PostgreSQL Binding + real Cube Fencing / Workspace lifecycle
         run: python -B -m poc.sandbox.verify_cube_live
+      - name: Create separate native Hatchet engine database
+        run: |
+          python - <<'PY'
+          import psycopg
+          with psycopg.connect('postgresql://postgres:postgres@127.0.0.1:5432/postgres', autocommit=True) as c:
+              c.execute('CREATE DATABASE hatchet_poc')
+          PY
+      - name: Real same-Run Hatchet Worker A SIGKILL / B native retry and original Cube Guest
+        run: timeout --signal=KILL 540s python -B -m poc.sandbox.verify_hatchet_cube_worker_takeover controller
