@@ -459,6 +459,91 @@ class CubePgBindingTests(unittest.TestCase):
                 self.scope,self.workspace,self.digest)
         self.assertEqual(self.binding.get(self.execution).fencing_epoch,7)
 
+    def test_trusted_quarantine_containment_destroys_original_guest_but_never_retries(self):
+        sid=self.gateway.allocate(self.execution,"worker-A",7)
+        effect=self.binding.begin_guest_effect(
+            self.execution,"worker-A",7,"OPENCODE_SHELL","sha256:unsafe-inflight")
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.quarantine_unresolved(
+                self.execution,"worker-A",7,self.scope,self.workspace,self.digest)
+        with self.db.tx() as c:
+            c.execute("UPDATE harness_cube_binding "
+                      "SET lease_expires_at=now()-interval '1 second' "
+                      "WHERE execution_id=%s",(self.execution,))
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.quarantine_unresolved(
+                self.execution,"worker-A",7,"different-scope",self.workspace,self.digest)
+        self.assertEqual(self.transport.killed,[])
+        self.gateway.quarantine_unresolved(
+            self.execution,"worker-A",7,self.scope,self.workspace,self.digest)
+        self.assertEqual(self.transport.killed,[sid])
+        self.assertEqual(self.binding.get(self.execution).state,"RELEASED")
+        self.assertEqual(self.binding.get_guest_effect(effect)["state"],"DISPATCHED")
+        self.assertEqual(len(self.transport.created),1)
+        with self.assertRaises(UnsafeDispatch):
+            self.binding.takeover(
+                self.execution,7,"worker-B",self.scope,self.workspace,self.digest)
+
+    def test_quarantine_wrong_native_identity_keeps_release_uncertain(self):
+        sid=self.gateway.allocate(self.execution,"worker-A",7)
+        self.binding.begin_guest_effect(
+            self.execution,"worker-A",7,"OPENCODE_SHELL","sha256:unsafe-effect")
+        with self.db.tx() as c:
+            c.execute("UPDATE harness_cube_binding "
+                      "SET lease_expires_at=now()-interval '1 second' "
+                      "WHERE execution_id=%s",(self.execution,))
+        self.transport.inspect=lambda _: {
+            "sandboxID":"other-native-cube","metadata":{}}
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.quarantine_unresolved(
+                self.execution,"worker-A",7,self.scope,self.workspace,self.digest)
+        self.assertEqual(self.binding.get(self.execution).state,"RELEASING")
+        self.assertNotIn(sid,self.transport.killed)
+
+    def test_quarantine_accepts_native_provider_augmentation_but_not_identity_override(self):
+        sid=self.gateway.allocate(self.execution,"worker-A",7)
+        self.binding.begin_guest_effect(
+            self.execution,"worker-A",7,"OPENCODE_SHELL","sha256:inflight")
+        original_inspect=self.transport.inspect
+        def supplemented_info(native):
+            info=original_inspect(native)
+            info["metadata"]={
+                **info["metadata"],
+                "cube_provider_runtime":"synthetic-extra",
+                "cube_created_at":"synthetic-timestamp",
+            }
+            return info
+        self.transport.inspect=supplemented_info
+        with self.db.tx() as c:
+            c.execute("UPDATE harness_cube_binding "
+                      "SET lease_expires_at=now()-interval '1 second' "
+                      "WHERE execution_id=%s",(self.execution,))
+        self.gateway.quarantine_unresolved(
+            self.execution,"worker-A",7,self.scope,self.workspace,self.digest)
+        self.assertEqual(self.transport.killed,[sid])
+        self.assertEqual(self.binding.get(self.execution).state,"RELEASED")
+
+    def test_quarantine_native_critical_metadata_override_stays_unknown(self):
+        sid=self.gateway.allocate(self.execution,"worker-A",7)
+        self.binding.begin_guest_effect(
+            self.execution,"worker-A",7,"OPENCODE_SHELL","sha256:inflight")
+        original_inspect=self.transport.inspect
+        def forged_info(native):
+            info=original_inspect(native)
+            info["metadata"]={
+                **info["metadata"],"harness_scope":"forged-scope"}
+            return info
+        self.transport.inspect=forged_info
+        with self.db.tx() as c:
+            c.execute("UPDATE harness_cube_binding "
+                      "SET lease_expires_at=now()-interval '1 second' "
+                      "WHERE execution_id=%s",(self.execution,))
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.quarantine_unresolved(
+                self.execution,"worker-A",7,self.scope,self.workspace,self.digest)
+        self.assertEqual(self.binding.get(self.execution).state,"RELEASING")
+        self.assertNotIn(sid,self.transport.killed)
+
 
 if __name__=="__main__":
     unittest.main()

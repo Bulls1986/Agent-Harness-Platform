@@ -82,6 +82,8 @@ jobs:
         run: timeout --signal=KILL 320s python -B -m poc.sandbox.verify_opencode_guest_http
       - name: Real PG fenced OpenCode native session continuity across A-to-B ownership
         run: timeout --signal=KILL 420s python -B -m poc.sandbox.verify_opencode_pg_guest_live
+      - name: Real unresolved OpenCode Guest tool quarantined via native Cube destroy ACK
+        run: timeout --signal=KILL 320s python -B -m poc.sandbox.verify_opencode_guest_quarantine_live
       - name: Real Hatchet OS Worker A SIGKILL to B native retry retaining same OpenCode session
         env:
           HARNESS_M5_NATIVE_OPENCODE: '1'

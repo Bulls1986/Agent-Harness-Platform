@@ -337,6 +337,39 @@ class CubeBinding:
                 "workspace_ref":workspace})
         return self.get(execution_id)
 
+    def claim_quarantine(self,execution_id,owner,epoch,scope,workspace,
+                         environment_digest):
+        """Authorized expired Owner may CONTAIN an unresolved Guest by killing
+        its entire verified native MicroVM. It cannot continue the Run/Session.
+
+        This is a separate emergency recovery path, never normal takeover or
+        implicit retry. Frozen Scope/Workspace/Template remain authoritative.
+        """
+        self._text(execution_id,owner,scope,workspace,environment_digest)
+        self._valid_epoch(epoch)
+        with self.facts.tx() as c:
+            row=c.execute(
+                "SELECT "+",".join(self.FIELDS)+",lease_expires_at<=now() "
+                "FROM harness_cube_binding WHERE execution_id=%s FOR UPDATE",
+                (execution_id,)).fetchone()
+            if (not row or row[5]!=owner or row[6]!=epoch
+                    or row[2:5]!=(scope,workspace,environment_digest)
+                    or row[9]!="ACTIVE" or not row[7]
+                    or row[10] is not True):
+                raise UnsafeDispatch("Quarantine needs expired original Cube binding")
+            if not c.execute(
+                    "SELECT 1 FROM harness_cube_guest_effect "
+                    "WHERE execution_id=%s AND state='DISPATCHED'",
+                    (execution_id,)).fetchone():
+                raise UnsafeDispatch("No unresolved Guest effect for containment")
+            fact=self._binding(row[:-1])
+            c.execute(
+                "UPDATE harness_cube_binding SET state='RELEASING' "
+                "WHERE execution_id=%s",(execution_id,))
+            PgFacts.event(c,fact.run_id,"sandbox.guest.quarantine.claimed",{
+                "execution_id":execution_id,"original_epoch":epoch})
+            return fact
+
     def mark_releasing(self,execution_id,owner,epoch):
         with self.facts.tx() as c:
             row=self._check(c,execution_id,owner,epoch,"ACTIVE")
@@ -349,7 +382,7 @@ class CubeBinding:
                       "WHERE execution_id=%s",(execution_id,))
             return row.sandbox_id
 
-    def mark_released(self,execution_id,owner,epoch):
+    def mark_released(self,execution_id,owner,epoch,*,quarantined=False):
         with self.facts.tx() as c:
             row=c.execute(
                 "SELECT run_id,owner_id,fencing_epoch,state "
@@ -362,6 +395,11 @@ class CubeBinding:
                       "WHERE execution_id=%s",(execution_id,))
             PgFacts.event(c,row[0],"sandbox.binding.released",
                           {"execution_id":execution_id})
+            if quarantined:
+                PgFacts.event(c,row[0],"sandbox.guest.quarantine.contained",{
+                    "execution_id":execution_id,
+                    "guest_terminated_by":"native_provider_destroy_ack",
+                    "external_tool_effect":"UNKNOWN_REQUIRES_RECONCILIATION"})
 
 
 class CubeWorkspaceGateway:
@@ -485,6 +523,51 @@ class CubeWorkspaceGateway:
             # sandbox while destroy confirmation is uncertain.
             raise UnsafeDispatch("Cube destroy ACK unknown; explicit reconciliation required") from None
         self.binding.mark_released(execution_id,owner,epoch)
+
+    def quarantine_unresolved(self,execution_id,owner,epoch,scope,workspace,
+                              environment_digest):
+        """Trusted operator-only containment. Never restarts an unknown Tool.
+
+        Even with provider Destroy ACK, effects are left DISPATCHED and the
+        original Run/Native Session must not be resumed; external receipts
+        require independent reconciliation. No endpoint exposes this action.
+        """
+        original=self.binding.claim_quarantine(
+            execution_id,owner,epoch,scope,workspace,environment_digest)
+        sid=original.sandbox_id
+        phase="native-connect"
+        try:
+            native=self.transport.connect(sid)
+            native_id=native if isinstance(native,str) else getattr(
+                native,"sandbox_id",None)
+            phase="native-identity"
+            if native_id != sid:
+                raise ValueError("Unexpected Native Sandbox ID")
+            phase="native-detail"
+            detail=self.transport.inspect(native)
+            if not isinstance(detail,dict) or detail.get("sandboxID")!=sid:
+                phase="native-detail-id"
+                raise ValueError("Native provider ID differs from PG")
+            expected=self.binding._metadata(original)
+            actual=detail.get("metadata")
+            if (not isinstance(actual,dict)
+                    or any(actual.get(k)!=v for k,v in expected.items())):
+                # Cube may append its own provider metadata. The full frozen
+                # Harness identity MUST be present with exact string values;
+                # additional provider attributes are not authorization.
+                phase="native-detail-metadata-trusted-fields"
+                raise ValueError("Native provider metadata differs from PG")
+            phase="native-destroy"
+            self.transport.kill(native)
+        except Exception:
+            # RELEASING remains unresolved. Never re-kill or declare success
+            # without explicit provider reconciliation. Expose only a bounded
+            # phase code, never URLs, HTTP payloads or credentials.
+            raise UnsafeDispatch(
+                "Guest quarantine "+phase+
+                " outcome unknown; provider reconciliation required"
+            ) from None
+        self.binding.mark_released(execution_id,owner,epoch,quarantined=True)
 
 
 class NativeCubeTransport:
