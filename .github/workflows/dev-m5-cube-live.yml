@@ -38,5 +38,7 @@ jobs:
         run: |
           test -n "$CUBE_API_URL" || { echo 'REAL_CUBE_GATE_NOT_RUN: CUBE_API_URL unavailable'; exit 2; }
           test -n "$CUBE_TEMPLATE_ID" || { echo 'REAL_CUBE_GATE_NOT_RUN: CUBE_TEMPLATE_ID unavailable'; exit 2; }
-      - name: Allocate genuine Cube MicroVM / persist / reconnect / fencing / destroy
+      - name: Genuine native Cube MicroVM SDK create/files/reconnect/destroy smoke
+        run: python -B -m poc.sandbox.verify_cube_sdk_smoke
+      - name: Harness PostgreSQL Binding + real Cube Fencing / Workspace lifecycle
         run: python -B -m poc.sandbox.verify_cube_live

@@ -44,6 +44,14 @@ jobs:
         run: npx --yes @fission-ai/openspec@1.12.0 validate dev-m5-sandbox-worker-binding --strict
       - name: Real PG binding and native Cube SDK contract negative tests
         run: python -B -m unittest poc.sandbox.test_cube_binding_pg -v
+      - name: Compile genuine Cube smoke and require fail-closed when no endpoint
+        run: |
+          python -m py_compile poc/sandbox/verify_cube_sdk_smoke.py
+          if env -u CUBE_API_URL -u CUBE_TEMPLATE_ID python -B -m poc.sandbox.verify_cube_sdk_smoke; then
+            echo 'Cube smoke incorrectly passed without a real endpoint'
+            exit 1
+          fi
+          echo 'Genuine Cube smoke correctly refuses missing real endpoint'
       - name: Native SDK method availability (NOT real MicroVM evidence)
         run: |
           python - <<'PY'
