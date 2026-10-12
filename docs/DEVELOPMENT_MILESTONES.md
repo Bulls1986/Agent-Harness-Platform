@@ -11,7 +11,7 @@
 | DEV-M2 模型及流式交互 | 真实 LiteLLM、Token SSE、持久游标/取消 | 有限开发切片 PASS |
 | DEV-M3 领域内核 | Run/Plan/Step/Attempt、Replan v2、Workflow Segment | ACTIVE：Plan v1 与 PURE 真实 Hatchet v1→v2 独立 Segment 子切片 PASS；非 PURE/完整 Step-Attempt Gate OPEN |
 | DEV-M4 一致性与恢复 | Outbox/Inbox、ACK-loss、UNKNOWN/非幂等 Receipt | ACTIVE：实际 Worker A 进程 SIGKILL→独立 B 领取 Native Task、非幂等 Receipt/PG Fencing 子切片 PASS；通用 ToolRuntime/Inbox/跨宿主完整 Gate OPEN |
-| DEV-M5 Cube 可信执行 | WorkspaceRef/Scope/Lease/Fencing、跨 Worker 接管 | ACTIVE：**真实 Cube Native SDK MicroVM Create/Guest Files/Connect/Destroy 最小 Demo PASS（本机两次）**；PG Binding/Fencing + 物理 Hatchet A→B + 同 Cube Workspace 联合 Gate、Guest/OCI 仍 OPEN |
+| DEV-M5 Cube 可信执行 | WorkspaceRef/Scope/Lease/Fencing、跨 Worker 接管 | ACTIVE：**真实 PG Binding/Fencing + Cube MicroVM 同 Workspace A/7→B/8 逻辑接管 PASS**；物理 Hatchet A SIGKILL→B+Cube 同一执行全链路 Gate、Guest in-flight/OCI 仍 OPEN |
 | DEV-M6 多 Agent Recipe | 跨 Runtime 交接、Verifier、Artifact、Approval | PLANNED |
 | DEV-M7 公共 API/SDK | Conversation/Turn/Run、鉴权、Typed SSE、错误合同 | ACTIVE：授权只读 8 项单测、真实 PG Run 归属/不可变性 5 项测试及 CI PASS；真实 Gateway/Policy+PG E2E、SSE/Artifact/UI Gate OPEN |
 | DEV-M8 通用消费者互通 | **只用合成数据**验证独立客户端对 Harness 公共 API 的调用、身份隔离和故障语义 | PLANNED |
@@ -29,7 +29,7 @@
 |---|---|---|
 | M3 | M1 Run/PG/Hatchet 已有有限实测；M3 内核开发可独立推进 | PURE PG+Hatchet v1→v2 子切片 PASS；运行中旧 Worker 结束确认、非 PURE/完整 Step-Attempt/业务终态仍 OPEN |
 | M4 | M3 Domain/Segment 事实是完整恢复对账的前置；故障负例可先并行 TDD | 物理 Worker A SIGKILL→B、Receipt Fencing 限定场景 PASS；通用 Inbox/多 Attempt、跨宿主与生产 Tool Runtime Gate OPEN |
-| M5 | HC-03 是约束；Cube Allocate/Bind/Release 可与 M3/M4 并行；A→B 恢复需要相关执行事实 | 真 Cube MicroVM 原生创建、Guest 文件读写、同 ID 重连与销毁最小 Demo PASS；Harness PG/Worker B 联合 Fencing/Guest OCI/生产资源回收仍 OPEN |
+| M5 | HC-03 是约束；Cube Allocate/Bind/Release 可与 M3/M4 并行；A→B 恢复需要相关执行事实 | 实机 PG+Cube Native/Workspace/Fencing A/7→B/8 PASS；与物理 Hatchet Worker SIGKILL 联合容灾、Guest OCI/Fencing、跨宿主仍 OPEN |
 | M6 | 依赖 M3/M4/M5 相关真实执行、安全和恢复 Gate | 通用合成 Recipe 的跨 Runtime、Approval、Artifact/Evidence、Verifier 实测 |
 | M7 | 依赖 M2 Typed SSE 和 M3 的 Run 归属领域事实；外部可信身份是适配输入，可并行开发授权边界 | PG Run Binding 子切片 PASS；真实 Gateway/Policy+PG 联调、Conversation/Turn、授权 SSE/Artifact/UI 仍 OPEN |
 | M8 | 依赖 M7 版本化公共 API/SDK 与相关 M3～M6 合同；只使用独立合成客户端 | 身份隔离、取消、游标和失败传播的真实公共 API 联调 |
