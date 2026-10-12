@@ -39,6 +39,7 @@ jobs:
       - name: Offline fail-closed adapter and joint-evidence contracts
         run: |
           python -B -m unittest discover -s tests -p test_native_cube_transport.py -v
+          python -B -m unittest discover -s tests -p test_m5_cube_connect_identity.py -v
           python -B -m unittest discover -s tests -p test_m5_joint_evidence.py -v
       - name: Strict DEV-M5 OpenSpec validation
         run: npx --yes @fission-ai/openspec@1.12.0 validate dev-m5-sandbox-worker-binding --strict

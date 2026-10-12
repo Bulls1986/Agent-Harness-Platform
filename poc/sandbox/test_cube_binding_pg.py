@@ -125,6 +125,19 @@ class CubePgBindingTests(unittest.TestCase):
                                "/workspace/../etc/forbidden","x")
         self.assertEqual(len(self.transport.connected),baseline)
 
+    def test_cube_connect_returns_wrong_provider_identity_must_fail_closed(self):
+        sid=self.gateway.allocate(self.execution,"worker-A",7)
+        self.assertEqual(self.binding.get(self.execution).sandbox_id,sid)
+        # A faulty or compromised Provider could return another native Guest
+        # despite being asked to connect the PG-authorized sandbox locator.
+        self.transport.connect=lambda _requested: "another-cube-id"
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.read(
+                self.execution,"worker-A",7,"/workspace/secret.txt")
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.write(
+                self.execution,"worker-A",7,"/workspace/secret.txt","x")
+
     def test_cube_create_succeeds_but_pg_bind_ack_fails_no_second_create(self):
         # Crash-window: Cube MicroVM exists, but Harness PG binding ACK
         # is lost. A second allocate() MUST NEVER call Cube create again.

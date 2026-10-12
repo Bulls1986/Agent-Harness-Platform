@@ -30,3 +30,11 @@
 后续在授权的 Linux、真实 READY Cube、两独立 PostgreSQL/Hatchet 数据库上运行联合 Gate，确认全部 Native/Guest/OS/Fencing/Destroy 证据，再进行 Head CI/架构 Guard/复盘。失败时维持 OPEN 或 UNKNOWN，禁止盲目新建第二 Sandbox 或 Host Shell 回退。
 
 **尚未验证**生产 IAM、Guest in-flight Fencing、OpenCode Guest 全链、真实 OCI digest、跨宿主 HA、100 Active Runs。Inspector 暂不暴露未经认证的故障注入和 Cube 特权执行端点。
+
+## 2026-10-12 后续推进：真实环境阻塞与新安全回归
+
+在继续验证本次联合 Gate 时，确认已有 Ubuntu WSL CubeSandbox 一键部署目录与真实 Cubelet 服务存在，但此次启动后的 Cube API localhost:3000 没有监听（curl exit 7 / HTTP 000），CubeMaster / Cube API 未就绪。Cube 的 MySQL/Redis systemd 单元一度持续处于 start-post；Docker 记录 MySQL Exited (137)、Redis 正常退出，不能仅据 137 推断内存耗尽。cube-egress-net 的失败日志为 RTNETLINK answers: File exists，表明已有网络规则与启动脚本存在冲突待对账，**未擅自删除路由、重置 Docker 或修改安全隔离**。本机 WSL 内已有专用 Cube SDK 0.7.0 虚拟环境，但该环境当时缺 hatchet_sdk/psycopg；Windows 侧 SDK 单元测试不能替代 Linux 端到端运行。
+
+继续采用 Red→Green 补上受信任 SDK connect 返回实例身份校验：旧实现虽以 PG 中的 Sandbox ID 调用 Native Connect，却没有核对原生 SDK 返回的 Sandbox ID，错误的 Provider 返回对象可能在有效 Owner Permit 下被读写。新增 tests/test_m5_cube_connect_identity.py 首次运行 3 个错误 Native ID 子例全部失败；修改 CubeWorkspaceGateway._attach 对返回的 Native ID 做精确比较，缺 ID / 错 ID 均在 Guest 数据调用之前 UnsafeDispatch，正确 ID 正例仍可读取，Green 2/2 PASS。对应 PG 合同增加恶意 Fake Transport 测例，须待真实 PG CI 执行后判定。
+
+常规 dev-m5-cube-binding 工作流现明确执行 Immutable Template、Native Connect identity、Joint Evidence 三组纯单测及原有真实 PG/Fake Cube 合同；专用真实 Cube Workflow 也包含这些安全负例。**本次后续提交的最终 Head CI 仍需核验**，且不能把任何普通 PG/Fake Cube CI 成功视作真实 Cubes/Worker 联合 PASS。

@@ -353,6 +353,12 @@ class CubeWorkspaceGateway:
             sb=self.transport.connect(fact.sandbox_id)
         except Exception:
             raise UnsafeDispatch("Cube connect unavailable: cannot fabricate a replacement Workspace") from None
+        # A Provider locator is not an authorization capability. Even a
+        # successful connect must return the EXACT identity frozen in PG;
+        # otherwise a wrong Guest could be exposed under a valid permit.
+        native_id=sb if isinstance(sb,str) else getattr(sb,"sandbox_id",None)
+        if native_id != fact.sandbox_id:
+            raise UnsafeDispatch("Native Cube connect returned wrong Sandbox identity")
         # A real provider call can race an Owner change. Recheck PG authority
         # before each operation; full revoke-in-flight requires guest fencing.
         fresh=self.binding.assert_active(execution_id,owner,epoch)
