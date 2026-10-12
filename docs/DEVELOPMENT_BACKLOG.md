@@ -8,7 +8,7 @@
 |---|---|---|---|
 | DEV-HC-01 | DEV-M3 | Run/Plan/Step/Attempt、Workflow Segment/Replan v2 与旧 Attempt 保护 | Plan v1 + PURE 真实 Hatchet v1→v2 独立 Segment PASS；运行中/非 PURE 与完整领域 Gate OPEN |
 | DEV-HC-02 | DEV-M4 | Outbox/Inbox、丢 ACK 对账、非幂等 Tool Receipt UNKNOWN | ACTIVE：实际 Hatchet Worker A 进程 SIGKILL→独立 B Native 接管、PG Receipt/Owner Fencing PASS（PR #72）；通用 ToolRuntime/Inbox/跨宿主 Gate OPEN |
-| DEV-HC-03 | DEV-M5 | ExecutionContext、Cube Scope/Lease/Fencing/WorkspaceRef、Worker A→B 安全接管 | PR #74 PG ACK-loss 合同 PASS；**2026-10-12 真 Cube Native MicroVM 创建/Guest Files/同 ID 重连/Destroy Smoke PASS**；真实 PG + Worker B + Cube 联合 Gate、OCI/Guest 隔离仍 OPEN |
+| DEV-HC-03 | DEV-M5 | ExecutionContext、Cube Scope/Lease/Fencing/WorkspaceRef、Worker A→B 安全接管 | **实机 PostgreSQL Binding/Fencing + Cube 同 WorkspaceRef A/7→B/8 逻辑转移 PASS**（2026-10-12）；实际 Hatchet Worker A SIGKILL + Cube 联合 Gate、Guest OCI/in-flight 隔离仍 OPEN |
 | DEV-RECIPE-01 | DEV-M6 | Provider-neutral Recipe、Artifact/Evidence、Verifier 与 Approval | PLANNED |
 | DEV-API-01 | DEV-M7 | 稳定公共 Run/Conversation/SSE/Cancel/ArtifactRef API/SDK 与服务身份合同 | ACTIVE：PR #65 授权读取与 PR #67 PG 归属/不可变性集成子切片 PASS；真实 IAM/Policy+PG、SSE/Artifact/UI Gate OPEN |
 | DEV-CONSUMER-01 | DEV-M8 | 只使用**合成数据**的独立客户端与平台公共 API 联调 | PLANNED |
