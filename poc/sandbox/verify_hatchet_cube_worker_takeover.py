@@ -166,6 +166,26 @@ def launch(role: str, diagnostics: dict[str, str]) -> subprocess.Popen:
         )
 
 
+def await_native_worker_ready(proc: subprocess.Popen, role: str,
+                              diagnostics: dict[str, str], timeout_seconds: int = 110) -> None:
+    """Wait for actual SDK task-registration evidence, never a fixed sleep."""
+    path = diagnostics[role]
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        if proc.poll() is not None:
+            raise RuntimeError("Physical " + role + " terminated before task registration")
+        try:
+            with open(path, encoding="utf-8", errors="replace") as log:
+                lines = log.read()
+            if "started, waiting for tasks" in lines:
+                print("HATCHET_PHYSICAL_" + role + "_NATIVE_REGISTERED", proc.pid,
+                      flush=True)
+                return
+        except FileNotFoundError:
+            pass
+        time.sleep(.5)
+    raise RuntimeError("Physical " + role + " did not register its Hatchet task")
+
 def wait_for_a(binding: CubeBinding, execution: str, a: subprocess.Popen,
                content: str, path: str) -> str:
     until = time.monotonic() + 100
@@ -208,9 +228,7 @@ def verify() -> dict:
     sid = None
     success = False
     try:
-        time.sleep(6)
-        if a.poll() is not None:
-            raise RuntimeError("Worker A could not start")
+        await_native_worker_ready(a, "worker-A", diagnostics)
         ref = workflow.run(
             CubeInput(run_id=run_id, execution_id=execution, scope=scope,
                       workspace_ref=workspace, environment_digest=digest),
@@ -231,6 +249,7 @@ def verify() -> dict:
             raise RuntimeError("A physical OS process was not SIGKILLed")
         print("PHYSICAL_CUBE_WORKER_A_SIGKILL", a.pid, sid, flush=True)
         b = launch("worker-B", diagnostics)
+        await_native_worker_ready(b, "worker-B", diagnostics)
         out = hatchet.runs.get_run_ref(ref.workflow_run_id).result()
         if not isinstance(out, dict) or len(out) != 1:
             raise RuntimeError("No true native Hatchet task result")
