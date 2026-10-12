@@ -11,7 +11,7 @@
 | DEV-M2 模型及流式交互 | 真实 LiteLLM、Token SSE、持久游标/取消 | 有限开发切片 PASS |
 | DEV-M3 领域内核 | Run/Plan/Step/Attempt、Replan v2、Workflow Segment | ACTIVE：Plan v1 与 PURE 真实 Hatchet v1→v2 独立 Segment 子切片 PASS；非 PURE/完整 Step-Attempt Gate OPEN |
 | DEV-M4 一致性与恢复 | Outbox/Inbox、ACK-loss、UNKNOWN/非幂等 Receipt | ACTIVE：实际 Worker A 进程 SIGKILL→独立 B 领取 Native Task、非幂等 Receipt/PG Fencing 子切片 PASS；通用 ToolRuntime/Inbox/跨宿主完整 Gate OPEN |
-| DEV-M5 Cube 可信执行 | WorkspaceRef/Scope/Lease/Fencing、跨 Worker 接管 | ACTIVE：**真实 Cube Native SDK MicroVM Create/Guest Files/Connect/Destroy 最小 Demo PASS（本机两次）**；PG Binding/Fencing + 物理 Hatchet A→B + 同 Cube Workspace 联合 Gate、Guest/OCI 仍 OPEN |
+| DEV-M5 Cube 可信执行 | WorkspaceRef/Scope/Lease/Fencing、跨 Worker 接管 | ACTIVE：真实 Cube SDK、PG Binding/Fencing，以及 **同 Run Hatchet Worker A SIGKILL → B Native Retry → 原 Cube Guest 联合 Gate PASS**；OpenCode Guest、in-flight fencing、OCI 与完整阶段退出 Gate 仍 OPEN |
 | DEV-M6 多 Agent Recipe | 跨 Runtime 交接、Verifier、Artifact、Approval | PLANNED |
 | DEV-M7 公共 API/SDK | Conversation/Turn/Run、鉴权、Typed SSE、错误合同 | ACTIVE：授权只读 8 项单测、真实 PG Run 归属/不可变性 5 项测试及 CI PASS；真实 Gateway/Policy+PG E2E、SSE/Artifact/UI Gate OPEN |
 | DEV-M8 通用消费者互通 | **只用合成数据**验证独立客户端对 Harness 公共 API 的调用、身份隔离和故障语义 | PLANNED |
@@ -21,9 +21,11 @@
 
 ## 2026-10-12 阶段状态冻结与下一执行切片
 
+**2026-10-12 当日后续实机增量（覆盖以下历史 BLOCKED 状态，但不覆盖整个 M5）**：本地 WSL 服务反复中断的主要可复现条件已定位并解决：WSL distro 在 Windows 不维持前台任务时进入正常 poweroff，旧 Python docker-compose 1.29.2 与 Docker 29 的事件监听还有 `KeyError: 'id'`。安装 Ubuntu Compose V2 2.40.3 并从 Windows Task Scheduler 启动**无自动触发的按需 WSL Keeper** 后，Cube MySQL/Redis/MinIO/CubeMaster/API 持续健康，`/health` HTTP 200；原生 SDK 真 MicroVM Create/Guest 新连接/Destroy 再次 PASS，Harness PG+Cube Live Gate PASS，**同一 Run/原生 Hatchet Worker A SIGKILL→独立 B Retry→原 Cube Guest 接管 B03 PASS**。Run、Workflow、PID、Native Retry、PG Fencing、原 Provider Sandbox、Guest 校验及 Destroy ACK 见 `docs/retrospectives/DEV_M5_JOINT_WORKER_CUBE_IMPLEMENTATION_20261012.md`。**M5 B.1/B.2 和 1.2 子项可据证据计 PASS，但 B.3、OpenCode 完整 Guest、in-flight fencing、2.x 退出门禁及整个 M5 保持 OPEN；Production NO-GO**。本地复现运维入口：`scripts/dev_cube_wsl_keepalive.ps1`，仅限受控 Windows/WSL 开发环境。
+
 当前事实必须按 **独立切片** 与 **联合门禁** 分开统计：M0 冻结；M1 基础闭环与 M2 部分真实 SSE/模型切片 PASS；M3/M4/M5/M7 均为 ACTIVE / 完整退出 Gate OPEN；M6/M8/M9 尚未完成正式验收。**Production NO-GO**。Inspector 8765 的原「需求分析→独立审核」可发起 Demo（确定性模型为默认配置）；「能力验证」Tab 展示四场景的用途与只读证据，不能把 PG 证据、旧 Worker 独立实验或 Cube 独立实验标作同一 Run 的真实联合 PASS。
 
-**下一优先级 P0 / DEV-M5-B03**：首先验证真 `NativeCubeTransport` 使用冻结的模板配置；以同一个 Harness Run / Execution 和原生 Hatchet Workflow ID 证明：独立 A Worker 获授权后创建**真实** Cube MicroVM、写入 Guest Workspace→操作系统真实 SIGKILL A→原生 Hatchet Retry 由独立 B 领取→Harness PG 按服务器时间授予 B 新 Fencing Epoch→B 以原 Sandbox ID 重连，读取原始 Guest 字节→拒绝 A 旧 Epoch 与错误 Scope→B 销毁 Sandbox 并确认 ACK。缺任一真实证据即 **BLOCKED / OPEN**，不以两个单独脚本拼接为 PASS。范围只使用合成数据；不包括生产 IAM、跨宿主 HA、OpenCode 完整 Guest、in-flight Guest Fencing。
+**已完成 P0 / DEV-M5-B03**：同一 Harness Run / Execution 与原生 Hatchet Workflow 的独立 Worker A SIGKILL→B Native Retry、PG Fencing 7→8、原 Cube Sandbox ID/Guest 字节恢复、旧 Epoch 与错误 Scope 拒绝和 Destroy ACK 已获得本机实机 PASS；范围只使用合成数据，未证明生产 IAM、跨宿主 HA、OpenCode 完整 Guest 或 in-flight Guest Fencing。**下一优先级改为 DEV-M5 尚未满足的完整 Guest/资源门禁及 Inspector B.3 的可信场景执行与证据 API**。
 
 **并行 P1 / Inspector**：复用同一可信 Scenario Runner / Evidence API 合同作为未来统一入口，不开放无认证的浏览器特权 SIGKILL/Cube 启动路径；正式运行器和真实证据交付之前，相关三个场景维持只读。后续顺序：M3/M4 正式领域与恢复合同 → M7 公共 API → M6 Recipe → M8 合成消费者 → M9 生产准入。
 

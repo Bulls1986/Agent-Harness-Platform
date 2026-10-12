@@ -2,7 +2,7 @@
 
 ## 当前判定
 
-**CODE_READY / LIVE BLOCKED，DEV-M5 OPEN，Production NO-GO。** 已增加联合实机入口、Fail-Closed 证据合同及显式 CI Gate，但**未取得**同一 Run 的 Cube 与物理 Worker 联合实测 PASS。此前各自通过的 Hatchet Worker 与 Cube MicroVM 实验不可拼接为本次验收。
+**2026-10-12 最终增量：B.2 同 Run 真实联合验收 PASS；DEV-M5 整体继续 OPEN，Production NO-GO。** 前期因 WSL 生命周期和 Cube 服务不可用而记为 CODE_READY / LIVE BLOCKED，下文保留了这些历史排障证据；随后修复环境与真实 Hatchet 任务注册/Worker 日志缺陷，取得物理 Worker A SIGKILL→B 原生 Retry→原 Cube Guest、PG Fencing 和 Destroy ACK 的完整联合实测。不得以本 B03 子切片代替 OpenCode、完整 Guest Fencing 或 DEV-M5 阶段退出。
 
 ## 目标和边界
 
@@ -50,3 +50,21 @@
 经验证发行版 Ubuntu Noble 提供 docker-compose-v2 2.40.3，且现有 Cube `support-compose-lib.sh` 原生优先 `docker compose`，已在 WSL 以 apt 安装 2.40.3 并核验 `docker compose version`。此举不改 Cube 源码，旧版 Python Compose 保留用于诊断；MySQL/Redis 以原始 systemd Unit 非破坏性重启，但最后复查仍存在起停/activating，尚未证明 Cube API 健康。因此真实联合 Gate **NOT RUN / OPEN**。
 
 另外发现 native Sandbox.create 使用 `timeout=300` 秒，而联合 Hatchet Task 原来仅 `execution_timeout=120` 秒，创建接近上限时必然被 Task Deadline 抢先中断。先写 `tests/test_m5_live_worker_time_budget.py` Red（缺共享 Time Budget），再显式定义 Cube Native Create 300 秒和 Hatchet Task 420 秒，CLI Live Gate watchdog 增至 780 秒、专用 workflow job 上限 30 分钟；Green 离线回归 **17/17 PASS**。这些代码和离线测试本身并不证明真实 Cube/Hatchet/PG 联合执行。
+
+## 2026-10-12 根因最终追溯：WSL 实例生命周期与 Compose 兼容性
+
+对齐系统日志时间轴后，确认主因不能写为「MySQL 自己 OOM 崩溃」：在部分故障窗口，`systemd-logind` 明确记录 `The system will power off now!`，随后 `shutdown.target` / `poweroff.target`、文件系统卸载、Docker 守护进程收到 **SIGTERM**，MySQL/Redis 因受控停止而退出；同一 Boot 内还观察到 Docker 正常 Stop/Start，MySQL 已 READY 后被停止。没有证据表明数据库卷需要重建。此前的 Docker Compose V1 1.29.2 发生 `KeyError: 'id'` 事件解析错误，与 Docker 29 不兼容，属于独立的放大因素；升级为发行版 Compose V2 2.40.3 后，单靠系统服务仍无法防止 Windows 结束空闲 WSL 实例。
+
+**可复现修复**：在 Windows **Task Scheduler** 中创建独立、不带自动触发器的按需 WSL 前台进程，例如 `wsl.exe -d Ubuntu -u root -e sleep 43200`。Windows 定时任务本身必须为 `Running`，不能只从短暂的命令行启动并随父进程退出。新增 `scripts/dev_cube_wsl_keepalive.ps1`：`-Action Start` / `Status` / `Stop`，默认 12 小时，**仅开发实验按需运行，不建立自动登录启动任务**。实测保活持续期间 Ubuntu Boot 时间不变，Docker/MySQL/Redis/MinIO/CubeMaster/CubeAPI 均 ACTIVE/HEALTHY，HTTP `GET /health` 返回 200；未删除 MySQL volume、未清理未知 Docker 数据或修改宿主网络安全策略。保活有明确时间上限，测试结束后可停止；Windows 主机退出/睡眠、WSL 被其他进程强制关机等行为未在此切片验收。
+
+## 2026-10-12 真实分层正例及同 Run 联合证据
+
+1. **真实 Native SDK Smoke 再次 PASS**：新 MicroVM Sandbox ID `21935fd308c14f43803ee12c3f5ddd00`。官方 `cubesandbox==0.7.0` 实际 Create、Guest 文件写读、独立 SDK Connect 同原 ID 读取原字节、Kill 确认、进程退出码 0；结束时 Cube `sandboxes=0`。
+2. **Harness PG + 真实 Cube PASS**：独立本地合成 PostgreSQL 16 测试容器（仅监听 `127.0.0.1:5432`、专用持久化 volume，未触碰 Cube MySQL）。`poc.sandbox.verify_cube_live` 真正运行并以 0 退出：Run `m5-cube-live-4a8d7bf5d1a7470b9de6e4d699ab65dc`，原 Sandbox `c51b673619e0404da77913dda4e7eaf4`，PG A/7→B/8、原 Guest 字节一致、旧 Owner 拒绝、Provider Destroy ACK→RELEASED。
+3. **Hatchet Embedded 引擎正常**：原生引擎 v0.110.5 在独立的 `hatchet_poc` 数据库成功启动、执行实际数据库迁移；SDK `hatchet-sdk==1.42.1`。第一次联合启动遇到真实 `NameError: Context is not defined`（`from __future__ import annotations` + 局部 `Context` import 与 Hatchet `typing.get_type_hints` 不兼容）。新增 `tests/test_m5_hatchet_task_registration.py` 首先 Red 后 Green，按模块级作用域注册 SDK Context，但普通离线测试不必依赖安装 Hatchet。
+4. **真实 Worker 诊断修复**：第二次联合运行原 Worker stdout/stderr 被重定向 `DEVNULL`，导致无法定位「没有 Cube Allocate」是任务未派发还是执行错误。新增 `tests/test_m5_worker_diagnostics.py` Red→Green，将独立 Worker stdout/stderr 留在唯一合成日志文件；当次阻塞 Synthetic Run 安全终止时 PG 为 ALLOCATING，未创建 Sandbox，未执行非幂等操作。随后再次运行才取得完整真实联合 PASS。
+5. **同 Run 物理 Worker + 真 Cube 正式 PASS**：`poc.sandbox.verify_hatchet_cube_worker_takeover controller` 真正执行并以 **退出码 0** 返回 `PASS_PHYSICAL_HATCHET_CUBE_SAME_RUN`。Harness Run `m5-joint-c2e2deb3c5414190a61b03209c29fb81`；Execution `cube-exec-m5-joint-c2e2deb3c5414190a61b03209c29fb81`；Hatchet Native Workflow `b68e09ec-1a44-492e-9977-91572c7466f4`；A PID **28410**，OS SIGKILL exit **-9**；独立 B PID **29342**，Hatchet Native Retry **1**，B 日志有原 Workflow/Step 的重新分配和完成；A/B 原生 Cube Sandbox 均 `5934b961fd72494094e891a497ee1490`；PG Fencing **7→8**、错误 Scope 与旧 Epoch 拒绝、原 Guest 数据逐字一致、仅一次 Cube 创建、Destroy ACK `RELEASED`，Cube /health 最后 `sandboxes=0`。Controller 校验了 PG 真实事件数和全关联身份字段，无 Fake Cube / Host Shell 替代路径。
+
+### 阶段退出范围和诚实边界
+
+**B.1、B.2、M5 1.2 PASS**。仍 **OPEN**：B.3 Inspector 可信 Scenario Runner/Evidence API、M5 1.3 完整 OpenCode Shell/Files/Git Guest、任务恢复所有负例/故障窗口、in-flight Guest Fencing、跨宿主 HA、生产 IAM、100 Active Runs、M5 2.x 阶段 Exit Gate。B.2 中 PG Lease 超期由测试控制器在确认 A SIGKILL 后以服务器时钟下的 SQL 故障注入完成，**不代表自动生产心跳/TTL 门禁 PASS**。OpenSpec 不归档，M5 整体不升级为 CLOSED。

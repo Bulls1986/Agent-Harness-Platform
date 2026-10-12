@@ -56,6 +56,10 @@ def build_hatchet():
 
 
 def build_workflow(hatchet):
+    # Hatchet resolves postponed annotations via typing.get_type_hints(fn),
+    # which evaluates them in the defining *module* namespace. A function-
+    # local Context import breaks actual native task registration.
+    global Context
     from hatchet_sdk import Context
 
     workflow = hatchet.workflow(
@@ -164,15 +168,25 @@ def build_workflow(hatchet):
 
 
 def launch_worker(role: str):
+    if role not in ("worker-A", "worker-B"):
+        raise ValueError("Physical verifier accepts only fixed worker roles")
     env = dict(os.environ)
     env["HARNESS_M5_FLEET_ROLE"] = role
-    return subprocess.Popen(
-        [sys.executable, "-B", "-m",
-         "poc.sandbox.verify_hatchet_cube_worker_takeover", "worker"],
-        env=env, stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        start_new_session=True,
-    )
+    log_dir = os.environ.get("HARNESS_M5_WORKER_LOG_DIR", "/tmp")
+    os.makedirs(log_dir, exist_ok=True)
+    log_path = os.path.join(log_dir, f"ahp-m5-{role}-{uuid4().hex[:12]}.log")
+    # Native worker stderr must survive process SIGKILL for a credible
+    # investigation. The gate uses synthetic data; never dump provider keys.
+    with open(log_path, "ab", buffering=0) as diagnostic:
+        worker = subprocess.Popen(
+            [sys.executable, "-B", "-m",
+             "poc.sandbox.verify_hatchet_cube_worker_takeover", "worker"],
+            env=env, stdin=subprocess.DEVNULL,
+            stdout=diagnostic, stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+    print("M5_NATIVE_WORKER_LOG", role, log_path, flush=True)
+    return worker
 
 
 def wait_for_original_data(db, binding, run_id, execution_id, worker):

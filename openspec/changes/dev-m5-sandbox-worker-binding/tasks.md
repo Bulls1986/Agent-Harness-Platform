@@ -1,6 +1,6 @@
 # DEV-M5 Cube 可信执行与 Coding Runtime · Tasks
 
-> 状态：**ACTIVE · 可信工具准入首段已通过，真实 Cube/Worker 接管仍 OPEN**。工期、Owner 和 Sprint 需要在真实代码/团队容量基线上评估；所有勾选项以运行证据为准。来源 DEV-HC-03 / HC-03。
+> 状态：**ACTIVE · 真实 Cube/Worker B03 联合接管已 PASS，其他 DEV-M5 阶段退出条件仍 OPEN**。工期、Owner 和 Sprint 需要在真实代码/团队容量基线上评估；所有勾选项以运行证据为准。来源 DEV-HC-03 / HC-03。
 
 ## 0. 前置与需求冻结
 - [ ] 0.1 审阅原有 Accepted ADR/HC 与 G01–G20，识别事实 Owner、安全边界和阻断依赖；OpenSpec 四类规划材料 Strict PASS。
@@ -21,10 +21,10 @@
 
 ## 1. TDD 与集成开发
 - [x] B.1（2026-10-12 控制层子切片收口）真实 Native Cube Create 显式传入已冻结模板；无 PG 的 SDK 参数负例覆盖缺模板拒绝、Metadata 不被修改及 Template 冻结；Red→Green 2/2，真实 PG/Fake Cube CI Head 38225131595 PASS。**证据**：docs/retrospectives/DEV_M5_JOINT_WORKER_CUBE_IMPLEMENTATION_20261012.md。仅 SDK 参数合同完成，不构成 B.2 联合实机 PASS。
-- [ ] B.2 实机联合 B03：同 Run、同 Hatchet Workflow、真实 Worker A SIGKILL→B 原生 Retry；真实 Cube ID、同 Guest 字节、PG A/7→B/8、旧 Owner/Scope 拒绝、销毁回执；独立进程 PID/退出码/Provider IDs、Guest 证据及全套失败路径可查询。未实测只可记为 CODE_READY/NOT_TESTED，禁止 PASS。
+- [x] B.2 实机联合 B03：同 Run、同 Hatchet Workflow、真实 Worker A SIGKILL→B 原生 Retry；真实 Cube ID、同 Guest 字节、PG A/7→B/8、旧 Owner/Scope 拒绝、销毁回执；独立进程 PID/退出码/Provider IDs、Guest 证据齐全。**2026-10-12 实机 PASS**：Run `m5-joint-c2e2deb3c5414190a61b03209c29fb81`，Workflow `b68e09ec-1a44-492e-9977-91572c7466f4`，Sandbox `5934b961fd72494094e891a497ee1490`；A PID 28410 / SIGKILL -9，B PID 29342 / Native Retry 1；PG 7→8、Guest 原字节一致、旧 Epoch/Scope 拒绝、RELEASED、真实脚本 exit 0。**证据**：docs/retrospectives/DEV_M5_JOINT_WORKER_CUBE_IMPLEMENTATION_20261012.md。仅 B03 联合子切片 PASS，DEV-M5 完整阶段仍 OPEN。
 - [ ] B.3 联合场景的权限边界和证据出口：Inspector 未来只能经可信后端受控发起，静态场景目录/只读 PG 不能判定真实联合 Gate。
 - [ ] 1.1 先写无 ExecutionContext、越权、旧 Lease/Fencing 的拒绝测试；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
-- [ ] 1.2 完成真实 Cube Provider Allocate/Bind/Release 与 WorkspaceRef；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
+- [x] 1.2 完成真实 Cube Provider Allocate/Bind/Release 与 WorkspaceRef；**实机证据**：docs/retrospectives/DEV_M5_JOINT_WORKER_CUBE_IMPLEMENTATION_20261012.md。PG+Cube Live Run `m5-cube-live-4a8d7bf5d1a7470b9de6e4d699ab65dc`，Sandbox `c51b673619e0404da77913dda4e7eaf4`；真实 PG B/8 重连、Guest 原文件逐字一致及 RELEASED；同 Run Hatchet Worker 联合 B03 另见 B.2。范围不包含 OpenCode Shell/Git 或 in-flight Guest Fencing。
 - [ ] 1.3 OpenCode Shell/Files/Git 和 Worker A→B 实机接管；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
 - [ ] 1.4 模型-only 0 Sandbox、资源释放、跨 Scope 安全/CI/复盘；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
 
