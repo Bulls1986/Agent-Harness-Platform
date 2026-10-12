@@ -42,3 +42,11 @@
 其后发现资源释放同样缺少对 Native Connect 返回身份的最终核对，错误的 SDK 返回对象可能导致删除另一 Sandbox 并误将原 Sandbox 记录为已 RELEASED。新增 Destroy 负例首次 Red（2 个错误身份场景 FAIL）；Release 在 Kill 前核对原生实例 ID，不符合则保持 RELEASING 等待对账，正确实例才 Kill 并确认 ACK；Green 共 4/4，组合离线回归 16/16 PASS。Native 连接、Destroy 均不能把 Provider Locator 当作授权依据。
 
 上一阶段 PR Head 2ae054e 的 Architecture Guards CI 38225131623 **SUCCESS** 与 DEV-M5 Real PG/Fake Cube CI 38225131595 **SUCCESS** 已核实；因此 B.1 模板与 SDK 参数合同子切片有可核查的远端结果。最新释放身份保护仍须在新 Head 单独复验。真实 Hatchet + Cube 联合 Gate 在 Cube API 不可访问情况下仍无可计入的 PASS 证据。
+
+## 2026-10-12 实机环境专项续查与 Task Budget TDD
+
+继续检测到 Docker 29 在 Ubuntu WSL 内反复处于 activating/restoring 状态，服务端请求偶发阻塞。旧版 Python docker-compose 1.29.2 的日志有 `compose/project.py` 事件监听 `KeyError: 'id'`，导致一键部署 MySQL/Redis 服务反复起停，CubeMaster/API 一直不可用。这是环境故障线索，不凭日志单独断言 Docker daemon 反复退出的唯一根因。MySQL **确实曾打印 ready for connections**，随后因服务停止收到正常的 shutdown；不得把这段 ready 日志当作长期健康运行。Cube MySQL 持久化使用 Docker volume /var/lib/mysql，本次未清除 volume、未改内网路由/防火墙规则、未删除 Sandbox。
+
+经验证发行版 Ubuntu Noble 提供 docker-compose-v2 2.40.3，且现有 Cube `support-compose-lib.sh` 原生优先 `docker compose`，已在 WSL 以 apt 安装 2.40.3 并核验 `docker compose version`。此举不改 Cube 源码，旧版 Python Compose 保留用于诊断；MySQL/Redis 以原始 systemd Unit 非破坏性重启，但最后复查仍存在起停/activating，尚未证明 Cube API 健康。因此真实联合 Gate **NOT RUN / OPEN**。
+
+另外发现 native Sandbox.create 使用 `timeout=300` 秒，而联合 Hatchet Task 原来仅 `execution_timeout=120` 秒，创建接近上限时必然被 Task Deadline 抢先中断。先写 `tests/test_m5_live_worker_time_budget.py` Red（缺共享 Time Budget），再显式定义 Cube Native Create 300 秒和 Hatchet Task 420 秒，CLI Live Gate watchdog 增至 780 秒、专用 workflow job 上限 30 分钟；Green 离线回归 **17/17 PASS**。这些代码和离线测试本身并不证明真实 Cube/Hatchet/PG 联合执行。

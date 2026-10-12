@@ -6,7 +6,7 @@ permissions:
 jobs:
   real-cube-microvm:
     runs-on: ubuntu-latest
-    timeout-minutes: 22
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:16-alpine
@@ -41,6 +41,7 @@ jobs:
           python -B -m unittest discover -s tests -p test_native_cube_transport.py -v
           python -B -m unittest discover -s tests -p test_m5_cube_connect_identity.py -v
           python -B -m unittest discover -s tests -p test_m5_joint_evidence.py -v
+          python -B -m unittest discover -s tests -p test_m5_live_worker_time_budget.py -v
       - name: Strict DEV-M5 OpenSpec validation
         run: npx --yes @fission-ai/openspec@1.12.0 validate dev-m5-sandbox-worker-binding --strict
       - name: Fail closed if real Cube endpoint and template unavailable
@@ -60,4 +61,4 @@ jobs:
               c.execute('CREATE DATABASE hatchet_poc')
           PY
       - name: Real same-Run Hatchet Worker A SIGKILL / B native retry and original Cube Guest
-        run: timeout --signal=KILL 540s python -B -m poc.sandbox.verify_hatchet_cube_worker_takeover controller
+        run: timeout --signal=KILL 780s python -B -m poc.sandbox.verify_hatchet_cube_worker_takeover controller

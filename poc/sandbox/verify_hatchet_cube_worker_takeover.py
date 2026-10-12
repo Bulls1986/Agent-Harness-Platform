@@ -25,6 +25,7 @@ from poc.sandbox.joint_gate_contract import validate_joint_evidence
 
 ROLE = os.environ.get("HARNESS_M5_FLEET_ROLE", "controller")
 GUEST_FILE = "/workspace/m5-joint-worker-takeover.txt"
+HATCHET_TASK_TIMEOUT_SECONDS = 420
 
 
 class Input(BaseModel):
@@ -63,7 +64,7 @@ def build_workflow(hatchet):
     )
 
     @workflow.task(retries=2, backoff_factor=1,
-                   execution_timeout=timedelta(seconds=120))
+                   execution_timeout=timedelta(seconds=HATCHET_TASK_TIMEOUT_SECONDS))
     def guest_workspace_task(input: Input, ctx: Context) -> dict:
         db = PgFacts()
         binding = CubeBinding(db)

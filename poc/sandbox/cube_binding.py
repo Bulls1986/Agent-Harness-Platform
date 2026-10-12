@@ -13,6 +13,9 @@ import os
 from poc.closed_loop.facts import PgFacts, UnsafeDispatch
 
 
+CUBE_NATIVE_CREATE_TIMEOUT_SECONDS = 300
+
+
 @dataclass(frozen=True)
 class Binding:
     execution_id: str
@@ -413,7 +416,8 @@ class NativeCubeTransport:
 
     def create(self,*,metadata):
         sandbox=self.sdk.create(
-            template=self.template,timeout=300,metadata=dict(metadata))
+            template=self.template,timeout=CUBE_NATIVE_CREATE_TIMEOUT_SECONDS,
+            metadata=dict(metadata))
         return sandbox.sandbox_id
 
     def list(self):
