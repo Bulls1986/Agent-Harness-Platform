@@ -43,6 +43,21 @@ The first screen explains **what is being verified**, its scope and the exact tw
 
 **This is a deterministic-model orchestration demo.** It uses real Pydantic AI/OpenAI Agents SDKs but each SDK receives a local model with a fixed test answer. The system is **not** interpreting the submitted business text and must never pretend to generate an actual product report. The completed Run's final result is the confirmed output of Step B, persisted atomically as a dedicated business result. A previously completed Run with no persisted original prompt shows “not recorded” instead of inventing its input; its older final result can be read from Step B's committed output and marked as derived.
 
+## 两个 Tab：双 Agent 演示 + 能力验证
+
+原来的 Inspector 页面保持在 `http://127.0.0.1:8765`，**只新增一个「能力验证」Tab**，不创建另一套页面/演示服务。第一个 Tab「双 Agent 演示」保留原 Run 提交、两 SDK 节点输入输出、最终 Run 结果、PG 历史和 SSE。
+
+新增的「能力验证」Tab 用场景而不是 JSON 为主线，针对四项能力逐一展示：
+
+- **双 Agent 跨 SDK 接力**：业务场景是产品分析与独立审核；证明跨 Agent SDK 调度、持久化节点数据和最终结果。这一项可以从原 Tab 直接执行。
+- **Cube Workspace 恢复**：业务场景是研发/测试 Agent 中断后续跑，证明同一 Sandbox ID / WorkspaceRef、旧 Owner 失效、新 Owner Guest 文件内容保持；实际 Cube Guest 和释放必须由真实运行器证明。
+- **Hatchet Worker A→B 故障接管**：业务场景是 Worker 异常退出后任务恢复；必须有真实 PID、A SIGKILL 退出码 -9、B 不同 PID、同 Workflow Native Retry、原 Cube 数据与 Epoch 才能算 PASS。该联合实机 Gate 尚未通过。
+- **非幂等 Tool Receipt**：业务场景是外部副作用落盘但 ACK 丢失；必须验证外部真实效果仅一次、UNKNOWN 保持/对账、过期 Owner 拒绝；不能只凭 PostgreSQL Receipt 事件断言外部事实。
+
+下方提供**只读 Run ID 证据查询**，通过 `GET /api/verification/evidence/{run_id}` 展示 PG Workflow ID、白名单事件、Cube Binding/Owner/Fencing、Tool Receipt 状态，始终标注 `PERSISTED_FACTS_ONLY` 与 `verified=false`。这意味着它只证明“数据库中观察到什么”，**不等于**真实 Guest 字节、OS SIGKILL 或外部付款等效果已经被独立验收。场景目录 API 为 `GET /api/verification/scenarios`。
+
+Cube/故障注入/外部 Tool 尚**未**在这个无生产认证的 Inspector 中开放“一键执行”；当前只能查看运行结果，或通过各自有权限的开发/CI 实机 Gate 执行。后续若要从 Tab 启动这些演示，必须先集成受信任的服务端执行器、回传证据和适当的访问控制，不能直接从浏览器触发宿主机 Shell 或 SIGKILL。
+
 ## What the browser shows
 
 - Submit prompt to **create a real** Platform Run and PG Outbox, dispatch on **one shared Hatchet Engine/Worker**.
