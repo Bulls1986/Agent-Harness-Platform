@@ -11,6 +11,8 @@
 - [x] 1.2 在同一 HTML 页面只添加一个顶层「能力验证」Tab；四场景均有使用场景、能力、步骤、证据、限制。
 - [x] 1.3 新增只读 Catalog 与 PG 证据 API，采用有限证据字段与明确 `verified=false`；不存在后端特权 Runner 时不得出现假的开始按钮。
 - [ ] 1.4 后续可信 Worker/Cube 联合 Gate 真通过之后，接入由受信任后端运行的演示执行器、真实 OS/Cube/Guest 原生证据与终态，不得从无认证页面直接放行特权操作。
+- [x] 1.4a B03 受控执行 API 与场景卡交互开发：默认只读，显式服务端 opt-in 与操作员鉴权、固定 Runner，不暴露 Shell 参数；独立证据查询，PG 观察不标记 verified。**证据**：docs/retrospectives/DEV_M5_INSPECTOR_TRUSTED_SCENARIO_20261012.md。真实 HTTP→Cube E2E 与其他场景执行入口仍 OPEN。
+- [ ] 1.4b 在真实 Linux/Hatchet/PG/Cube 环境完成 Inspector HTTP 授权触发的联合 Gate、持久化证据重启查询，并补齐 Cube-only/Receipt 场景独立合同。
 
 ## 2. 门禁
 - [x] 2.1 本 Tab 的真实 PG 合同、原 Inspector Black-box、Architecture Guards、Strict OpenSpec 均通过，新增 TDD 失败与整改已复盘：`docs/retrospectives/INSPECTOR_CAPABILITY_TAB_20261012.md`。完成文档后最终 Head CI 仍须复验再合并。

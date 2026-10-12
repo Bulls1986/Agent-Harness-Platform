@@ -128,13 +128,23 @@ Hatchet 负责两个节点的调度；Harness 保存业务 Run、每步输入输
 <section id="view-capabilities" role="tabpanel" aria-labelledby="tab-capabilities" hidden>
 <section class="panel intro">
 <h2>这个 Tab 用来验证什么？</h2>
-<p>每个场景说明<strong>使用场景、证明什么能力、实际步骤、实际验收证据与不能证明的部分</strong>。可直接执行的双 Agent 场景仍通过原 Tab 提交；Cube / 故障接管 / 非幂等 Tool 场景，当前仅支持读取真实数据库证据，不能在浏览器中伪造或触发特权执行。</p>
-<p class="notice" style="margin-top:10px"><strong>重要：</strong>已观察到的 PostgreSQL 事件 ≠ 真实 Cube Guest 校验通过 ≠ Hatchet Worker 实际 SIGKILL 后恢复。未接入可信场景运行器前，整条能力验证明确为“待验收”，不显示假 PASS。</p>
+<p>每个场景说明<strong>使用场景、证明什么能力、实际步骤、实际验收证据与不能证明的部分</strong>。双 Agent 场景仍通过原 Tab 提交；Cube 和非幂等 Tool 场景只读。物理 Worker 场景在服务端显式启用可信运行器后支持受控执行。</p>
+<p class="notice" style="margin-top:10px"><strong>重要：</strong>数据库事实不等于 Guest 字节校验或真实 Hatchet Worker 恢复。只有可信后端返回关联的完整证据，才能宣称本次验收通过。</p>
 </section>
 <section class="panel">
 <h2>使用场景与能力证明</h2>
 <div id="capability-cards" class="capability-grid" aria-live="polite"><p class="muted">读取能力场景定义中…</p></div>
 <p id="capability-error" class="error" role="alert"></p>
+</section>
+<section id="trusted-operator-panel" class="panel" hidden>
+<h2>受控场景执行 · 物理 Worker 接管</h2>
+<p class="caption">仅授权的开发环境可启动；需要操作员临时凭证。执行结果与数据库只读观察结果分开展示。</p>
+<div class="evidence-form">
+<label for="trusted-operator-token">操作员凭证</label>
+<input id="trusted-operator-token" type="password" autocomplete="off" spellcheck="false" placeholder="请输入临时凭证">
+</div>
+<p id="trusted-result" role="status" aria-live="polite" class="muted">尚未运行。</p>
+<pre id="trusted-evidence" class="technical" hidden></pre>
 </section>
 <section class="panel">
 <h2>实际验收证据 · 已持久化 Run</h2>
@@ -177,6 +187,7 @@ const eventLabels={
 };
 const stateLabels={CREATED:"已创建",RUNNING:"执行中",COMPLETED:"完成",FAILED:"失败",CANCEL_REQUESTED:"正在取消",CANCELLED:"已取消"};
 let capabilityCatalogLoaded=false;
+let privilegedExecutionRunning=false;
 const tabIds=["tab-agent-demo","tab-capabilities"];
 function switchInspectorTab(target){
   if(!tabIds.includes(target))return;
@@ -212,7 +223,10 @@ async function loadCapabilityCatalog(){
     for(const scenario of data.scenarios){
       const card=node("article","","capability-card");
       const executable=scenario.availability==="EXECUTABLE_EXISTING_TAB";
-      const badge=node("span",executable?"在双 Agent Tab 中可执行":"尚未接入一键执行 · 可读 PG 证据","tag"+(executable?" ready":""));
+      const privileged=scenario.availability==="EXECUTABLE_OPERATOR_AUTH";
+      const badge=node("span",executable?"在双 Agent Tab 中可执行":
+                       privileged?"已启用可信执行 · 需要操作员授权":
+                       "尚未接入一键执行 · 可读 PG 证据","tag"+((executable||privileged)?" ready":""));
       card.append(badge,node("h3",scenario.title));
       for(const [heading,description] of [
         ["使用场景",scenario.use_case],["证明什么能力",scenario.capability]
@@ -227,6 +241,12 @@ async function loadCapabilityCatalog(){
         btn.type="button";
         btn.addEventListener("click",()=>switchInspectorTab("tab-agent-demo"));
         card.append(btn);
+      }else if(privileged&&scenario.id==="worker-takeover"){
+        $("trusted-operator-panel").hidden=false;
+        const btn=node("button","启动受控故障接管验证");
+        btn.type="button";
+        btn.addEventListener("click",()=>startTrustedScenario(btn));
+        card.append(btn);
       }
       $("capability-cards").append(card);
     }
@@ -234,6 +254,47 @@ async function loadCapabilityCatalog(){
     capabilityCatalogLoaded=true;
   }catch(error){
     $("capability-error").textContent="读取场景定义失败："+error.message;
+  }
+}
+async function startTrustedScenario(button){
+  if(privilegedExecutionRunning)return;
+  const token=$("trusted-operator-token").value;
+  if(!token){
+    $("trusted-result").textContent="缺少操作员凭证，未发起执行。";
+    return;
+  }
+  const headers={"X-Inspector-Scenario-Token":token};
+  privilegedExecutionRunning=true;
+  button.disabled=true;
+  $("trusted-evidence").hidden=true;
+  $("trusted-result").textContent="正在请求服务端运行真实验证…";
+  try{
+    const started=await api("/api/verification/scenarios/worker-takeover/runs",
+                            {method:"POST",headers});
+    $("trusted-result").textContent="已受理，编号："+started.execution_id+"。正在运行…";
+    let finished=false;
+    for(let count=0;count<200;count++){
+      await new Promise(resolve=>setTimeout(resolve,4000));
+      const result=await api("/api/verification/executions/"+
+          encodeURIComponent(started.execution_id),{headers});
+      if(["PASSED","FAILED","BLOCKED_UNKNOWN"].includes(result.status)){
+        finished=true;
+        $("trusted-result").textContent=(result.verified?"真实联合验证通过":
+            "没有可信通过证据："+result.status)+" · 编号："+started.execution_id;
+        $("trusted-evidence").textContent=JSON.stringify(result,null,2);
+        $("trusted-evidence").hidden=false;
+        if(result.evidence?.run_id)$("evidence-run-input").value=result.evidence.run_id;
+        break;
+      }
+    }
+    if(!finished)$("trusted-result").textContent=
+      "查询超时，执行终态未知。禁止盲目重新触发；请按编号对账。";
+  }catch(error){
+    $("trusted-result").textContent=
+      "未取得可信结果："+error.message+"。请先核对服务端状态，不要盲目重试。";
+  }finally{
+    button.disabled=false;
+    privilegedExecutionRunning=false;
   }
 }
 function evidenceItem(label,value){

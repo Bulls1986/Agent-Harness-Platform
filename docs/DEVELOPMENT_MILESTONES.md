@@ -21,6 +21,8 @@
 
 ## 2026-10-12 阶段状态冻结与下一执行切片
 
+**B.3a Inspector 可信场景执行接口（当日增量）**：在既有双 Tab Inspector 内，完成 worker-takeover 固定受控 Runner 的操作员鉴权、默认关闭、单任务锁、真实 Native 证明字段校验、脱敏证据存储与 UI 查询。代码/真实 PG Inspector 回归通过；本轮**未取得由新 HTTP API 发起的 Hatchet→Cube 同 Run 联合实机 PASS**，故 B.3b、Inspector 完整场景操作台及 M5 阶段 Gate 仍 OPEN。不得将上一轮 CLI B03 实机 PASS 偷换为本次 HTTP 入口的实机结果。证据：docs/retrospectives/DEV_M5_INSPECTOR_TRUSTED_SCENARIO_20261012.md。
+
 **2026-10-12 当日后续实机增量（覆盖以下历史 BLOCKED 状态，但不覆盖整个 M5）**：本地 WSL 服务反复中断的主要可复现条件已定位并解决：WSL distro 在 Windows 不维持前台任务时进入正常 poweroff，旧 Python docker-compose 1.29.2 与 Docker 29 的事件监听还有 `KeyError: 'id'`。安装 Ubuntu Compose V2 2.40.3 并从 Windows Task Scheduler 启动**无自动触发的按需 WSL Keeper** 后，Cube MySQL/Redis/MinIO/CubeMaster/API 持续健康，`/health` HTTP 200；原生 SDK 真 MicroVM Create/Guest 新连接/Destroy 再次 PASS，Harness PG+Cube Live Gate PASS，**同一 Run/原生 Hatchet Worker A SIGKILL→独立 B Retry→原 Cube Guest 接管 B03 PASS**。Run、Workflow、PID、Native Retry、PG Fencing、原 Provider Sandbox、Guest 校验及 Destroy ACK 见 `docs/retrospectives/DEV_M5_JOINT_WORKER_CUBE_IMPLEMENTATION_20261012.md`。**M5 B.1/B.2 和 1.2 子项可据证据计 PASS，但 B.3、OpenCode 完整 Guest、in-flight fencing、2.x 退出门禁及整个 M5 保持 OPEN；Production NO-GO**。本地复现运维入口：`scripts/dev_cube_wsl_keepalive.ps1`，仅限受控 Windows/WSL 开发环境。
 
 当前事实必须按 **独立切片** 与 **联合门禁** 分开统计：M0 冻结；M1 基础闭环与 M2 部分真实 SSE/模型切片 PASS；M3/M4/M5/M7 均为 ACTIVE / 完整退出 Gate OPEN；M6/M8/M9 尚未完成正式验收。**Production NO-GO**。Inspector 8765 的原「需求分析→独立审核」可发起 Demo（确定性模型为默认配置）；「能力验证」Tab 展示四场景的用途与只读证据，不能把 PG 证据、旧 Worker 独立实验或 Cube 独立实验标作同一 Run 的真实联合 PASS。
