@@ -56,6 +56,9 @@ jobs:
           python -B -m unittest discover -s tests -p test_m5_runtime_admission_security.py -v
           python -B -m unittest discover -s tests -p test_m5_zero_sandbox_live_contract.py -v
           python -B -m unittest discover -s tests -p test_m5_opencode_prerequisites.py -v
+          python -B -m unittest discover -s tests -p test_m5_opencode_guest_http.py -v
+          python -B -m unittest discover -s tests -p test_m5_opencode_bound_guest.py -v
+          python -B -m unittest discover -s tests -p test_m5_physical_opencode_evidence.py -v
       - name: Compile genuine Cube smoke and require fail-closed when no endpoint
         run: |
           python -m py_compile poc/sandbox/verify_cube_sdk_smoke.py

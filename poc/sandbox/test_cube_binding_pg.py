@@ -8,6 +8,8 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
 import unittest
+from threading import Event
+from unittest.mock import patch
 from poc.closed_loop.facts import PgFacts, UnsafeDispatch
 from poc.sandbox.cube_binding import CubeBinding, CubeWorkspaceGateway
 
@@ -370,6 +372,92 @@ class CubePgBindingTests(unittest.TestCase):
             self.gateway.read(self.execution,"worker-B",8,
                               "/workspace/proof.txt")
         self.assertEqual(len(self.transport.created),1)
+
+    def test_unresolved_guest_effect_blocks_takeover_even_after_lease_expires(self):
+        """B must not reuse a Guest while A's async Shell may still run."""
+        sid=self.gateway.allocate(self.execution,"worker-A",7)
+        effect=self.binding.begin_guest_effect(
+            self.execution,"worker-A",7,"OPENCODE_SHELL","sha256:test-intent")
+        with self.db.tx() as c:
+            c.execute("UPDATE harness_cube_binding "
+                      "SET lease_expires_at=now()-interval '1 second' "
+                      "WHERE execution_id=%s",(self.execution,))
+        with self.assertRaises(UnsafeDispatch):
+            self.binding.takeover(
+                self.execution,7,"worker-B",
+                self.scope,self.workspace,self.digest)
+        self.assertEqual(self.binding.get(self.execution).sandbox_id,sid)
+        self.assertEqual(self.binding.get(self.execution).fencing_epoch,7)
+        self.assertEqual(self.binding.get_guest_effect(effect)["state"],"DISPATCHED")
+
+    def test_confirmed_guest_effect_allows_normal_fenced_handoff(self):
+        self.gateway.allocate(self.execution,"worker-A",7)
+        effect=self.binding.begin_guest_effect(
+            self.execution,"worker-A",7,"OPENCODE_SHELL","sha256:verified")
+        self.binding.confirm_guest_effect(
+            self.execution,"worker-A",7,effect,"sha256:receipt")
+        self.assertEqual(self.binding.get_guest_effect(effect)["state"],"CONFIRMED")
+        with self.db.tx() as c:
+            c.execute("UPDATE harness_cube_binding "
+                      "SET lease_expires_at=now()-interval '1 second' "
+                      "WHERE execution_id=%s",(self.execution,))
+        b=self.binding.takeover(
+            self.execution,7,"worker-B",self.scope,self.workspace,self.digest)
+        self.assertEqual(b.fencing_epoch,8)
+
+    def test_guest_effect_wrong_owner_cannot_confirm_or_release(self):
+        self.gateway.allocate(self.execution,"worker-A",7)
+        effect=self.binding.begin_guest_effect(
+            self.execution,"worker-A",7,"OPENCODE_SHELL","sha256:unknown")
+        with self.assertRaises(UnsafeDispatch):
+            self.binding.confirm_guest_effect(
+                self.execution,"worker-B",7,effect,"sha256:fake")
+        with self.assertRaises(UnsafeDispatch):
+            self.binding.confirm_guest_effect(
+                self.execution,"worker-A",8,effect,"sha256:fake")
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.release(self.execution,"worker-A",7)
+        self.assertEqual(self.binding.get(self.execution).state,"ACTIVE")
+
+    def test_actual_http_dispatch_race_blocks_worker_b_and_unknown_result(self):
+        """Fake HTTP controls timing; PG lock/fence is genuine (not a Guest PASS)."""
+        from poc.sandbox.opencode_bound_guest import BoundOpenCodeGuest
+        started, finish = Event(), Event()
+        self.gateway.allocate(self.execution,"worker-A",7)
+        agent=BoundOpenCodeGuest(
+            self.gateway,password="synthetic-only-private-secret-long-enough")
+        def suspended_http(*args,**kwargs):
+            started.set()
+            if not finish.wait(8):
+                raise TimeoutError("Synthetic HTTP transport expired")
+            return {"data":{"synthetic":True}}
+        with patch("poc.sandbox.opencode_bound_guest._guest_http",
+                   side_effect=suspended_http):
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                running=pool.submit(
+                    agent.native_shell,self.execution,"worker-A",7,
+                    "ses_realABC","/api",
+                    "printf first > /workspace/m5-opencode/a.txt")
+                try:
+                    self.assertTrue(started.wait(5))
+                    with self.db.tx() as c:
+                        c.execute(
+                            "UPDATE harness_cube_binding SET "
+                            "lease_expires_at=now()-interval '1 second' "
+                            "WHERE execution_id=%s",(self.execution,))
+                    with self.assertRaises(UnsafeDispatch):
+                        self.binding.takeover(
+                            self.execution,7,"worker-B",
+                            self.scope,self.workspace,self.digest)
+                finally:
+                    finish.set()
+                with self.assertRaises(UnsafeDispatch):
+                    running.result(timeout=10)
+        with self.assertRaises(UnsafeDispatch):
+            self.binding.takeover(
+                self.execution,7,"worker-B",
+                self.scope,self.workspace,self.digest)
+        self.assertEqual(self.binding.get(self.execution).fencing_epoch,7)
 
 
 if __name__=="__main__":

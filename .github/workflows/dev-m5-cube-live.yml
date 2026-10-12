@@ -6,7 +6,7 @@ permissions:
 jobs:
   real-cube-microvm:
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 75
     services:
       postgres:
         image: postgres:16-alpine
@@ -49,6 +49,9 @@ jobs:
           python -B -m unittest discover -s tests -p test_m5_runtime_admission_security.py -v
           python -B -m unittest discover -s tests -p test_m5_zero_sandbox_live_contract.py -v
           python -B -m unittest discover -s tests -p test_m5_opencode_prerequisites.py -v
+          python -B -m unittest discover -s tests -p test_m5_opencode_guest_http.py -v
+          python -B -m unittest discover -s tests -p test_m5_opencode_bound_guest.py -v
+          python -B -m unittest discover -s tests -p test_m5_physical_opencode_evidence.py -v
       - name: Strict DEV-M5 OpenSpec validation
         run: npx --yes @fission-ai/openspec@1.12.0 validate dev-m5-sandbox-worker-binding --strict
       - name: Fail closed if real Cube endpoint and template unavailable
@@ -75,3 +78,11 @@ jobs:
         run: timeout --signal=KILL 930s python -B -m poc.closed_loop.verify_trusted_scenario_api_live
       - name: Native Cube Guest OpenCode prerequisites (mandatory for full DEV-M5)
         run: timeout --signal=KILL 320s python -B -m poc.sandbox.verify_opencode_guest_prerequisites
+      - name: Actual OpenCode public Session Shell Files VCS inside native Cube MicroVM
+        run: timeout --signal=KILL 320s python -B -m poc.sandbox.verify_opencode_guest_http
+      - name: Real PG fenced OpenCode native session continuity across A-to-B ownership
+        run: timeout --signal=KILL 420s python -B -m poc.sandbox.verify_opencode_pg_guest_live
+      - name: Real Hatchet OS Worker A SIGKILL to B native retry retaining same OpenCode session
+        env:
+          HARNESS_M5_NATIVE_OPENCODE: '1'
+        run: timeout --signal=KILL 780s python -B -m poc.sandbox.verify_hatchet_cube_worker_takeover controller

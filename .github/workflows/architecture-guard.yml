@@ -29,6 +29,9 @@ jobs:
           python -B -m unittest discover -s tests -p "test_m5_runtime_admission_security.py" -v
           python -B -m unittest discover -s tests -p "test_m5_zero_sandbox_live_contract.py" -v
           python -B -m unittest discover -s tests -p "test_m5_opencode_prerequisites.py" -v
+          python -B -m unittest discover -s tests -p "test_m5_opencode_guest_http.py" -v
+          python -B -m unittest discover -s tests -p "test_m5_opencode_bound_guest.py" -v
+          python -B -m unittest discover -s tests -p "test_m5_physical_opencode_evidence.py" -v
       - name: Architecture docs and import boundaries
         run: python -B scripts/check_architecture_guardrails.py
       - name: Current architecture navigation and local Markdown link targets

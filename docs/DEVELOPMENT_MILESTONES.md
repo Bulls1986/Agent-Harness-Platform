@@ -21,6 +21,8 @@
 
 ## 2026-10-12 阶段状态冻结与下一执行切片
 
+**M5 Guest 在途屏障追加验收**：真实 OpenCode v2 Shell/Files/Git 已在 Cube+PG+Hatchet 双物理 Worker A SIGKILL→B Native Retry 下通过。新增 Harness PG 持久化工具 Effect 意图与终态回执：发起前登记 DISPATCHED，未知在途操作阻止 B Takeover/Destroy，前台 Shell 终态 marker 与文件验证后才能 CONFIRMED。真实 PG 并发拒绝测试和正常 PG+OpenCode 实机重测通过，但并不证明任意 Guest 后台子进程被强制终止。DEV-M5 1.3/2.1/2.3 仍 OPEN。证据：docs/retrospectives/DEV_M5_GUEST_INFLIGHT_BARRIER_20261012.md。
+
 **DEV-M5 当日 Exit 审计增量**：8 项 OPEN 经独立证据复核后，0.1/0.2/1.1/1.4 和阶段故障复盘 2.2 完成，余 **1.3 OpenCode Native Shell/Files/Git Guest 全链及在途 Fencing、2.1 全量真实阶段 Gate、2.3 审查合并归档**仍 OPEN。真实 Cube SDK 提供模型-only Native Inventory 0→0 的资源证明；新增 TDD 发现并封堵 Runtime 操作名与 Capability 不符的授权绕过，实际 PG Cube Binding 15/15。真实 Guest 首次探针发现 OpenCode 文件但修正后可运行性未获得 PASS，不能标记 1.3 完成。详见 docs/retrospectives/DEV_M5_PHASE_EXIT_AUDIT_20261012.md。完整 M5 仍 ACTIVE，生产 NO-GO。
 
 **B.3a/B.3b Inspector Worker Takeover 可信场景执行（当日增量）**：原双 Tab Inspector 的固定授权 Runner、默认关闭、单活锁、原生证据校验、脱敏落盘及查询完成。新 HTTP API 真实触发的 Hatchet Worker A SIGKILL→独立 B Retry→原生 Cube Guest/PG Fencing 同 Run 实机 **PASS_REAL_INSPECTOR_TRUSTED_B03_API**；新 Evidence proof-c7b82a4c3c6d4a4d963e5aee8fbf52e5，Run m5-joint-8b90c55281864cfe8f055cb1de6fbb8d，Sandbox 73d702e69a374e778bcae3ed79d1625a；PG Epoch 8/RELEASED，Cube 0 Sandbox、重建 Inspector 后可查询证据。**只关闭 Worker Takeover 受控路径，不包含 Cube-only、非幂等 Receipt 的独立执行、完整 Guest/安全/容量或 M5 整体 Gate。** 详见 docs/retrospectives/DEV_M5_INSPECTOR_TRUSTED_SCENARIO_20261012.md。

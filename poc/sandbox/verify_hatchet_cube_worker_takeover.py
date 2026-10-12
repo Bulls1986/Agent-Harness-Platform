@@ -10,6 +10,8 @@ from __future__ import annotations
 from datetime import timedelta
 import json
 import os
+import re
+import secrets
 import signal
 import subprocess
 import sys
@@ -21,11 +23,38 @@ from pydantic import BaseModel
 from poc.closed_loop.facts import PgFacts, UnsafeDispatch
 from poc.sandbox.cube_binding import CubeBinding, CubeWorkspaceGateway, NativeCubeTransport
 from poc.sandbox.joint_gate_contract import validate_joint_evidence
+from poc.sandbox.opencode_bound_guest import BoundOpenCodeGuest
 
 
 ROLE = os.environ.get("HARNESS_M5_FLEET_ROLE", "controller")
 GUEST_FILE = "/workspace/m5-joint-worker-takeover.txt"
+OPENCODE_GUEST_FILE = "/workspace/m5-opencode/native-tool.txt"
 HATCHET_TASK_TIMEOUT_SECONDS = 420
+
+
+def opencode_enabled() -> bool:
+    value = os.environ.get("HARNESS_M5_NATIVE_OPENCODE", "0")
+    if value not in ("0", "1"):
+        raise ValueError("Unknown M5 OpenCode native mode")
+    return value == "1"
+
+
+def validate_opencode_joint_evidence(evidence: dict) -> None:
+    if not isinstance(evidence, dict):
+        raise ValueError("Native OpenCode proof not supplied")
+    a = evidence.get("native_opencode_session_id")
+    b = evidence.get("native_opencode_session_after_retry")
+    if (not isinstance(a, str)
+            or not re.fullmatch(r"[A-Za-z0-9_-]{3,128}", a)
+            or b != a
+            or evidence.get("opencode_shell_files_git") is not True
+            or evidence.get("opencode_original_guest_file_preserved") is not True
+            or evidence.get("opencode_old_owner_denied") is not True
+            or type(evidence.get("opencode_pg_effect_receipts_confirmed")) is not int
+            or evidence["opencode_pg_effect_receipts_confirmed"] < 2
+            or evidence.get("opencode_pg_effects_pending") != 0
+            or evidence.get("opencode_destroy_ack") != "RELEASED"):
+        raise ValueError("Physical Native OpenCode + Cube proof incomplete")
 
 
 class Input(BaseModel):
@@ -99,7 +128,43 @@ def build_workflow(hatchet):
             gateway.write(input.execution_id, "worker-A", 7, GUEST_FILE, original)
             if gateway.read(input.execution_id, "worker-A", 7, GUEST_FILE) != original:
                 raise UnsafeDispatch("Worker A could not verify real Guest bytes")
+            native_session = None
+            api_prefix = None
+            if opencode_enabled():
+                # This credential originates at the trusted controller and is
+                # shared with both test Workers only; it is never a Run fact.
+                opencode = BoundOpenCodeGuest(
+                    gateway, password=os.environ.get(
+                        "HARNESS_M5_GUEST_OPENCODE_PASSWORD", ""))
+                opencode.start_server(input.execution_id, "worker-A", 7)
+                for attempt in range(15):
+                    try:
+                        native_session, api_prefix = opencode.create_session(
+                            input.execution_id, "worker-A", 7)
+                        break
+                    except RuntimeError:
+                        if attempt == 14:
+                            raise
+                        time.sleep(1)
+                opencode.native_shell_verified_file(
+                    input.execution_id, "worker-A", 7,
+                    native_session, api_prefix,
+                    "printf " + original + " > " + OPENCODE_GUEST_FILE,
+                    OPENCODE_GUEST_FILE, original)
+                if opencode.read_native_file(
+                        input.execution_id, "worker-A", 7, api_prefix,
+                        "native-tool.txt") != original:
+                    raise UnsafeDispatch("A Native OpenCode Files inconsistent")
+                opencode.native_vcs(input.execution_id, "worker-A", 7, api_prefix)
             with db.tx() as c:
+                if opencode_enabled():
+                    PgFacts.event(c, input.run_id, "runtime.opencode.native.session", {
+                        "execution_id": input.execution_id,
+                        "sandbox_id": sid,
+                        "native_session_id": native_session,
+                        "api_prefix": api_prefix,
+                        "workspace_ref": fact.workspace,
+                    })
                 PgFacts.event(c, input.run_id, "sandbox.guest.original.confirmed", {
                     "execution_id": input.execution_id,
                     "sandbox_id": sid,
@@ -144,6 +209,65 @@ def build_workflow(hatchet):
         actual = new_gateway.read(input.execution_id, "worker-B", 8, GUEST_FILE)
         if actual != original:
             raise UnsafeDispatch("Worker B did not see original Guest bytes")
+        opencode_evidence = {}
+        if opencode_enabled():
+            records = [
+                e["data"] for e in db.snapshot(input.run_id)["events"]
+                if e["type"] == "runtime.opencode.native.session"
+            ]
+            if len(records) != 1:
+                raise UnsafeDispatch("A did not persist unique Native Session")
+            saved = records[0]
+            if (saved.get("sandbox_id") != old_sid
+                    or saved.get("workspace_ref") != fact.workspace
+                    or saved.get("execution_id") != input.execution_id):
+                raise UnsafeDispatch("Recovered OpenCode Session wrong Scope/Cube")
+            session_id, prefix = saved["native_session_id"], saved["api_prefix"]
+            password = os.environ.get("HARNESS_M5_GUEST_OPENCODE_PASSWORD", "")
+            stale_native_denied = False
+            try:
+                BoundOpenCodeGuest(gateway, password=password).native_shell(
+                    input.execution_id, "worker-A", 7, session_id, prefix,
+                    "touch /workspace/m5-opencode/stale-should-not-appear")
+            except UnsafeDispatch:
+                stale_native_denied = True
+            if not stale_native_denied:
+                raise UnsafeDispatch("Old OpenCode Owner mutated Guest")
+            opencode_b = BoundOpenCodeGuest(new_gateway, password=password)
+            recovered = opencode_b.recover_session(
+                input.execution_id, "worker-B", 8, session_id, prefix)
+            if opencode_b.read_native_file(
+                    input.execution_id, "worker-B", 8, prefix,
+                    "native-tool.txt") != original:
+                raise UnsafeDispatch("Native OpenCode Guest File continuity lost")
+            opencode_b.native_vcs(input.execution_id, "worker-B", 8, prefix)
+            b_value = "native-worker-B-" + input.run_id
+            opencode_b.native_shell_verified_file(
+                input.execution_id, "worker-B", 8, session_id, prefix,
+                "printf " + b_value + " > /workspace/m5-opencode/b-proof.txt",
+                "/workspace/m5-opencode/b-proof.txt", b_value)
+            if opencode_b.read_native_file(
+                    input.execution_id, "worker-B", 8,
+                    prefix, "b-proof.txt") != b_value:
+                raise UnsafeDispatch("Native OpenCode B Tool effect not preserved")
+            with db.tx() as c:
+                confirmed,pending=c.execute(
+                    "SELECT count(*) FILTER (WHERE state='CONFIRMED'),"
+                    "count(*) FILTER (WHERE state='DISPATCHED') "
+                    "FROM harness_cube_guest_effect WHERE execution_id=%s",
+                    (input.execution_id,)).fetchone()
+            if confirmed < 2 or pending:
+                raise UnsafeDispatch(
+                    "Native OpenCode tool effects have unresolved receipts")
+            opencode_evidence = {
+                "native_opencode_session_id": session_id,
+                "native_opencode_session_after_retry": recovered,
+                "opencode_shell_files_git": True,
+                "opencode_original_guest_file_preserved": True,
+                "opencode_old_owner_denied": stale_native_denied,
+                "opencode_pg_effect_receipts_confirmed": confirmed,
+                "opencode_pg_effects_pending": pending,
+            }
         new_gateway.release(input.execution_id, "worker-B", 8)
         if binding.get(input.execution_id).state != "RELEASED":
             raise UnsafeDispatch("No native Cube Destroy ACK")
@@ -162,6 +286,9 @@ def build_workflow(hatchet):
             "old_epoch_rejected": old_epoch_rejected,
             "wrong_scope_rejected": wrong_scope_rejected,
             "destroy_ack": "RELEASED",
+            **opencode_evidence,
+            **({"opencode_destroy_ack": "RELEASED"}
+               if opencode_enabled() else {}),
         }
 
     return workflow, Input
@@ -204,6 +331,10 @@ def wait_for_original_data(db, binding, run_id, execution_id, worker):
 
 
 def verify(hatchet, workflow, Input):
+    if opencode_enabled():
+        # Shared via the short-lived local test controller/worker environment
+        # only; never part of PG facts, OpenSpec, stdout or workflow input.
+        os.environ["HARNESS_M5_GUEST_OPENCODE_PASSWORD"] = secrets.token_urlsafe(48)
     db = PgFacts()
     run_id = "m5-joint-" + uuid4().hex
     execution_id = "cube-exec-" + run_id
@@ -257,6 +388,8 @@ def verify(hatchet, workflow, Input):
             "worker_b_pid": b.pid,
         }
         validate_joint_evidence(evidence)
+        if opencode_enabled():
+            validate_opencode_joint_evidence(evidence)
         if (evidence["run_id"] != run_id
                 or evidence["execution_id"] != execution_id
                 or evidence["workflow_run_id"] != ref.workflow_run_id
@@ -270,8 +403,14 @@ def verify(hatchet, workflow, Input):
                      "sandbox.binding.released"):
             if sum(e["type"] == name for e in events) != 1:
                 raise RuntimeError("Expected one persisted event: " + name)
+        if (opencode_enabled()
+                and sum(e["type"] == "runtime.opencode.native.session"
+                        for e in events) != 1):
+            raise RuntimeError("OpenCode native session lineage missing/duplicated")
         return {
-            "outcome": "PASS_PHYSICAL_HATCHET_CUBE_SAME_RUN",
+            "outcome": ("PASS_PHYSICAL_HATCHET_CUBE_OPENCODE_GUEST_SAME_RUN"
+                        if opencode_enabled()
+                        else "PASS_PHYSICAL_HATCHET_CUBE_SAME_RUN"),
             **{k: v for k, v in evidence.items()
                if k not in ("guest_original", "guest_after_reconnect")},
             "guest_original_bytes_preserved": True,

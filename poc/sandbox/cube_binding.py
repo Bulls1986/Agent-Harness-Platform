@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import os
+from uuid import uuid4
 
 from poc.closed_loop.facts import PgFacts, UnsafeDispatch
 
@@ -54,6 +55,22 @@ class CubeBinding:
                   binding_generation BIGINT NOT NULL DEFAULT 1,
                   state TEXT NOT NULL CHECK(state IN
                      ('ALLOCATING','CREATING','ACTIVE','BLOCKED_UNKNOWN','RELEASING','RELEASED'))
+                )
+            """)
+            # A timed-out or killed Worker might have already sent a native
+            # OpenCode Shell request. Ownership of the *Sandbox* alone cannot
+            # prove that the old Guest command has stopped mutating files.
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS harness_cube_guest_effect(
+                  effect_id TEXT PRIMARY KEY,
+                  execution_id TEXT NOT NULL
+                    REFERENCES harness_cube_binding(execution_id),
+                  owner_id TEXT NOT NULL,
+                  fencing_epoch BIGINT NOT NULL,
+                  kind TEXT NOT NULL CHECK(kind='OPENCODE_SHELL'),
+                  intent_digest TEXT NOT NULL,
+                  state TEXT NOT NULL CHECK(state IN ('DISPATCHED','CONFIRMED')),
+                  receipt_digest TEXT
                 )
             """)
 
@@ -145,6 +162,66 @@ class CubeBinding:
         with self.facts.tx() as c:
             return self._check(c,execution_id,owner_id,epoch,"ACTIVE")
 
+    def begin_guest_effect(self,execution_id,owner,epoch,kind,intent_digest):
+        """Persist native side-effect intent before any Guest dispatch.
+
+        Uses the same PG row lock as takeover. No loss of an HTTP response,
+        Worker process or lease can silently erase the in-flight marker.
+        """
+        self._text(execution_id,owner,intent_digest)
+        if kind!="OPENCODE_SHELL" or not intent_digest.startswith("sha256:"):
+            raise UnsafeDispatch("Only explicit native Shell intent admitted")
+        self._valid_epoch(epoch)
+        effect_id="guest-effect-"+uuid4().hex
+        with self.facts.tx() as c:
+            fact=self._check(c,execution_id,owner,epoch,"ACTIVE")
+            if c.execute(
+                "SELECT 1 FROM harness_cube_guest_effect "
+                "WHERE execution_id=%s AND state='DISPATCHED'",
+                (execution_id,)).fetchone():
+                raise UnsafeDispatch("Another Guest effect is unresolved")
+            c.execute(
+                "INSERT INTO harness_cube_guest_effect("
+                "effect_id,execution_id,owner_id,fencing_epoch,"
+                "kind,intent_digest,state) VALUES (%s,%s,%s,%s,%s,%s,'DISPATCHED')",
+                (effect_id,execution_id,owner,epoch,kind,intent_digest))
+            PgFacts.event(c,fact.run_id,"sandbox.guest.effect.dispatched",{
+                "execution_id":execution_id,"effect_id":effect_id,
+                "epoch":epoch,"kind":kind})
+        return effect_id
+
+    def get_guest_effect(self,effect_id):
+        self._text(effect_id)
+        with self.facts.tx() as c:
+            row=c.execute(
+                "SELECT effect_id,execution_id,owner_id,fencing_epoch,"
+                "kind,intent_digest,state,receipt_digest "
+                "FROM harness_cube_guest_effect WHERE effect_id=%s",
+                (effect_id,)).fetchone()
+        if row is None:
+            raise KeyError(effect_id)
+        return dict(zip(("effect_id","execution_id","owner_id",
+                         "fencing_epoch","kind","intent_digest","state",
+                         "receipt_digest"),row))
+
+    def confirm_guest_effect(self,execution_id,owner,epoch,effect_id,receipt_digest):
+        self._text(execution_id,owner,effect_id,receipt_digest)
+        if not receipt_digest.startswith("sha256:"):
+            raise UnsafeDispatch("A durable verified receipt digest is required")
+        with self.facts.tx() as c:
+            fact=self._check(c,execution_id,owner,epoch,"ACTIVE")
+            changed=c.execute(
+                "UPDATE harness_cube_guest_effect SET state='CONFIRMED',"
+                "receipt_digest=%s WHERE effect_id=%s AND execution_id=%s "
+                "AND owner_id=%s AND fencing_epoch=%s AND state='DISPATCHED'",
+                (receipt_digest,effect_id,execution_id,owner,epoch))
+            if changed.rowcount!=1:
+                raise UnsafeDispatch("Guest effect owner or state changed")
+            PgFacts.event(c,fact.run_id,"sandbox.guest.effect.confirmed",{
+                "execution_id":execution_id,"effect_id":effect_id,
+                "epoch":epoch})
+        return effect_id
+
     def assert_unknown(self,execution_id,owner_id,epoch):
         self._valid_epoch(epoch)
         with self.facts.tx() as c:
@@ -234,6 +311,12 @@ class CubeBinding:
                     or (row[9] in ("BLOCKED_UNKNOWN","CREATING")
                         and row[7] is not None)):
                 raise UnsafeDispatch("Sandbox takeover requires expired matching Scope/Workspace")
+            if c.execute(
+                    "SELECT 1 FROM harness_cube_guest_effect "
+                    "WHERE execution_id=%s AND state='DISPATCHED'",
+                    (execution_id,)).fetchone():
+                raise UnsafeDispatch(
+                    "Guest native side effect unresolved: takeover requires reconciliation")
             run=c.execute("SELECT state FROM harness_run WHERE id=%s FOR UPDATE",
                           (row[1],)).fetchone()
             if run!=("RUNNING",):
@@ -257,6 +340,11 @@ class CubeBinding:
     def mark_releasing(self,execution_id,owner,epoch):
         with self.facts.tx() as c:
             row=self._check(c,execution_id,owner,epoch,"ACTIVE")
+            if c.execute(
+                    "SELECT 1 FROM harness_cube_guest_effect "
+                    "WHERE execution_id=%s AND state='DISPATCHED'",
+                    (execution_id,)).fetchone():
+                raise UnsafeDispatch("Cannot destroy Cube while Guest effect unresolved")
             c.execute("UPDATE harness_cube_binding SET state='RELEASING' "
                       "WHERE execution_id=%s",(execution_id,))
             return row.sandbox_id
