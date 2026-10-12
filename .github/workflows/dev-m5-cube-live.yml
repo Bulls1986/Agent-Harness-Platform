@@ -53,7 +53,7 @@ jobs:
           python -B -m unittest discover -s tests -p test_m5_opencode_bound_guest.py -v
           python -B -m unittest discover -s tests -p test_m5_physical_opencode_evidence.py -v
       - name: Strict DEV-M5 OpenSpec validation
-        run: npx --yes @fission-ai/openspec@1.12.0 validate dev-m5-sandbox-worker-binding --strict
+        run: npx --yes @fission-ai/openspec@1.12.0 validate sandbox-worker-binding --type spec --strict
       - name: Fail closed if real Cube endpoint and template unavailable
         shell: bash
         run: |

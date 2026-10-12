@@ -11,7 +11,7 @@
 | DEV-M2 模型及流式交互 | 真实 LiteLLM、Token SSE、持久游标/取消 | 有限开发切片 PASS |
 | DEV-M3 领域内核 | Run/Plan/Step/Attempt、Replan v2、Workflow Segment | ACTIVE：Plan v1 与 PURE 真实 Hatchet v1→v2 独立 Segment 子切片 PASS；非 PURE/完整 Step-Attempt Gate OPEN |
 | DEV-M4 一致性与恢复 | Outbox/Inbox、ACK-loss、UNKNOWN/非幂等 Receipt | ACTIVE：实际 Worker A 进程 SIGKILL→独立 B 领取 Native Task、非幂等 Receipt/PG Fencing 子切片 PASS；通用 ToolRuntime/Inbox/跨宿主完整 Gate OPEN |
-| DEV-M5 Cube 可信执行 | WorkspaceRef/Scope/Lease/Fencing、跨 Worker 接管 | ACTIVE：真实 Cube SDK、PG Binding/Fencing，以及 **同 Run Hatchet Worker A SIGKILL → B Native Retry → 原 Cube Guest 联合 Gate PASS**；OpenCode Guest、in-flight fencing、OCI 与完整阶段退出 Gate 仍 OPEN |
+| DEV-M5 Cube 可信执行 | WorkspaceRef/Scope/Lease/Fencing、跨 Worker 接管 | **CLOSED · 受控 POC Gate**：真实 Cube/OpenCode Native Shell/Files/VCS、PG Fencing、物理 Hatchet A SIGKILL→B 同 Sandbox/Session 恢复及在途不确定工具整沙箱隔离、父 Run BLOCKED_UNKNOWN，均有真实证据；**生产安全/OCI/Git Revision/外部 Tool Receipt/容量仍 NO-GO** |
 | DEV-M6 多 Agent Recipe | 跨 Runtime 交接、Verifier、Artifact、Approval | PLANNED |
 | DEV-M7 公共 API/SDK | Conversation/Turn/Run、鉴权、Typed SSE、错误合同 | ACTIVE：授权只读 8 项单测、真实 PG Run 归属/不可变性 5 项测试及 CI PASS；真实 Gateway/Policy+PG E2E、SSE/Artifact/UI Gate OPEN |
 | DEV-M8 通用消费者互通 | **只用合成数据**验证独立客户端对 Harness 公共 API 的调用、身份隔离和故障语义 | PLANNED |
@@ -20,6 +20,8 @@
 **依赖方向：外部业务消费者 → 受版本管理的 Harness 公共 API/SDK → Harness Domain/AgentRuntime → Hatchet/Cube。** 业务系统独立发布和维护，不得导入 Harness 内部源码、操作 Harness PG 或挪用技术执行权威；Harness 更不包含业务系统专属实现。
 
 ## 2026-10-12 阶段状态冻结与下一执行切片
+
+**DEV-M5 受控 POC Exit 完成**：正常恢复（同一原 Cube/OpenCode Session、Hatchet 物理 A→B Native Retry、Fencing）和异常在途隔离（Destroy ACK、父 Run BLOCKED_UNKNOWN、保留外部 Effect 未知）双终态，真实 PG 24/24、M5 合同 41/41、模型-only 0 Sandbox 与 OpenSpec 正式 Spec Strict PASS；证据见 docs/retrospectives/DEV_M5_FINAL_ACCEPTANCE_MATRIX_20261012.md。已归档 OpenSpec；合并须以 PR 最新 Head CI 成功为准。**阶段关闭仅限受控 POC，不代表任何生产 GO，也不代表外部效果自动对账或原 Session 可在销毁后恢复。** 以下保留当日排障历史快照，历史 ACTIVE/BLOCKED 文字不代表本表的最新状态。
 
 **M5 Guest 在途屏障追加验收**：真实 OpenCode v2 Shell/Files/Git 已在 Cube+PG+Hatchet 双物理 Worker A SIGKILL→B Native Retry 下通过。新增 Harness PG 持久化工具 Effect 意图与终态回执：发起前登记 DISPATCHED，未知在途操作阻止 B Takeover/Destroy，前台 Shell 终态 marker 与文件验证后才能 CONFIRMED。真实 PG 并发拒绝测试和正常 PG+OpenCode 实机重测通过，但并不证明任意 Guest 后台子进程被强制终止。DEV-M5 1.3/2.1/2.3 仍 OPEN。证据：docs/retrospectives/DEV_M5_GUEST_INFLIGHT_BARRIER_20261012.md。
 
@@ -45,7 +47,7 @@
 |---|---|---|
 | M3 | M1 Run/PG/Hatchet 已有有限实测；M3 内核开发可独立推进 | PURE PG+Hatchet v1→v2 子切片 PASS；运行中旧 Worker 结束确认、非 PURE/完整 Step-Attempt/业务终态仍 OPEN |
 | M4 | M3 Domain/Segment 事实是完整恢复对账的前置；故障负例可先并行 TDD | 物理 Worker A SIGKILL→B、Receipt Fencing 限定场景 PASS；通用 Inbox/多 Attempt、跨宿主与生产 Tool Runtime Gate OPEN |
-| M5 | HC-03 是约束；Cube Allocate/Bind/Release 可与 M3/M4 并行；A→B 恢复需要相关执行事实 | 真 Cube MicroVM 原生创建、Guest 文件读写、同 ID 重连与销毁最小 Demo PASS；Harness PG/Worker B 联合 Fencing/Guest OCI/生产资源回收仍 OPEN |
+| M5 | HC-03 是约束；正式生产准入仍需 M3/M4 适用的领域与外部 Receipt 治理 | 受控 POC 的真 Cube/OpenCode 与 Worker A→B/UNKNOWN 隔离门禁 CLOSED；正式 OCI/Git Revision 可复现、跨宿主生产可靠性/容量/IAM 仍在 M9 NO-GO |
 | M6 | 依赖 M3/M4/M5 相关真实执行、安全和恢复 Gate | 通用合成 Recipe 的跨 Runtime、Approval、Artifact/Evidence、Verifier 实测 |
 | M7 | 依赖 M2 Typed SSE 和 M3 的 Run 归属领域事实；外部可信身份是适配输入，可并行开发授权边界 | PG Run Binding 子切片 PASS；真实 Gateway/Policy+PG 联调、Conversation/Turn、授权 SSE/Artifact/UI 仍 OPEN |
 | M8 | 依赖 M7 版本化公共 API/SDK 与相关 M3～M6 合同；只使用独立合成客户端 | 身份隔离、取消、游标和失败传播的真实公共 API 联调 |
@@ -59,7 +61,7 @@
 |---|---|
 | DEV-M3 | [dev-m3-run-plan-domain](../openspec/changes/dev-m3-run-plan-domain/) |
 | DEV-M4 | [dev-m4-reliable-task-facts](../openspec/changes/dev-m4-reliable-task-facts/) |
-| DEV-M5 | [dev-m5-sandbox-worker-binding](../openspec/changes/dev-m5-sandbox-worker-binding/) |
+| DEV-M5 | [已归档：dev-m5-sandbox-worker-binding](../openspec/changes/archive/2026-10-12-dev-m5-sandbox-worker-binding/) · [正式 Spec](../openspec/specs/sandbox-worker-binding/spec.md) |
 | DEV-M6 | [dev-m6-agent-recipe-execution](../openspec/changes/dev-m6-agent-recipe-execution/) |
 | DEV-M7 | [dev-m7-platform-access-contract](../openspec/changes/dev-m7-platform-access-contract/) |
 | DEV-M8 | [dev-m8-external-consumer-integration](../openspec/changes/dev-m8-external-consumer-integration/) |
