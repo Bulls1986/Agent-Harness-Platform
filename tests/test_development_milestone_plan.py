@@ -30,6 +30,22 @@ def validate_milestones(root: Path) -> list[str]:
             errors.append(f"milestone missing in plan: {code}")
     for code, (change_name, capability) in PHASES.items():
         base = root / "openspec" / "changes" / change_name
+        archived = False
+        if not base.is_dir():
+            # Archived milestones remain traceable, while unfinished stages
+            # must still have an active OpenSpec with unchecked tasks.
+            candidates = sorted(
+                (root / "openspec" / "changes" / "archive").glob(
+                    f"????-??-??-{change_name}"
+                )
+            )
+            stage = next(
+                (line for line in text.splitlines()
+                 if line.startswith(f"| {code} ")),
+                "",
+            )
+            if len(candidates) == 1 and "**CLOSED" in stage:
+                base, archived = candidates[0], True
         required = [
             ".openspec.yaml", "proposal.md", "design.md", "tasks.md",
             f"specs/{capability}/spec.md",
@@ -40,10 +56,19 @@ def validate_milestones(root: Path) -> list[str]:
         tasks = base / "tasks.md"
         if tasks.is_file():
             body = tasks.read_text(encoding="utf-8")
-            if not re.search(r"(?m)^- \[ \] ", body):
+            if archived:
+                if re.search(r"(?m)^- \[ \] ", body):
+                    errors.append(f"{code} archived with unfinished tasks")
+                official = root / "openspec" / "specs" / capability / "spec.md"
+                if not official.is_file():
+                    errors.append(f"{code} archived without canonical spec")
+                refs = re.findall(r"docs/retrospectives/[A-Za-z0-9_-]+\.md", body)
+                if not refs or not all((root / ref).is_file() for ref in refs):
+                    errors.append(f"{code} archived without traceable evidence")
+            elif not re.search(r"(?m)^- \[ \] ", body):
                 errors.append(f"{code} missing open implementation tasks")
             for line in body.splitlines():
-                if not re.match(r"^- \[[xX]\] ", line):
+                if archived or not re.match(r"^- \[[xX]\] ", line):
                     continue
                 refs = re.findall(
                     r"docs/retrospectives/[A-Za-z0-9_-]+\.md", line
@@ -132,6 +157,59 @@ class MilestonePlanTests(unittest.TestCase):
             self.assertEqual(validate_milestones(root), [])
 
 
+
+
+    def test_archived_m3_requires_closed_plan_canonical_spec_and_evidence(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "docs" / "retrospectives").mkdir(parents=True)
+            (root / "docs/retrospectives/proof.md").write_text(
+                "official CI proof", encoding="utf-8"
+            )
+            names = " ".join(n for n, _ in PHASES.values())
+            (root / "docs/DEVELOPMENT_MILESTONES.md").write_text(
+                " ".join(f"DEV-M{i}" for i in range(10)) + " " + names
+                + "\n| DEV-M3 领域内核 | contract | **CLOSED** |",
+                encoding="utf-8",
+            )
+            (root / "README.md").write_text(
+                "正式研发实施 docs/DEVELOPMENT_MILESTONES.md",
+                encoding="utf-8",
+            )
+            m3tasks = None
+            for code, (name, cap) in PHASES.items():
+                base = root / "openspec" / "changes" / name
+                if code == "DEV-M3":
+                    base = root / "openspec" / "changes" / "archive" / (
+                        "2026-10-13-" + name
+                    )
+                for rel in (".openspec.yaml", "proposal.md", "design.md",
+                            "tasks.md", f"specs/{cap}/spec.md"):
+                    f = base / rel
+                    f.parent.mkdir(parents=True, exist_ok=True)
+                    f.write_text("- [ ] remaining work\n", encoding="utf-8")
+                if code == "DEV-M3":
+                    m3tasks = base / "tasks.md"
+            self.assertIsNotNone(m3tasks)
+            m3tasks.write_text(
+                "- [x] evidence docs/retrospectives/proof.md\n",
+                encoding="utf-8",
+            )
+            official = root / "openspec/specs/run-plan-domain/spec.md"
+            official.parent.mkdir(parents=True, exist_ok=True)
+            official.write_text("## Requirements\n", encoding="utf-8")
+            self.assertEqual(validate_milestones(root), [])
+
+            official.unlink()
+            self.assertTrue(any("canonical spec" in error
+                                for error in validate_milestones(root)))
+            official.write_text("## Requirements\n", encoding="utf-8")
+            m3tasks.write_text(
+                "- [x] evidence docs/retrospectives/proof.md\n"
+                "- [ ] unresolved\n", encoding="utf-8"
+            )
+            self.assertTrue(any("unfinished tasks" in error
+                                for error in validate_milestones(root)))
 
     def test_m7_active_slice_and_api_owner_stay_in_sync(self):
         milestones = (ROOT / "docs/DEVELOPMENT_MILESTONES.md").read_text(encoding="utf-8")

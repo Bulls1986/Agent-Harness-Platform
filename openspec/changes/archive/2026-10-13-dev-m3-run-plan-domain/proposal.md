@@ -22,4 +22,4 @@ DEV-M1/M2 现有 Run 闭环；HC-01；任务编号：DEV-HC-01 / HC-01。严格�
 
 ## Status
 
-**PLANNED · 只有规划产物，全部实现/真实验收 Tasks 尚未启动。**
+**CLOSED · 2026-10-13，原始 DEV-M3 交付范围。** 实际 Hatchet v1→v2 新 Segment、旧 Attempt 拒绝和领域事实均已有主干代码、官方实机 CI 与归档证据。生产 GO 与 M4/M5 通用可靠性仍开放。
