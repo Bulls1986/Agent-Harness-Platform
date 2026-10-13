@@ -58,6 +58,9 @@ code{overflow-wrap:anywhere;font-size:12px}#message{min-height:2.4em}
 .evidence-kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:13px}
 .evidence-kv>div{border:1px solid #3c536c;border-radius:9px;padding:12px;overflow-wrap:anywhere}
 .evidence-kv strong{display:block;color:#9cadc6;font-size:12px;margin-bottom:5px}
+.m7-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.m7-panel{border:1px solid #496583;border-radius:10px;padding:13px;background:#112034}
+.m7-panel li{margin:4px 0;overflow-wrap:anywhere}
 @media(max-width:780px){.capability-grid{grid-template-columns:1fr}}
 @media(max-width:780px){.layout{grid-template-columns:1fr}body{padding:16px}h1{font-size:23px}}
 </style>
@@ -136,6 +139,26 @@ Hatchet 负责两个节点的调度；Harness 保存业务 Run、每步输入输
 <div id="capability-cards" class="capability-grid" aria-live="polite"><p class="muted">读取能力场景定义中…</p></div>
 <p id="capability-error" class="error" role="alert"></p>
 </section>
+<section class="panel" id="m7-capability-demo">
+<h2>DEV-M7 · 公共 API 真实执行</h2>
+<p class="caption"><strong>要证明：</strong>通过版本化 API 创建 Conversation → Turn → Run，由真实 Hatchet 调度节点 A（Pydantic AI）与节点 B（OpenAI Agents SDK），再从授权 API/SSE 查看 Workflow ID、节点输出及业务最终结果。旧 Inspector 调试接口不承担 M7 入口。</p>
+<p class="notice"><strong>边界：</strong>仅 Docker 本地 Inspector 显式启用，使用服务端固定合成身份；不代表企业 Gateway/IdP、外部模型效果、Cube 或生产准入。请勿提交敏感内容。</p>
+<div class="m7-grid"><div>
+<label for="m7-prompt">模拟需求输入</label>
+<textarea id="m7-prompt" maxlength="4096">Review a synthetic product requirement via the public API</textarea>
+<button id="m7-start" type="button" disabled>通过公共 API 执行</button>
+<p id="m7-message" class="muted" role="status" aria-live="polite">正在检查本地演示入口…</p>
+<div id="m7-ids" class="evidence-kv" aria-label="真实绑定标识"></div>
+</div><div class="m7-panel">
+<div class="headrow"><h3>执行过程与结果</h3><span id="m7-state" class="status">尚未启动</span></div>
+<p id="m7-sse" class="caption">Typed SSE：尚未连接</p>
+<div class="steps" id="m7-steps"><p class="muted">执行后显示两套 SDK 的持久化 Step。</p></div>
+<span class="fieldname">Run 最终输出 · 节点 B</span>
+<pre id="m7-final" class="value result">尚无结果</pre>
+</div></div>
+<details style="margin-top:15px"><summary>持久化 Typed Events · 按游标读取</summary>
+<ol id="m7-events" class="eventlist"></ol></details>
+</section>
 <section class="panel">
 <h2>实际验收证据 · 已持久化 Run</h2>
 <p class="caption">输入一个真实 Run ID，读取 Harness PostgreSQL 保存的 Provider 绑定、Sandbox/Workspace、Owner/Fencing 和相关事件。这里展示的是观察证据，不会自动推断外部 MicroVM、进程退出码或非幂等写入次数。</p>
@@ -212,7 +235,10 @@ async function loadCapabilityCatalog(){
     for(const scenario of data.scenarios){
       const card=node("article","","capability-card");
       const executable=scenario.availability==="EXECUTABLE_EXISTING_TAB";
-      const badge=node("span",executable?"在双 Agent Tab 中可执行":"尚未接入一键执行 · 可读 PG 证据","tag"+(executable?" ready":""));
+      const m7Executable=scenario.availability==="EXECUTABLE_M7_CAPABILITY_TAB";
+      const badge=node("span",executable?"在双 Agent Tab 中可执行":
+        m7Executable?"本地公共 API 演示可执行":"尚未接入一键执行 · 可读 PG 证据",
+        "tag"+(executable||m7Executable?" ready":""));
       card.append(badge,node("h3",scenario.title));
       for(const [heading,description] of [
         ["使用场景",scenario.use_case],["证明什么能力",scenario.capability]
@@ -227,6 +253,17 @@ async function loadCapabilityCatalog(){
         btn.type="button";
         btn.addEventListener("click",()=>switchInspectorTab("tab-agent-demo"));
         card.append(btn);
+      }
+      if(m7Executable){
+        const btn=node("button","打开下方公共 API 演示");btn.type="button";
+        btn.addEventListener("click",()=>{$("m7-capability-demo").scrollIntoView();$("m7-prompt").focus()});
+        card.append(btn);
+      }
+      if(scenario.id==="public-api-agent-run"){
+        $("m7-start").disabled=!m7Executable;
+        $("m7-message").textContent=m7Executable?
+          "本地公共 API 已启用，可执行合成双 Agent 场景。":
+          "本地演示未启用。须显式设置 HARNESS_INSPECTOR_M7_DEMO_ENABLED=1，禁止用它替代生产鉴权。";
       }
       $("capability-cards").append(card);
     }
