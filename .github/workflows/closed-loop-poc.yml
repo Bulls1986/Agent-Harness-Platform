@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'poc/closed_loop/**'
+      - 'poc/platform_access/**'
       - 'compose.yaml'
       - 'openspec/changes/minimal-run-closed-loop/**'
       - 'openspec/changes/real-model-agent-closed-loop/**'
@@ -74,6 +75,8 @@ jobs:
           node --check /tmp/harness-inspector.js
       - name: Real Engine and two SDKs in one PG-backed business Run
         run: python -B -m poc.closed_loop.hatchet_pg_live
+      - name: M7 Real versioned Public API creates actual Hatchet workflow and two SDK Results
+        run: python -B -m poc.platform_access.verify_public_api_hatchet
       - name: Real Hatchet v1-to-v2 PURE Replan and independent Segment gate
         run: python -B -m poc.closed_loop.verify_replan_v2_hatchet
       - name: Real HTTP Inspector submit and persistent refresh / process restart

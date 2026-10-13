@@ -13,7 +13,7 @@ import re
 import time
 from typing import Callable
 
-from fastapi import Body, HTTPException, Query, Request
+from fastapi import Body, Header, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -50,6 +50,9 @@ def create_platform_app(
     authorize_create: Callable,
     sse_max_polls: int = 20,
     cancel_run: Callable[[str],str] | None = None,
+    start_run: Callable[[str,str,str],object] | None = None,
+    model_binding: Callable[[],tuple[str,str|None]] | None = None,
+    admit_recipe: Callable[[str,str],bool] | None = None,
 ):
     """Purely composed service-side adapters; no untrusted HTTP identity.
 
@@ -128,6 +131,55 @@ def create_platform_app(
         try:tid=store.create_turn(conversation_id,body.message,body.agent_ref,body.recipe_ref)
         except ValueError:raise HTTPException(422,"Invalid Turn") from None
         return {"turn_id":tid,"conversation_id":conversation_id}
+
+    @app.post("/api/v1/turns/{turn_id}/runs",status_code=202)
+    def start_new_run(turn_id:str,request:Request,
+                      idempotency_key:str|None=Header(None,alias="Idempotency-Key")):
+        # The USER cannot choose raw Provider/Workflow IDs or rewrite a
+        # previously frozen prompt/model. This reuses the M2/M3/M4 Run,
+        # Outbox and real Hatchet execution entrypoint.
+        ctx=identity(request)
+        try:scope=store.turn_binding(turn_id)
+        except KeyError:raise HTTPException(404,"Resource not found") from None
+        conversation_access(request,scope["conversation_id"],"turn.run.create")
+        if (not callable(start_run) or not callable(model_binding)
+                or not callable(admit_recipe)):
+            raise HTTPException(503,"Real Harness execution adapter unavailable")
+        if (idempotency_key is None or len(idempotency_key)>128
+                or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}",idempotency_key)):
+            raise HTTPException(422,"Valid Idempotency-Key is required")
+        try:agent_ref,recipe_ref=store.turn_selection(turn_id)
+        except KeyError:raise HTTPException(404,"Resource not found") from None
+        # A metadata label from the client is not execution authority. The
+        # existing Runtime/Recipe adapter must explicitly support the frozen
+        # Turn choice; otherwise do not allocate or dispatch any Run.
+        explicit(admit_recipe,agent_ref,recipe_ref)
+        try:
+            mode,model_id=model_binding()
+            rid,key,prompt,created=store.create_run_for_turn(
+                turn_id,idempotency_key,project_scope=ctx.project_scope,
+                principal_id=ctx.principal_id,model_mode=mode,model_id=model_id,
+            )
+        except KeyError:raise HTTPException(404,"Resource not found") from None
+        except UnsafeDispatch:raise HTTPException(409,"Run binding conflict") from None
+        except ValueError:raise HTTPException(422,"Invalid frozen Run model") from None
+        except Exception:raise HTTPException(503,"Unable to persist Run") from None
+        if created:
+            try:
+                start_run(rid,prompt,key)
+            except Exception:
+                # Submission ACK is uncertain. Return the durable Run ID,
+                # then stop. Never dispatch again on HTTP retry.
+                try:store.facts.report_execution_error(rid,"SUBMISSION_UNKNOWN")
+                except Exception:pass
+                raise HTTPException(503,detail={
+                    "message":"Dispatch outcome uncertain; reconcile persisted Run",
+                    "run_id":rid,
+                }) from None
+        state=store.facts.snapshot(rid)["state"]
+        return {"run_id":rid,"turn_id":turn_id,"state":state,
+                "replayed":not created,
+                "needs_reconciliation":not created and state=="CREATED"}
 
     @app.post("/api/v1/turns/{turn_id}/runs/{run_id}")
     def attach_existing_run(turn_id:str,run_id:str,request:Request):

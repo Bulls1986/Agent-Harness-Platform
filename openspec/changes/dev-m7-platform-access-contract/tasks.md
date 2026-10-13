@@ -12,6 +12,8 @@
 
 > 2026-10-13 DEV-M7 原范围集成推进：在已有 PR #65/#67 的受信任授权 Run 读取/真实 PG 归属基础上，补充 PostgreSQL Conversation→Turn→Run 事实、版本化 `/api/v1`、授权 SSE/游标、ArtifactRef 元数据、取消请求与只读结果 UI。真实 PG+HTTP 跨项目/跨用户/撤权负例已写；PR [#86](https://github.com/Bulls1986/Agent-Harness-Platform/pull/86) 最新 Head 真实 PG/HTTP+OpenSpec [CI 38360300342](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38360300342) 和 [架构 CI 38360300381](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38360300381) 均 SUCCESS、已合并 main；真实 PG 14/14、授权单元 8/8，共 22/22，无 SKIPPED。**本切片不声称真实企业 IdP、现网旧 UI/OSS 签名/Agent 创建运行完整集成已完成；这些属于本阶段原 1.1～2.1 未完成验收项，保持 OPEN，不增设新任务编号。** 证据：docs/retrospectives/DEV_M7_PLATFORM_API_INTEGRATION_20261013.md。
 
+> 2026-10-13 原始 **1.2/1.3 的统一执行入口**在研：版本化 `POST /api/v1/turns/{turn_id}/runs`，可信 Agent/Recipe admission + Model Binding、`Idempotency-Key`、同 PG 事务 Run/Outbox/Turn 关联及真实 Hatchet `execute` 提交；拒绝无权限、未知配置、重复不安全 dispatch、以及确认不明后 HTTP 盲重派。真实 PG TDD 7 项 + 既有 M7 回归 22 项本地 PASS；`poc.platform_access.verify_public_api_hatchet` 已加入**现有**真实 Hatchet/双 SDK CI。该门禁尚须 PR 最新 Head 官方真实运行才能作为已验收证据，整阶段含外部 Gateway/OSS/既有 Portal 条件仍 OPEN。不新增 A.x 或新阶段。
+
 ## 0. 前置与需求冻结
 
 > 现状：DEV-M2 Token SSE/游标实测已完成有限切片；DEV-M3 真实 Replan/完整 Domain Gate 未完成。0.1/0.2 尚无全阶段冻结与真实 Gateway/PG/权限/失败样本的完整证据，因此维持未勾选，不能据此宣称可进行整阶段验收。
