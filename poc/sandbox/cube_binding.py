@@ -396,7 +396,7 @@ class NativeCubeTransport:
         self.sdk=Sandbox
 
     def create(self,*,metadata):
-        sandbox=self.sdk.create(metadata=metadata)
+        sandbox=self.sdk.create(template=os.environ["CUBE_TEMPLATE_ID"],metadata=metadata)
         return sandbox.sandbox_id
 
     def list(self):
