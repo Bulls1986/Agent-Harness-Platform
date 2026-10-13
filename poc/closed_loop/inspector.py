@@ -33,6 +33,7 @@ def create_app(
     *,
     facts_factory: Callable[[], PgFacts] = PgFacts,
     submit: Callable[[str, str, str], object] | None = None,
+    public_api_app: FastAPI | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Harness Run Inspector (Local POC)", version="0.1.0")
     index = Path(__file__).with_name("inspector.html")
@@ -46,7 +47,7 @@ def create_app(
     @app.get("/api/verification/scenarios")
     def capability_scenarios():
         from .capability_inspector import catalog
-        return catalog()
+        return catalog(m7_demo_enabled=public_api_app is not None)
 
     @app.get("/api/verification/evidence/{run_id}")
     def capability_evidence(run_id: str):
@@ -184,5 +185,11 @@ def create_app(
         return {"run_id": run_id, "events": [
             item for item in snapshot["events"] if item["seq"] > after
         ], "cursor": snapshot["events"][-1]["seq"] if snapshot["events"] else 0}
+
+    # Explicit opt-in local Inspector adapter: mounted M7 Public API uses
+    # a trusted server-side synthetic demo identity, never HTTP identity
+    # headers. This local-only POC mount is NOT enterprise authentication.
+    if public_api_app is not None:
+        app.mount("/m7-demo", public_api_app)
 
     return app
