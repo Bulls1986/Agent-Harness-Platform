@@ -12,6 +12,8 @@
 2. 原通用 Cube `sandbox-code` Guest 的 `git --version` 退出 `127`（未安装 Git）；SDK 创建/清理成功，测试 FAIL 而非伪装完成。选择**已存在**的 `ahp-opencode2-cube` Git Coding 模板，真实 Guest `git version 2.39.5`、`pwd=/workspace`、exit 0，原生 Sandbox 销毁成功；未构建新镜像，不在宿主安装 Git。
 3. 先提交 PG 负例红灯 [PR #94](https://github.com/Bulls1986/Agent-Harness-Platform/pull/94)：缺 Sandbox、伪 Owner、旧 Fencing、过期 Lease、发布后旧 Run 禁止调用 `command`，以及 Native SDK Guest `commands.run(...,cwd=/workspace,timeout=30)` 形状；[RED CI 38407481404](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38407481404) 保留真实失败。最小 Green 是在**现有** `CubeWorkspaceGateway` 利用原 PG `_attach` 授权执行 `command`，`NativeCubeTransport` 只调用沙箱 Guest 的 `commands.run`，没有 `subprocess`、Host Shell 兜底、第二技术调度器或额外任务。[GREEN CI 38407888927](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38407888927) 与 [架构 CI 38407889074](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38407889074) SUCCESS。
 
+真实物理联合测试输出的明确机器字段：`"native_guest_git": true`、`"host_shell_fallback": false`、`"guest_original_content_kept": true`、`"retry_count": 1`、`"cube_release_confirmed": true`；这是已验收的实际本地运行结果，不是预期值。
+
 ## 真实执行 Gate（同一单宿主 CubeSandbox / 原始用户预期）
 
 | Gate | 实际可信证据 | 结果 |
