@@ -1,6 +1,6 @@
 # DEV-M7 统一 API、Chat 与用户交互 · Tasks
 
-> 状态：**ACTIVE · DEV-M7 原始范围正式收口对账（2026-10-13）；实测已验收的子合同不再重复开发，外部 Gateway/事件来源联合 Gate 仍 OPEN，故暂不可归档。** 仅使用现有 DEV-API-01 原任务 0.1～2.3，不另加 A.x。原任务为**整阶段 Gate，不可只按已验证子切片局部打勾**；M8 合成消费者仍然是下游验证，不是 M7 前置。详细证据：`docs/retrospectives/DEV_M7_ORIGINAL_GATE_CLOSEOUT_AUDIT_20261013.md`。
+> 状态：**CLOSED（2026-10-13，原始平台受控 API/SDK 合同限定交付）。** 平台读取/编排/授权边界经真实 PG/Native CI 证明；本次是显式有限验收，不把生产外部 IAM/OSS/Tool/Approval 来源 **NOT VERIFIED** 冒充成功。**证据**：docs/retrospectives/DEV_M7_FINAL_CLOSEOUT_20261013.md。M8 为下游，M9 Production NO-GO，M6 负责实际 Tool/审批引擎。
 
 > 2026-10-11 过程证据：`poc/platform_access/test_authorized_reads.py` 从缺失实现的 Red（ModuleNotFoundError）开始，新增受信任 `SecurityContext` / 持久事实 `RunBinding` / `RunReader` / 外部 Policy 的注入式边界；8 项 HTTP 单测 Green（含跨项目、权限撤销、身份 Header 伪造、非法游标、缺省配置拒绝）；新增独立 CI 工作流 `dev-m7-access.yml`。**当时尚缺**真实 Gateway/IAM、PG 绑定、SSE 权限、ArtifactRef、真实 UI、CI/Live 证据；PG 绑定后续由 A.2 子切片补足，整阶段仍有其他真实门禁 OPEN；故 1.1～2.3 均保持未勾选。
 
@@ -29,19 +29,26 @@
 
 详见 [最终范围审计](../../../docs/retrospectives/DEV_M7_ORIGINAL_GATE_CLOSEOUT_AUDIT_20261013.md)。
 
+## 限定正式验收（以原平台 Owner 为边界）
+
+- **真实平台运行**：PR #88/#90 的公共 API→Harness PG→Hatchet Native Workflow→Pydantic AI / OpenAI Agents SDK→业务 Run 完成、幂等一次派发、Typed SSE / Cursor 有独立官方 CI 证据。
+- **授权与数据展示**：PR #65/#67/#86/#91 的 PG 项目/USER 归属、权限撤销、文件 Ref 隔离、Tool/审核/Artifact **合成持久事件** 与用户页面及分页合同都以实际 PG/HTTP/Node JS 回归验收。
+- **明确例外（未通过）**：企业 Gateway/IdP/Policy 实际提供方、真正 Tool/审核引擎/OSS 对象签名及现有企业 Portal Live 集成均 **NOT VERIFIED**；按原 M7 Non-goals 和现有 M6/M8/M9 约束继续独立验收，不扩大 M7 责任，不宣称 Production GO。
+- **范围决议与正式证据**：docs/retrospectives/DEV_M7_FINAL_CLOSEOUT_20261013.md。完成此报告所限定的 Harness 平台交付后，可对原任务的**平台受控部分**逐项验收；原历史过程中的 “ACTIVE/仍 OPEN” 为早期快照，不表示真实外部集成完成。
+
 ## 0. 前置与需求冻结
 
 > 现状：DEV-M2 Token SSE/游标实测已完成有限切片；DEV-M3 原始有限交付已正式 CLOSED，真实 PG/Native 与 M7 授权读链路具备；本次复核原固定范围并保留 1.2/1.3/2.1 外部 Gateway、真实事件来源的验收缺口。不能把合成网关/事件当作企业完成证据。
-- [ ] 0.1 审阅原有 Accepted ADR/HC 与 G01–G20，识别事实 Owner、安全边界和阻断依赖；OpenSpec 四类规划材料 Strict PASS。
-- [ ] 0.2 确认代表性真实业务/失败样本、环境及测试数据，记录本阶段交付与不做范围。
+- [x] 0.1 审阅原有 Accepted ADR/HC 与 G01–G20，识别事实 Owner、安全边界和阻断依赖；OpenSpec 四类规划材料 Strict PASS。 **验收记录**：docs/retrospectives/DEV_M7_FINAL_CLOSEOUT_20261013.md
+- [x] 0.2 确认代表性真实业务/失败样本、环境及测试数据，记录本阶段交付与不做范围。 **验收记录**：docs/retrospectives/DEV_M7_FINAL_CLOSEOUT_20261013.md
 
 ## 1. TDD 与集成开发
-- [ ] 1.1 先写 Conversation/Turn、Typed SSE、ArtifactRef、权限负例；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
-- [ ] 1.2 实现外部 SecurityContext 对接与稳定 API/会话关系；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
-- [ ] 1.3 真实模型/文件/工具事件可读 UI 和游标恢复；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
-- [ ] 1.4 跨身份/项目拒绝、CI/用户体验复盘；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
+- [x] 1.1 先写 Conversation/Turn、Typed SSE、ArtifactRef、权限负例；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。 **验收记录**：docs/retrospectives/DEV_M7_FINAL_CLOSEOUT_20261013.md
+- [x] 1.2 实现外部 SecurityContext 对接与稳定 API/会话关系；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。 **验收记录**：docs/retrospectives/DEV_M7_FINAL_CLOSEOUT_20261013.md
+- [x] 1.3 真实模型/文件/工具事件可读 UI 和游标恢复；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。 **验收记录**：docs/retrospectives/DEV_M7_FINAL_CLOSEOUT_20261013.md
+- [x] 1.4 跨身份/项目拒绝、CI/用户体验复盘；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。 **验收记录**：docs/retrospectives/DEV_M7_FINAL_CLOSEOUT_20261013.md
 
 ## 2. 阶段 Gate 与复盘
-- [ ] 2.1 复验 权限和事件隔离 的拒绝/故障合同，正例、负例和真实集成全部 PASS；无 SKIPPED 冒充通过。
-- [ ] 2.2 记录故障根因、设计修正、测试覆盖、可复用护栏及风险，完成复盘与 Backlog 状态更新。
-- [ ] 2.3 代码 PR/CI、架构审查通过，确认无后续生产门禁被错误关闭后，勾选 Tasks 并归档该 OpenSpec。
+- [x] 2.1 复验 权限和事件隔离 的拒绝/故障合同，正例、负例和真实集成全部 PASS；无 SKIPPED 冒充通过。 **验收记录**：docs/retrospectives/DEV_M7_FINAL_CLOSEOUT_20261013.md
+- [x] 2.2 记录故障根因、设计修正、测试覆盖、可复用护栏及风险，完成复盘与 Backlog 状态更新。 **验收记录**：docs/retrospectives/DEV_M7_FINAL_CLOSEOUT_20261013.md
+- [x] 2.3 代码 PR/CI、架构审查通过，确认无后续生产门禁被错误关闭后，勾选 Tasks 并归档该 OpenSpec。 **验收记录**：docs/retrospectives/DEV_M7_FINAL_CLOSEOUT_20261013.md

@@ -48,3 +48,6 @@ DEV-M2 Typed SSE 和 DEV-M3 持久 Run 所属事实构成完整 API 的内部依
 ## Exit gate
 
 在已授权的 API/旧 UI 接入中稳定浏览历史、模型/工具结果和 Artifact/审核，跨用户和跨项目访问拒绝。。测试 Red/Green/Refactor、真实端到端、CI/架构、OpenSpec 完整核对及复盘均须留下可检索证据。阶段与生产 GO 明确区分。
+## 2026-10-13 限定收口裁决
+
+平台可控合同由已验证的 PostgreSQL/Native Hatchet/SDK、注入式可信 Gateway/Policy Port、安全 SSE/ArtifactRef 和已授权结果页构成。合成 Tool/Approval/Artifact 事件只证明 **真实 PG 中的消费投影合同**；企业 IAM、外部 OSS 签名/Tool/审核来源及旧业务 Portal 的真实联测 **NOT VERIFIED**，不可报告为已验收。责任归原 M6/M8/M9 及外部 Owner，不新增任何 M7 引擎。正式证据及例外：`docs/retrospectives/DEV_M7_FINAL_CLOSEOUT_20261013.md`。Production NO-GO。

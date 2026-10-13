@@ -10,6 +10,8 @@ on:
       - 'openspec/changes/real-model-agent-closed-loop/**'
       - 'openspec/changes/dev-inspector-capability-verification/**'
       - 'openspec/changes/archive/2026-10-13-dev-m3-run-plan-domain/**'
+      - 'openspec/changes/archive/2026-10-13-dev-m7-platform-access-contract/**'
+      - 'openspec/specs/platform-access-contract/**'
       - 'openspec/specs/run-plan-domain/**'
       - 'poc/runtime_spi/**'
       - '.github/workflows/closed-loop-poc.yml'
