@@ -13,7 +13,7 @@
 | DEV-M4 一致性与恢复 | Outbox/Inbox、ACK-loss、UNKNOWN/非幂等 Receipt | **CLOSED（原始限定范围）**：平台 PG Outbox/Native Lookup + Provider Observation Inbox 去重；三独立 PG 的非幂等 Tool 在真正 SIGKILL、原生 Retry、物理 A→B 接管后 UNKNOWN→唯一外部 Receipt 对账，未盲重放。原 A.1～A.4 有官方真实 CI；本次 Inbox 集成随归档 PR 最新 Head CI 通过后生效。通用 Tool Runtime 属后续增强，Cube 跨宿主/生产级 Gate 归 M5/M9。|
 | DEV-M5 Cube 可信执行 | WorkspaceRef/Scope/Lease/Fencing、跨 Worker 接管 | ACTIVE：**真实 Cube Native SDK MicroVM Create/Guest Files/Connect/Destroy 最小 Demo PASS（本机两次）**；PG Binding/Fencing + 物理 Hatchet A→B + 同 Cube Workspace 联合 Gate、Guest/OCI 仍 OPEN |
 | DEV-M6 多 Agent Recipe | 跨 Runtime 交接、Verifier、Artifact、Approval | PLANNED |
-| DEV-M7 公共 API/SDK | Conversation/Turn/Run、鉴权、Typed SSE、错误合同 | **ACTIVE**：授权读取 8 项 + 真 PG Run Scope/不可变性 5 项已 PASS；2026-10-13 原范围整合 PG Conversation/Turn/Run、版本化 HTTP、授权 SSE/ArtifactRef/取消与结果 UI（本 PR 最新 Head CI 待验）。真实企业 IdP/Policy、统一发起 Hatchet/多 SDK Run、OSS/既有 Portal 综合 Gate OPEN。|
+| DEV-M7 公共 API/SDK | Conversation/Turn/Run、鉴权、Typed SSE、错误合同 | ACTIVE：授权读取 8 项 + 真 PG Run Scope/不可变性 5 项已 PASS；2026-10-13 原范围整合 PG Conversation/Turn/Run、版本化 HTTP、授权 SSE/ArtifactRef/取消与结果 UI（本 PR 最新 Head CI 待验）。真实企业 IdP/Policy、统一发起 Hatchet/多 SDK Run、OSS/既有 Portal 综合 Gate OPEN。|
 | DEV-M8 通用消费者互通 | **只用合成数据**验证独立客户端对 Harness 公共 API 的调用、身份隔离和故障语义 | PLANNED |
 | DEV-M9 生产交付 | 容量/安全/可靠性/部署/回退（含 100 Active Runs 实测） | PLANNED，Production NO-GO |
 
