@@ -62,4 +62,4 @@ jobs:
       - name: Strict original DEV-M7 OpenSpec
         run: npx --yes @fission-ai/openspec@1.12.0 validate dev-m7-platform-access-contract --strict
       - name: Real PostgreSQL Run owner, Conversation, Turn, authorized SSE and ArtifactRef HTTP integration
-        run: python -B -m unittest poc.platform_access.test_pg_reader poc.platform_access.test_platform_api_pg poc.platform_access.test_public_run_launch_pg -v
+        run: python -B -m unittest poc.platform_access.test_pg_reader poc.platform_access.test_platform_api_pg poc.platform_access.test_public_run_launch_pg poc.platform_access.test_m7_full_event_view_pg -v

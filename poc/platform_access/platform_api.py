@@ -308,13 +308,42 @@ for(const turn of conversation.turns){
   if(!r.ok){node("p","执行记录已不可访问",a);continue}
   const run=await r.json();node("h4","Run "+run.run_id+" · "+run.state,a);
   if(run.result){node("pre",run.result.final_output??JSON.stringify(run.result),a)}
-  const ev=await fetch("/api/v1/runs/"+encodeURIComponent(runId)+"/events?limit=250",
-   {credentials:"same-origin"});
-  if(ev.ok){const list=await ev.json();for(const e of list.events){
-    if(e.type==="response.output_text.delta")node("span",e.data.delta,a);
-    if(e.type.startsWith("tool.")||e.type.startsWith("approval.")||
-       e.type.startsWith("step."))node("p",e.type+" · "+JSON.stringify(e.data),a);
-  }}
+  // The read-only page uses only authorized M7 Public API calls.
+  // Synthetic Tool / Approval event projections never invoke their engines.
+  const timeline=node("section","",a);
+  let cursor=0;
+  async function loadPage(){
+    const ev=await fetch("/api/v1/runs/"+encodeURIComponent(runId)+
+      "/events?after="+cursor+"&limit=250",{credentials:"same-origin"});
+    if(!ev.ok){node("p","事件不可访问或授权已撤销",timeline);return}
+    const list=await ev.json();
+    for(const e of list.events){
+      const data=e.data??{};
+      if(e.type==="response.output_text.delta"){
+        node("span",data.delta??"",timeline);
+      }else if(e.type.startsWith("tool.")){
+        node("p","工具事件 · "+e.type+" · "+JSON.stringify(data),timeline);
+      }else if(e.type.startsWith("approval.")){
+        node("p","审核事件 · "+e.type+" · "+JSON.stringify(data),timeline);
+      }else if(e.type.startsWith("artifact.")){
+        node("p","文件事件 · "+e.type+" · "+JSON.stringify(data),timeline);
+      }else if(e.type.startsWith("step.")){
+        node("p","执行步骤 · "+e.type+" · "+JSON.stringify(data),timeline);
+      }
+    }
+    const previous=cursor;
+    cursor=list.cursor;
+    if(list.events.length===250&&cursor>previous){
+      const more=node("button","加载后续事件",timeline);
+      more.type="button";
+      more.addEventListener("click",async()=>{
+        more.disabled=true;
+        await loadPage();
+        more.remove();
+      });
+    }
+  }
+  await loadPage();
   const files=await fetch("/api/v1/runs/"+encodeURIComponent(runId)+"/artifacts",
    {credentials:"same-origin"});
   if(files.ok){const data=await files.json();for(const f of data.artifacts){

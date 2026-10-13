@@ -22,6 +22,8 @@ DEV-M2 Typed SSE 和 DEV-M3 Run/Plan/Step 领域归属事实是平台内部依�
 
 ## Status
 
-**ACTIVE · 授权 Run 详情/事件读取边界单元切片已开发，DEV-M7 整体 OPEN。**
+**ACTIVE · 2026-10-13 原始退出条件已逐项核对，仍有外部真实联调阻断，暂不可归档。** 公共 API 现在已具备真实 PG Conversation/Turn/Run、版本化 REST、可信注入授权与撤权、SSE Cursor、ArtifactRef 元数据、Native Hatchet 双 SDK 实际执行和本地 Inspector 演示。PR #65/#67/#86/#88/#90 官方真实 CI 已有合格证据；本轮加强 Tool/Approval/Artifact 只读事件可读性与超过 250 个事件的安全分页，真实 PG TDD Red→Green。
 
-该切片仅提供受信任网关身份、当前授权策略与 Run 所属关系的注入式合同；尚未对接真实企业 IdP、PostgreSQL Run 归属事实、会话写入、SSE/OSS 授权和现网 UI。不得将单元测试通过解释为平台 API 的生产准入。
+**尚无足以关闭原 M7 的证据**：外部企业 Gateway/Policy 身份真实联调、实际存储对象与 Tool/审批事件来源贯通已授权用户客户端的端到端呈现。外部 IAM、OSS 及 M6 Approval 引擎仍不是本平台要重建的能力；缺少外部服务/验收条件时，不把合成身份/事件、开发调试 Inspector 或 M8 合成消费者假冒成真实企业接入。
+
+参见 [DEV-M7 固定范围 Gate 最终审计](../../../docs/retrospectives/DEV_M7_ORIGINAL_GATE_CLOSEOUT_AUDIT_20261013.md)。阶段继续 `ACTIVE`，Production `NO-GO`。
