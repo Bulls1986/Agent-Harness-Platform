@@ -64,7 +64,7 @@ jobs:
       - name: Strict OpenSpec DEV-M4 and DEV-M5 contract validation
         run: |
           npx --yes @fission-ai/openspec@1.12.0 validate dev-m4-reliable-task-facts --strict
-          npx --yes @fission-ai/openspec@1.12.0 validate sandbox-worker-binding --type spec --strict
+          npx --yes @fission-ai/openspec@1.12.0 validate dev-m5-sandbox-worker-binding --strict
       - name: Create isolated Harness and non-idempotent external databases
         run: |
           python - <<'PY'

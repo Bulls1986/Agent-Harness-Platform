@@ -15,6 +15,8 @@ class PostgreSQLFactsTests(unittest.TestCase):
         self.db = PgFacts()
         self.run_id = "facts-" + uuid4().hex
         self.command = self.db.create(self.run_id, prompt="用户的演示输入")
+        self.attempt_a = "a-" + uuid4().hex
+        self.attempt_b = "b-" + uuid4().hex
 
     def event(self, runtime, output):
         return [TypedEvent(self.run_id, 1, "run.started", runtime),
@@ -46,7 +48,7 @@ class PostgreSQLFactsTests(unittest.TestCase):
         # A CREATED Run has a pending Outbox but no confirmed Hatchet owner.
         before = self.db.snapshot(self.run_id)
         with self.assertRaises(UnsafeDispatch):
-            self.db.start_step(self.run_id, 'pydantic', '用户的演示输入')
+            self.db.start_step(self.run_id, 'pydantic', '用户的演示输入', attempt_id=self.attempt_a)
         after = self.db.snapshot(self.run_id)
         self.assertEqual(after['steps'], before['steps'])
         self.assertEqual(after['events'], before['events'])
@@ -55,12 +57,12 @@ class PostgreSQLFactsTests(unittest.TestCase):
     def test_m3_late_step_cannot_mutate_cancel_requested_or_terminal_run(self):
         self.db.dispatch(self.command)
         self.db.bind(self.command, 'provider-' + self.run_id)
-        self.db.start_step(self.run_id, 'pydantic', '用户的演示输入')
+        self.db.start_step(self.run_id, 'pydantic', '用户的演示输入', attempt_id=self.attempt_a)
         self.assertEqual(self.db.request_cancel(self.run_id), 'CANCEL_REQUESTED')
         before = self.db.snapshot(self.run_id)
         with self.assertRaises(UnsafeDispatch):
             self.db.finish_step(self.run_id, 'pydantic', 'late worker output',
-                                self.event('pydantic', 'late worker output'))
+                                self.event('pydantic', 'late worker output'), attempt_id=self.attempt_a)
         after = self.db.snapshot(self.run_id)
         self.assertEqual(after['events'], before['events'])
         self.assertEqual(after['steps'], before['steps'])
@@ -68,7 +70,7 @@ class PostgreSQLFactsTests(unittest.TestCase):
         terminal = self.db.snapshot(self.run_id)
         with self.assertRaises(UnsafeDispatch):
             self.db.finish_step(self.run_id, 'pydantic', 'late terminal output',
-                                self.event('pydantic', 'late terminal output'))
+                                self.event('pydantic', 'late terminal output'), attempt_id=self.attempt_a)
         self.assertEqual(self.db.snapshot(self.run_id)['events'], terminal['events'])
         self.assertEqual(self.db.snapshot(self.run_id)['steps'], terminal['steps'])
         self.assertEqual(self.db.run_state(self.run_id), 'CANCELLED')
@@ -84,12 +86,12 @@ class PostgreSQLFactsTests(unittest.TestCase):
             self.db.assert_model_binding(live_id, 'live', 'other-model')
         self.db.dispatch(command)
         self.db.bind(command, 'provider-' + live_id)
-        self.db.start_step(live_id, 'pydantic', '业务需求')
+        self.db.start_step(live_id, 'pydantic', '业务需求', attempt_id=self.attempt_a)
         self.db.finish_step(live_id, 'pydantic', 'validated-draft',
-                            [TypedEvent(live_id, 1, 'run.completed', 'pydantic', {'result':'validated-draft'})])
-        self.db.start_step(live_id, 'openai', 'validated-draft')
+                            [TypedEvent(live_id, 1, 'run.completed', 'pydantic', {'result':'validated-draft'})], attempt_id=self.attempt_a)
+        self.db.start_step(live_id, 'openai', 'validated-draft', attempt_id=self.attempt_b)
         self.db.finish_step(live_id, 'openai', 'verified-report',
-                            [TypedEvent(live_id, 1, 'run.completed', 'openai-agents', {'result':'verified-report'})])
+                            [TypedEvent(live_id, 1, 'run.completed', 'openai-agents', {'result':'verified-report'})], attempt_id=self.attempt_b)
         with self.assertRaises(UnsafeDispatch):
             self.db.complete(live_id)
         self.assertEqual(self.db.snapshot(live_id)['state'], 'RUNNING')
@@ -103,19 +105,19 @@ class PostgreSQLFactsTests(unittest.TestCase):
         self.db.dispatch(self.command)
         self.db.bind(self.command, "provider-" + self.run_id)
         with self.assertRaises(UnsafeDispatch):
-            self.db.start_step(self.run_id, "openai", "input")
+            self.db.start_step(self.run_id, "openai", "input", attempt_id=self.attempt_b)
         with self.assertRaises(UnsafeDispatch):
             self.db.complete(self.run_id)
-        self.db.start_step(self.run_id, "pydantic", "用户的演示输入")
+        self.db.start_step(self.run_id, "pydantic", "用户的演示输入", attempt_id=self.attempt_a)
         self.db.finish_step(self.run_id, "pydantic", "pydantic-output",
-                            self.event("pydantic", "pydantic-output"))
-        self.assertEqual(self.db.start_step(self.run_id, "pydantic", "用户的演示输入"),
+                            self.event("pydantic", "pydantic-output"), attempt_id=self.attempt_a)
+        self.assertEqual(self.db.start_step(self.run_id, "pydantic", "用户的演示输入", attempt_id=self.attempt_a),
                          "pydantic-output")
         with self.assertRaises(UnsafeDispatch):
-            self.db.start_step(self.run_id, "pydantic", "different-prompt")
-        self.db.start_step(self.run_id, "openai", "pydantic-output")
+            self.db.start_step(self.run_id, "pydantic", "different-prompt", attempt_id=self.attempt_b)
+        self.db.start_step(self.run_id, "openai", "pydantic-output", attempt_id=self.attempt_b)
         self.db.finish_step(self.run_id, "openai", "openai-output",
-                            self.event("openai-agents", "openai-output"))
+                            self.event("openai-agents", "openai-output"), attempt_id=self.attempt_b)
         outputs = self.db.complete(self.run_id)
         self.assertEqual(outputs, {"pydantic": "pydantic-output",
                                    "openai": "openai-output"})

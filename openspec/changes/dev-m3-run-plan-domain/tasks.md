@@ -13,6 +13,8 @@
 
 - [x] A.3 2026-10-13 Step 准入与迟到完成的**局部安全门禁**：真实 PG 先 RED 证明 CREATED/Provider 未绑定时 SDK Step 可错误启动，及 CANCEL_REQUESTED/CANCELLED 后迟到 Worker 可写 Step/Event；加锁重新校验 Run RUNNING + Plan v1，修复后 M3 三组 PG 测试 15/15 PASS。**证据**：docs/retrospectives/DEV_M3_STEP_TERMINAL_GUARD_20261013.md。仍缺完整版本化 Step/Attempt、实际 Hatchet Cancel/TERMINATED/非 PURE 联合验收，故 1.1～2.3 和 M3 阶段保持 OPEN。
 
+- [x] A.4 2026-10-13 模型-only Plan v1 单次 Attempt 身份与并发重复派发拒绝：新增真实 PG `harness_step_attempt` 持久事实，SDK 传入独立 Attempt ID，完成必须同事务匹配当前 Attempt；重复启动、跨 Step、错误/缺失 ID、迟到结果均 Fail Closed。真实 PG 24/24、架构 8/8、OpenSpec 3/3 PASS；本地 Hatchet Live 因 Sidecar 下载 TLS 故障尚未实机 PASS，官方最新 Head CI 仍需完成。证据：docs/retrospectives/DEV_M3_ATTEMPT_FENCING_20261013.md。**属于 1.1/1.2/1.4 局部切片，不勾选完整 M3 Task/Gate。**
+
 ## 1. TDD 与集成开发
 - [ ] 1.1 先按 HC-01 写状态机/版本/过期 Attempt 失败测试并记录 Red；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
 - [ ] 1.2 实现 Run/Plan/Step/Attempt/Segment 领域事实和独立 Provider Binding；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。

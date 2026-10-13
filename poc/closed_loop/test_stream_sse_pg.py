@@ -11,7 +11,7 @@ class StreamFactsTests(unittest.TestCase):
         self.db=PgFacts();self.rid="sse-"+uuid4().hex
         self.key=self.db.create(self.rid,prompt="test",model_mode="live",model_id="model")
         self.db.dispatch(self.key);self.db.bind(self.key,"wf-"+self.rid)
-        self.db.start_step(self.rid,"pydantic","test")
+        self.db.start_step(self.rid,"pydantic","test",attempt_id="a-"+self.rid)
 
     def test_real_chunks_are_pg_events_before_step_completed_and_cursor_is_stable(self):
         self.db.append_stream_delta(self.rid,"pydantic","测试","pydantic")
