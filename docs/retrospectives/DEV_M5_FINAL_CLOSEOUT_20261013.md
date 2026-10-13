@@ -4,7 +4,7 @@
 
 **DEV-M5 / DEV-HC-03：CLOSED（原始平台控制层 + 单宿主真实 Coding Guest 合同）**，不是平台 Production GO。原始 Proposal/Spec 要求：可信 ExecutionContext/WorkspaceRef/Scope/Lease/Fencing、按需 Cube Create/Bind/Release、模型-only 不分配 Sandbox、OpenCode 方向的 Coding Guest Shell/Files/Git 仅能在 Cube 中执行、真实 Hatchet Worker A 进程被杀后 Worker B 连接 **同一个** Cube、跨 Scope/旧 Owner 被拒。以上**原始有界合同**均已有真实 PG、真实 Cube MicroVM、原生 Hatchet/Worker 与 Git Guest 证据，不借用 Host Shell、不另建 Engine 或功能任务。
 
-**明确 NOT TESTED：** 跨不同宿主故障接管、已经进入 Cube Guest 的 in-flight 强制 Fencing/进程撤销、生产级 OCI 镜像供应链/密钥隔离、安全证明，以及完整远程 LLM/OpenCode Agent 的自主编程回路。这些不能从本地单宿主的真实 MicroVM 测试推断，也未在当前阶段作为实机完成声明；遵循原 M6/M8/M9 以及 Cube 基础设施 Owner 的既有验收职责。生产 **NO-GO** 不变。
+**明确 NOT TESTED（cross-host / Guest in-flight 等生产门禁）：** 跨不同宿主故障接管、已经进入 Cube Guest 的 in-flight 强制 Fencing/进程撤销、生产级 OCI 镜像供应链/密钥隔离、安全证明，以及完整远程 LLM/OpenCode Agent 的自主编程回路。这些不能从本地单宿主的真实 MicroVM 测试推断，也未在当前阶段作为实机完成声明；遵循原 M6/M8/M9 以及 Cube 基础设施 Owner 的既有验收职责。生产 **NO-GO** 不变。
 
 ## Red → Green、根因
 
