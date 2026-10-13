@@ -1,5 +1,9 @@
 # platform-access-contract Specification
 
+## Purpose
+
+定义并验收 DEV-M7 原始 Harness 公共 API/SDK 受控交付：持久 Conversation/Turn/Run、服务端注入的授权与 Run 归属、Typed SSE/ArtifactRef、用户结果页，以及真实 Hatchet/双 SDK 执行。企业 IAM、OSS 签名及实际 Tool/审批来源为外部责任，未联调的外部能力不得被宣称为已验收或 Production GO。
+
 ## Requirements
 
 ### Requirement: 实施与结果服从架构边界
