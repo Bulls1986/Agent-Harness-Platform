@@ -371,6 +371,19 @@ class CubeWorkspaceGateway:
         sb=self._attach(execution_id,owner,epoch)
         return self.transport.write(sb,path,content)
 
+    def command(self,execution_id,owner,epoch,command):
+        """Only the ACTIVE, PG-fenced native Cube Guest may run Shell/Git.
+
+        Never substitute subprocess, host cwd, or a local shared workspace.
+        The Native transport executes inside Cube with cwd=/workspace.
+        """
+        if (not isinstance(command,str) or not command.strip()
+                or len(command)>4096 or "\x00" in command):
+            raise UnsafeDispatch("Invalid or missing Cube Guest command")
+        sandbox=self._attach(execution_id,owner,epoch)
+        # Nonzero exit code is a real Guest command result, never a Host retry.
+        return self.transport.command(sandbox,command)
+
     def release(self,execution_id,owner,epoch):
         sbid=self.binding.mark_releasing(execution_id,owner,epoch)
         try:
@@ -417,6 +430,9 @@ class NativeCubeTransport:
 
     def write(self,sandbox,path,data):
         return sandbox.files.write(path,data)
+
+    def command(self,sandbox,cmd):
+        return sandbox.commands.run(cmd,cwd="/workspace",timeout=30)
 
     def kill(self,sandbox):
         return sandbox.kill()
