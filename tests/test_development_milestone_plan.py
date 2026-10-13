@@ -211,18 +211,31 @@ class MilestonePlanTests(unittest.TestCase):
             self.assertTrue(any("unfinished tasks" in error
                                 for error in validate_milestones(root)))
 
-    def test_m7_active_slice_and_api_owner_stay_in_sync(self):
+    def test_m7_archived_bounded_contract_and_api_owner_stay_in_sync(self):
         milestones = (ROOT / "docs/DEVELOPMENT_MILESTONES.md").read_text(encoding="utf-8")
         backlog = (ROOT / "docs/DEVELOPMENT_BACKLOG.md").read_text(encoding="utf-8")
-        tasks = (ROOT / "openspec/changes/dev-m7-platform-access-contract/tasks.md").read_text(encoding="utf-8")
-        self.assertIn("| ACTIVE：", next(line for line in milestones.splitlines() if line.startswith("| DEV-M7 公共 API/SDK |")))
-        self.assertIn("| ACTIVE：", next(line for line in backlog.splitlines() if line.startswith("| DEV-API-01 | DEV-M7 |")))
-        self.assertIn("ACTIVE", tasks)
-        self.assertIn("仍 OPEN", tasks)
+        stage = next(line for line in milestones.splitlines()
+                     if line.startswith("| DEV-M7 公共 API/SDK |"))
+        owner = next(line for line in backlog.splitlines()
+                     if line.startswith("| DEV-API-01 | DEV-M7 |"))
+        self.assertIn("**CLOSED（原始平台受控交付限定范围）**", stage)
+        self.assertIn("**CLOSED（原始平台受控交付限定范围）**", owner)
+        self.assertIn("Production NO-GO", stage)
+        self.assertIn("NOT VERIFIED", stage)
+        self.assertFalse((ROOT / "openspec/changes/dev-m7-platform-access-contract").exists())
+        archive = ROOT / "openspec/changes/archive/2026-10-13-dev-m7-platform-access-contract"
+        task_body = (archive / "tasks.md").read_text(encoding="utf-8")
+        self.assertNotRegex(task_body, r"(?m)^- \\[ \\] ")
+        self.assertEqual(task_body.count("**验收记录**：docs/retrospectives/DEV_M7_FINAL_CLOSEOUT_20261013.md"), 9)
+        self.assertTrue((ROOT / "openspec/specs/platform-access-contract/spec.md").is_file())
+        report = (ROOT / "docs/retrospectives/DEV_M7_FINAL_CLOSEOUT_20261013.md").read_text(encoding="utf-8")
+        for missing in ("NOT VERIFIED", "Gateway/IdP", "OSS", "Approval",
+                        "Production NO-GO", "M8", "M9"):
+            self.assertIn(missing, report)
 
     def test_public_api_dependency_points_to_synthetic_consumer_not_reverse(self):
         base = ROOT / "openspec/changes"
-        m7 = base / "dev-m7-platform-access-contract"
+        m7 = base / "archive/2026-10-13-dev-m7-platform-access-contract"
         for filename in ("proposal.md", "design.md", "tasks.md"):
             content = (m7 / filename).read_text(encoding="utf-8")
             self.assertNotRegex(content, r"DEV-CONSUMER-0[2-9]\s*前置", filename)
