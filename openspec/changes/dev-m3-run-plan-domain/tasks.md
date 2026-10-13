@@ -11,6 +11,8 @@
 
 - [x] A.2 在真实 PostgreSQL 上原子冻结 PURE Plan v2/独立 Segment Outbox，Provider Native COMPLETED 后才允许新版本、旧 Plan/Attempt 的写入保护、新 Worker 按确认的 PG Provider ID 准入；真实 Hatchet 双 Workflow 和 26 项 PG/API/Model/SSE 回归；**证据**：docs/retrospectives/DEV_M3_REPLAN_V2_PURE_20261011.md（Red CI 38141097324、Green CI 38141333840、独立 Provider IDs）。旧 Worker 运行中 Cancel/TERMINATED、非 PURE Tool Receipt/UNKNOWN、完整多版本 Step/Attempt/业务终态和 Cube Worker 接管 **仍 OPEN**。
 
+- [x] A.3 2026-10-13 Step 准入与迟到完成的**局部安全门禁**：真实 PG 先 RED 证明 CREATED/Provider 未绑定时 SDK Step 可错误启动，及 CANCEL_REQUESTED/CANCELLED 后迟到 Worker 可写 Step/Event；加锁重新校验 Run RUNNING + Plan v1，修复后 M3 三组 PG 测试 15/15 PASS。**证据**：docs/retrospectives/DEV_M3_STEP_TERMINAL_GUARD_20261013.md。仍缺完整版本化 Step/Attempt、实际 Hatchet Cancel/TERMINATED/非 PURE 联合验收，故 1.1～2.3 和 M3 阶段保持 OPEN。
+
 ## 1. TDD 与集成开发
 - [ ] 1.1 先按 HC-01 写状态机/版本/过期 Attempt 失败测试并记录 Red；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
 - [ ] 1.2 实现 Run/Plan/Step/Attempt/Segment 领域事实和独立 Provider Binding；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。

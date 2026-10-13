@@ -297,8 +297,10 @@ class PgFacts:
             # Acquire the parent Run serialization lock before Step locks.
             run = c.execute("SELECT state,input_prompt,plan_version FROM harness_run WHERE id=%s FOR UPDATE",
                             (rid,)).fetchone()
-            if not run or run[0] not in ("CREATED", "RUNNING") or run[2] != 1:
-                raise UnsafeDispatch("Run is missing, terminal or an old Plan version")
+            if not run or run[0] != "RUNNING" or run[2] != 1:
+                # An Outbox-pending CREATED Run has no confirmed Provider owner;
+                # never execute an Agent before the Hatchet binding exists.
+                raise UnsafeDispatch("Run not executing under a confirmed Plan v1")
             # Old workflow cannot launch NEW work after a frozen Replan intent.
             if c.execute("SELECT 1 FROM information_schema.tables "
                          "WHERE table_schema=current_schema() AND table_name='harness_replan_intent'"
@@ -337,10 +339,12 @@ class PgFacts:
         if not events or events[-1].type != "run.completed":
             raise UnsafeDispatch("AgentRuntime did not complete successfully")
         with self.tx() as c:
-            active = c.execute("SELECT plan_version FROM harness_run "
+            active = c.execute("SELECT state,plan_version FROM harness_run "
                                "WHERE id=%s FOR UPDATE", (rid,)).fetchone()
-            if active != (1,):
-                raise UnsafeDispatch("Stale Plan/Attempt cannot commit after Replan")
+            if active != ("RUNNING", 1):
+                # A cancelled/terminal Run cannot accept a late SDK response;
+                # the Run row lock serializes this with cancellation and Replan.
+                raise UnsafeDispatch("Non-running or stale Plan/Attempt cannot commit")
             state = c.execute(
                 "SELECT state FROM harness_step WHERE run_id=%s AND id=%s FOR UPDATE",
                 (rid, name),

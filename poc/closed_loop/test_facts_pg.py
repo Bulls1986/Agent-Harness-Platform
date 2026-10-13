@@ -42,6 +42,37 @@ class PostgreSQLFactsTests(unittest.TestCase):
             self.db.dispatch(self.command)
         self.assertIsNone(self.db.snapshot(self.run_id)["provider_workflow_run_id"])
 
+    def test_m3_step_must_not_start_before_provider_binding(self):
+        # A CREATED Run has a pending Outbox but no confirmed Hatchet owner.
+        before = self.db.snapshot(self.run_id)
+        with self.assertRaises(UnsafeDispatch):
+            self.db.start_step(self.run_id, 'pydantic', '用户的演示输入')
+        after = self.db.snapshot(self.run_id)
+        self.assertEqual(after['steps'], before['steps'])
+        self.assertEqual(after['events'], before['events'])
+        self.assertEqual(after['outbox'], 'PENDING')
+
+    def test_m3_late_step_cannot_mutate_cancel_requested_or_terminal_run(self):
+        self.db.dispatch(self.command)
+        self.db.bind(self.command, 'provider-' + self.run_id)
+        self.db.start_step(self.run_id, 'pydantic', '用户的演示输入')
+        self.assertEqual(self.db.request_cancel(self.run_id), 'CANCEL_REQUESTED')
+        before = self.db.snapshot(self.run_id)
+        with self.assertRaises(UnsafeDispatch):
+            self.db.finish_step(self.run_id, 'pydantic', 'late worker output',
+                                self.event('pydantic', 'late worker output'))
+        after = self.db.snapshot(self.run_id)
+        self.assertEqual(after['events'], before['events'])
+        self.assertEqual(after['steps'], before['steps'])
+        self.db.acknowledge_cancel(self.run_id)
+        terminal = self.db.snapshot(self.run_id)
+        with self.assertRaises(UnsafeDispatch):
+            self.db.finish_step(self.run_id, 'pydantic', 'late terminal output',
+                                self.event('pydantic', 'late terminal output'))
+        self.assertEqual(self.db.snapshot(self.run_id)['events'], terminal['events'])
+        self.assertEqual(self.db.snapshot(self.run_id)['steps'], terminal['steps'])
+        self.assertEqual(self.db.run_state(self.run_id), 'CANCELLED')
+
     def test_live_binding_freeze_and_verification_are_required(self):
         live_id = 'live-' + uuid4().hex
         command = self.db.create(live_id, prompt='业务需求',
