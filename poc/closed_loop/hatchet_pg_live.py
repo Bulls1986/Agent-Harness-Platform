@@ -100,7 +100,9 @@ async def pydantic_step(input: LoopInput, ctx: Context) -> dict[str, str]:
     db = PgFacts()
     cfg = ModelConfiguration.from_env()
     db.assert_model_binding(input.run_id, cfg.mode, cfg.model_id)
-    cached = db.start_step(input.run_id, "pydantic", input.prompt)
+    attempt_id = 'pydantic-' + uuid4().hex
+    cached = db.start_step(input.run_id, "pydantic", input.prompt,
+                           attempt_id=attempt_id)
     if cached is not None:
         return {"output": cached}
 
@@ -115,7 +117,8 @@ async def pydantic_step(input: LoopInput, ctx: Context) -> dict[str, str]:
     if cfg.mode == 'live':
         # Verification Gate: never release Step B on malformed model content.
         result = parse_requirements(result).model_dump_json()
-    db.finish_step(input.run_id, "pydantic", result, events)
+    db.finish_step(input.run_id, "pydantic", result, events,
+                   attempt_id=attempt_id)
     return {"output": result}
 
 
@@ -131,7 +134,9 @@ async def openai_step(input: LoopInput, ctx: Context) -> dict[str, str]:
     db = PgFacts()
     cfg = ModelConfiguration.from_env()
     db.assert_model_binding(input.run_id, cfg.mode, cfg.model_id)
-    cached = db.start_step(input.run_id, "openai", parent)
+    attempt_id = 'openai-' + uuid4().hex
+    cached = db.start_step(input.run_id, "openai", parent,
+                           attempt_id=attempt_id)
     if cached is not None:
         return {"output": cached}
 
@@ -163,7 +168,8 @@ async def openai_step(input: LoopInput, ctx: Context) -> dict[str, str]:
         draft = parse_requirements(parent)
         review = parse_review(result)
         result = render_business_report(draft, review)
-    db.finish_step(input.run_id, "openai", result, events)
+    db.finish_step(input.run_id, "openai", result, events,
+                   attempt_id=attempt_id)
     return {"output": result}
 
 

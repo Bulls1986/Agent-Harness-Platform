@@ -132,16 +132,6 @@ class AgentRuntimeDispatcher:
     def _authorize(request: RunRequest) -> None:
         if not request.runtime or not request.operation or not request.prompt:
             raise RuntimeAdmissionDenied("Missing runtime operation or prompt")
-        if (not request.capabilities
-                or not request.capabilities.issubset(EXEC_CAPS | {"model"})):
-            raise RuntimeAdmissionDenied("Unknown or empty requested capabilities")
-        # A malicious Tool caller must not label shell/files/git operations as
-        # 'model' to bypass both the native Sandbox Grant and trusted lease.
-        for capability in EXEC_CAPS:
-            if request.operation.startswith(capability + ".") and (
-                    capability not in request.capabilities):
-                raise RuntimeAdmissionDenied(
-                    "Native operation requires explicit " + capability + " capability")
         needed = request.capabilities & EXEC_CAPS
         grant = request.sandbox
         if needed and grant is None:

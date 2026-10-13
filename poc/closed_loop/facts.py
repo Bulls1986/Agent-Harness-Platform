@@ -102,6 +102,20 @@ class PgFacts:
                 )
             """)
             c.execute("""
+                CREATE TABLE IF NOT EXISTS harness_step_attempt (
+                    run_id TEXT NOT NULL,
+                    step_id TEXT NOT NULL,
+                    ordinal INTEGER NOT NULL CHECK (ordinal > 0),
+                    attempt_id TEXT NOT NULL UNIQUE,
+                    plan_version INTEGER NOT NULL,
+                    state TEXT NOT NULL CHECK (state IN ('RUNNING', 'COMPLETED')),
+                    PRIMARY KEY (run_id, step_id, ordinal),
+                    FOREIGN KEY (run_id, step_id)
+                        REFERENCES harness_step(run_id, id)
+                )
+            """)
+
+            c.execute("""
                 CREATE TABLE IF NOT EXISTS harness_outbox (
                     command_key TEXT PRIMARY KEY, run_id TEXT NOT NULL REFERENCES harness_run(id),
                     state TEXT NOT NULL
@@ -135,19 +149,6 @@ class PgFacts:
         Test POC schema may not have the new M4 journal installed yet.
         Run row must be locked by the caller to serialize intent insertions.
         """
-        # Native OpenCode Shell is also an external side effect. It must not
-        # be ignored just because the optional M4 Tool Intent journal was
-        # never installed for this synthetic Run.
-        if c.execute(
-            "SELECT to_regclass('harness_cube_guest_effect') IS NOT NULL"
-        ).fetchone()[0]:
-            if c.execute(
-                "SELECT 1 FROM harness_cube_guest_effect AS effect "
-                "JOIN harness_cube_binding AS binding "
-                "ON binding.execution_id=effect.execution_id "
-                "WHERE binding.run_id=%s LIMIT 1", (rid,),
-            ).fetchone():
-                return True
         if not c.execute(
             "SELECT to_regclass('harness_tool_intent') IS NOT NULL"
         ).fetchone()[0]:
@@ -292,7 +293,15 @@ class PgFacts:
                           "WHERE command_key=%s", (key,))
                 self.event(c, row[0], "workflow.unknown", {"command_key": key})
 
-    def start_step(self, rid: str, name: str, value: str) -> str | None:
+    @staticmethod
+    def validate_attempt_id(attempt_id: str) -> None:
+        if (not isinstance(attempt_id, str) or not attempt_id.isascii()
+                or attempt_id != attempt_id.strip() or not 1 <= len(attempt_id) <= 128
+                or any(char.isspace() for char in attempt_id)):
+            raise ValueError("An explicit bounded ASCII Attempt ID is required")
+
+    def start_step(self, rid: str, name: str, value: str, *, attempt_id: str) -> str | None:
+        self.validate_attempt_id(attempt_id)
         with self.tx() as c:
             # Acquire the parent Run serialization lock before Step locks.
             run = c.execute("SELECT state,input_prompt,plan_version FROM harness_run WHERE id=%s FOR UPDATE",
@@ -321,6 +330,11 @@ class PgFacts:
                 if row[2] != sha(value):
                     raise UnsafeDispatch("Completed Step input mismatch")
                 return row[3]  # cached PURE result; never rerun completed SDK Step
+            # A Hatchet delivery/retry is NOT automatically a new business
+            # Attempt. Without a provider-confirmed safe-stop and HC-02 proof,
+            # neither a concurrent worker nor a replay may rerun a RUNNING Step.
+            if row[0] != "PENDING" or row[1] != 0:
+                raise UnsafeDispatch("Active or previous Step Attempt needs reconciliation")
             if name == "openai":
                 parent = c.execute(
                     "SELECT state,output FROM harness_step "
@@ -331,11 +345,18 @@ class PgFacts:
             c.execute("UPDATE harness_step SET state='RUNNING',attempts=%s,"
                       "input_hash=%s WHERE run_id=%s AND id=%s",
                       (row[1] + 1, sha(value), rid, name))
+            c.execute("INSERT INTO harness_step_attempt "
+                      "(run_id,step_id,ordinal,attempt_id,plan_version,state) "
+                      "VALUES (%s,%s,%s,%s,1,'RUNNING')",
+                      (rid, name, row[1] + 1, attempt_id))
             self.event(c, rid, "step.started",
-                       {"step_id": name, "attempt": row[1] + 1})
+                       {"step_id": name, "attempt": row[1] + 1,
+                        "attempt_id": attempt_id})
             return None
 
-    def finish_step(self, rid: str, name: str, output: str, events: list):
+    def finish_step(self, rid: str, name: str, output: str, events: list,
+                    *, attempt_id: str):
+        self.validate_attempt_id(attempt_id)
         if not events or events[-1].type != "run.completed":
             raise UnsafeDispatch("AgentRuntime did not complete successfully")
         with self.tx() as c:
@@ -346,15 +367,25 @@ class PgFacts:
                 # the Run row lock serializes this with cancellation and Replan.
                 raise UnsafeDispatch("Non-running or stale Plan/Attempt cannot commit")
             state = c.execute(
-                "SELECT state FROM harness_step WHERE run_id=%s AND id=%s FOR UPDATE",
-                (rid, name),
+                "SELECT state,attempts FROM harness_step "
+                "WHERE run_id=%s AND id=%s FOR UPDATE", (rid, name),
             ).fetchone()
-            if state != ("RUNNING",):
+            if not state or state[0] != "RUNNING":
                 raise UnsafeDispatch("Step already committed or never started")
+            active_attempt = c.execute(
+                "SELECT attempt_id,plan_version,state FROM harness_step_attempt "
+                "WHERE run_id=%s AND step_id=%s AND ordinal=%s FOR UPDATE",
+                (rid, name, state[1]),
+            ).fetchone()
+            if active_attempt != (attempt_id, 1, "RUNNING"):
+                raise UnsafeDispatch("Missing, stale or mismatched Step Attempt")
             for e in events:
                 # Runtime sub-run terminals are NOT the platform Run terminal.
                 self.event(c, rid, "runtime." + e.type,
                            {"step_id": name, "runtime": e.runtime, **e.data})
+            c.execute("UPDATE harness_step_attempt SET state='COMPLETED' "
+                      "WHERE run_id=%s AND step_id=%s AND ordinal=%s",
+                      (rid, name, state[1]))
             c.execute("UPDATE harness_step SET state='COMPLETED',output=%s,"
                       "output_hash=%s WHERE run_id=%s AND id=%s",
                       (output, sha(output), rid, name))

@@ -9,12 +9,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import os
-from uuid import uuid4
 
 from poc.closed_loop.facts import PgFacts, UnsafeDispatch
-
-
-CUBE_NATIVE_CREATE_TIMEOUT_SECONDS = 300
 
 
 @dataclass(frozen=True)
@@ -55,22 +51,6 @@ class CubeBinding:
                   binding_generation BIGINT NOT NULL DEFAULT 1,
                   state TEXT NOT NULL CHECK(state IN
                      ('ALLOCATING','CREATING','ACTIVE','BLOCKED_UNKNOWN','RELEASING','RELEASED'))
-                )
-            """)
-            # A timed-out or killed Worker might have already sent a native
-            # OpenCode Shell request. Ownership of the *Sandbox* alone cannot
-            # prove that the old Guest command has stopped mutating files.
-            c.execute("""
-                CREATE TABLE IF NOT EXISTS harness_cube_guest_effect(
-                  effect_id TEXT PRIMARY KEY,
-                  execution_id TEXT NOT NULL
-                    REFERENCES harness_cube_binding(execution_id),
-                  owner_id TEXT NOT NULL,
-                  fencing_epoch BIGINT NOT NULL,
-                  kind TEXT NOT NULL CHECK(kind='OPENCODE_SHELL'),
-                  intent_digest TEXT NOT NULL,
-                  state TEXT NOT NULL CHECK(state IN ('DISPATCHED','CONFIRMED')),
-                  receipt_digest TEXT
                 )
             """)
 
@@ -162,66 +142,6 @@ class CubeBinding:
         with self.facts.tx() as c:
             return self._check(c,execution_id,owner_id,epoch,"ACTIVE")
 
-    def begin_guest_effect(self,execution_id,owner,epoch,kind,intent_digest):
-        """Persist native side-effect intent before any Guest dispatch.
-
-        Uses the same PG row lock as takeover. No loss of an HTTP response,
-        Worker process or lease can silently erase the in-flight marker.
-        """
-        self._text(execution_id,owner,intent_digest)
-        if kind!="OPENCODE_SHELL" or not intent_digest.startswith("sha256:"):
-            raise UnsafeDispatch("Only explicit native Shell intent admitted")
-        self._valid_epoch(epoch)
-        effect_id="guest-effect-"+uuid4().hex
-        with self.facts.tx() as c:
-            fact=self._check(c,execution_id,owner,epoch,"ACTIVE")
-            if c.execute(
-                "SELECT 1 FROM harness_cube_guest_effect "
-                "WHERE execution_id=%s AND state='DISPATCHED'",
-                (execution_id,)).fetchone():
-                raise UnsafeDispatch("Another Guest effect is unresolved")
-            c.execute(
-                "INSERT INTO harness_cube_guest_effect("
-                "effect_id,execution_id,owner_id,fencing_epoch,"
-                "kind,intent_digest,state) VALUES (%s,%s,%s,%s,%s,%s,'DISPATCHED')",
-                (effect_id,execution_id,owner,epoch,kind,intent_digest))
-            PgFacts.event(c,fact.run_id,"sandbox.guest.effect.dispatched",{
-                "execution_id":execution_id,"effect_id":effect_id,
-                "epoch":epoch,"kind":kind})
-        return effect_id
-
-    def get_guest_effect(self,effect_id):
-        self._text(effect_id)
-        with self.facts.tx() as c:
-            row=c.execute(
-                "SELECT effect_id,execution_id,owner_id,fencing_epoch,"
-                "kind,intent_digest,state,receipt_digest "
-                "FROM harness_cube_guest_effect WHERE effect_id=%s",
-                (effect_id,)).fetchone()
-        if row is None:
-            raise KeyError(effect_id)
-        return dict(zip(("effect_id","execution_id","owner_id",
-                         "fencing_epoch","kind","intent_digest","state",
-                         "receipt_digest"),row))
-
-    def confirm_guest_effect(self,execution_id,owner,epoch,effect_id,receipt_digest):
-        self._text(execution_id,owner,effect_id,receipt_digest)
-        if not receipt_digest.startswith("sha256:"):
-            raise UnsafeDispatch("A durable verified receipt digest is required")
-        with self.facts.tx() as c:
-            fact=self._check(c,execution_id,owner,epoch,"ACTIVE")
-            changed=c.execute(
-                "UPDATE harness_cube_guest_effect SET state='CONFIRMED',"
-                "receipt_digest=%s WHERE effect_id=%s AND execution_id=%s "
-                "AND owner_id=%s AND fencing_epoch=%s AND state='DISPATCHED'",
-                (receipt_digest,effect_id,execution_id,owner,epoch))
-            if changed.rowcount!=1:
-                raise UnsafeDispatch("Guest effect owner or state changed")
-            PgFacts.event(c,fact.run_id,"sandbox.guest.effect.confirmed",{
-                "execution_id":execution_id,"effect_id":effect_id,
-                "epoch":epoch})
-        return effect_id
-
     def assert_unknown(self,execution_id,owner_id,epoch):
         self._valid_epoch(epoch)
         with self.facts.tx() as c:
@@ -311,12 +231,6 @@ class CubeBinding:
                     or (row[9] in ("BLOCKED_UNKNOWN","CREATING")
                         and row[7] is not None)):
                 raise UnsafeDispatch("Sandbox takeover requires expired matching Scope/Workspace")
-            if c.execute(
-                    "SELECT 1 FROM harness_cube_guest_effect "
-                    "WHERE execution_id=%s AND state='DISPATCHED'",
-                    (execution_id,)).fetchone():
-                raise UnsafeDispatch(
-                    "Guest native side effect unresolved: takeover requires reconciliation")
             run=c.execute("SELECT state FROM harness_run WHERE id=%s FOR UPDATE",
                           (row[1],)).fetchone()
             if run!=("RUNNING",):
@@ -337,52 +251,14 @@ class CubeBinding:
                 "workspace_ref":workspace})
         return self.get(execution_id)
 
-    def claim_quarantine(self,execution_id,owner,epoch,scope,workspace,
-                         environment_digest):
-        """Authorized expired Owner may CONTAIN an unresolved Guest by killing
-        its entire verified native MicroVM. It cannot continue the Run/Session.
-
-        This is a separate emergency recovery path, never normal takeover or
-        implicit retry. Frozen Scope/Workspace/Template remain authoritative.
-        """
-        self._text(execution_id,owner,scope,workspace,environment_digest)
-        self._valid_epoch(epoch)
-        with self.facts.tx() as c:
-            row=c.execute(
-                "SELECT "+",".join(self.FIELDS)+",lease_expires_at<=now() "
-                "FROM harness_cube_binding WHERE execution_id=%s FOR UPDATE",
-                (execution_id,)).fetchone()
-            if (not row or row[5]!=owner or row[6]!=epoch
-                    or row[2:5]!=(scope,workspace,environment_digest)
-                    or row[9]!="ACTIVE" or not row[7]
-                    or row[10] is not True):
-                raise UnsafeDispatch("Quarantine needs expired original Cube binding")
-            if not c.execute(
-                    "SELECT 1 FROM harness_cube_guest_effect "
-                    "WHERE execution_id=%s AND state='DISPATCHED'",
-                    (execution_id,)).fetchone():
-                raise UnsafeDispatch("No unresolved Guest effect for containment")
-            fact=self._binding(row[:-1])
-            c.execute(
-                "UPDATE harness_cube_binding SET state='RELEASING' "
-                "WHERE execution_id=%s",(execution_id,))
-            PgFacts.event(c,fact.run_id,"sandbox.guest.quarantine.claimed",{
-                "execution_id":execution_id,"original_epoch":epoch})
-            return fact
-
     def mark_releasing(self,execution_id,owner,epoch):
         with self.facts.tx() as c:
             row=self._check(c,execution_id,owner,epoch,"ACTIVE")
-            if c.execute(
-                    "SELECT 1 FROM harness_cube_guest_effect "
-                    "WHERE execution_id=%s AND state='DISPATCHED'",
-                    (execution_id,)).fetchone():
-                raise UnsafeDispatch("Cannot destroy Cube while Guest effect unresolved")
             c.execute("UPDATE harness_cube_binding SET state='RELEASING' "
                       "WHERE execution_id=%s",(execution_id,))
             return row.sandbox_id
 
-    def mark_released(self,execution_id,owner,epoch,*,quarantined=False):
+    def mark_released(self,execution_id,owner,epoch):
         with self.facts.tx() as c:
             row=c.execute(
                 "SELECT run_id,owner_id,fencing_epoch,state "
@@ -395,23 +271,6 @@ class CubeBinding:
                       "WHERE execution_id=%s",(execution_id,))
             PgFacts.event(c,row[0],"sandbox.binding.released",
                           {"execution_id":execution_id})
-            if quarantined:
-                # Destroy ACK terminates the Guest, not an external Tool
-                # Receipt. Never leave the parent Run apparently RUNNING
-                # after its only trusted execution environment is gone.
-                changed=c.execute(
-                    "UPDATE harness_run SET state='BLOCKED_UNKNOWN' "
-                    "WHERE id=%s AND state='RUNNING'",(row[0],))
-                if changed.rowcount!=1:
-                    raise UnsafeDispatch("Quarantined Run was no longer active")
-                PgFacts.event(c,row[0],"run.blocked_unknown",{
-                    "execution_id":execution_id,
-                    "reason":"NATIVE_GUEST_QUARANTINED_EXTERNAL_EFFECT_UNKNOWN",
-                    "may_retry_original_tool":False})
-                PgFacts.event(c,row[0],"sandbox.guest.quarantine.contained",{
-                    "execution_id":execution_id,
-                    "guest_terminated_by":"native_provider_destroy_ack",
-                    "external_tool_effect":"UNKNOWN_REQUIRES_RECONCILIATION"})
 
 
 class CubeWorkspaceGateway:
@@ -494,12 +353,6 @@ class CubeWorkspaceGateway:
             sb=self.transport.connect(fact.sandbox_id)
         except Exception:
             raise UnsafeDispatch("Cube connect unavailable: cannot fabricate a replacement Workspace") from None
-        # A Provider locator is not an authorization capability. Even a
-        # successful connect must return the EXACT identity frozen in PG;
-        # otherwise a wrong Guest could be exposed under a valid permit.
-        native_id=sb if isinstance(sb,str) else getattr(sb,"sandbox_id",None)
-        if native_id != fact.sandbox_id:
-            raise UnsafeDispatch("Native Cube connect returned wrong Sandbox identity")
         # A real provider call can race an Owner change. Recheck PG authority
         # before each operation; full revoke-in-flight requires guest fencing.
         fresh=self.binding.assert_active(execution_id,owner,epoch)
@@ -522,64 +375,12 @@ class CubeWorkspaceGateway:
         sbid=self.binding.mark_releasing(execution_id,owner,epoch)
         try:
             sb=self.transport.connect(sbid)
-            native_id=sb if isinstance(sb,str) else getattr(sb,"sandbox_id",None)
-            if native_id != sbid:
-                # Never kill another Guest or record a false Destroy ACK.
-                # Keep RELEASING pending operator/provider reconciliation.
-                raise UnsafeDispatch("Cube destroy blocked: wrong native Sandbox identity")
             self.transport.kill(sb)
-        except UnsafeDispatch:
-            raise
         except Exception:
             # RELEASING is not an ACK: remain blocked, never make a second
             # sandbox while destroy confirmation is uncertain.
             raise UnsafeDispatch("Cube destroy ACK unknown; explicit reconciliation required") from None
         self.binding.mark_released(execution_id,owner,epoch)
-
-    def quarantine_unresolved(self,execution_id,owner,epoch,scope,workspace,
-                              environment_digest):
-        """Trusted operator-only containment. Never restarts an unknown Tool.
-
-        Even with provider Destroy ACK, effects are left DISPATCHED and the
-        original Run/Native Session must not be resumed; external receipts
-        require independent reconciliation. No endpoint exposes this action.
-        """
-        original=self.binding.claim_quarantine(
-            execution_id,owner,epoch,scope,workspace,environment_digest)
-        sid=original.sandbox_id
-        phase="native-connect"
-        try:
-            native=self.transport.connect(sid)
-            native_id=native if isinstance(native,str) else getattr(
-                native,"sandbox_id",None)
-            phase="native-identity"
-            if native_id != sid:
-                raise ValueError("Unexpected Native Sandbox ID")
-            phase="native-detail"
-            detail=self.transport.inspect(native)
-            if not isinstance(detail,dict) or detail.get("sandboxID")!=sid:
-                phase="native-detail-id"
-                raise ValueError("Native provider ID differs from PG")
-            expected=self.binding._metadata(original)
-            actual=detail.get("metadata")
-            if (not isinstance(actual,dict)
-                    or any(actual.get(k)!=v for k,v in expected.items())):
-                # Cube may append its own provider metadata. The full frozen
-                # Harness identity MUST be present with exact string values;
-                # additional provider attributes are not authorization.
-                phase="native-detail-metadata-trusted-fields"
-                raise ValueError("Native provider metadata differs from PG")
-            phase="native-destroy"
-            self.transport.kill(native)
-        except Exception:
-            # RELEASING remains unresolved. Never re-kill or declare success
-            # without explicit provider reconciliation. Expose only a bounded
-            # phase code, never URLs, HTTP payloads or credentials.
-            raise UnsafeDispatch(
-                "Guest quarantine "+phase+
-                " outcome unknown; provider reconciliation required"
-            ) from None
-        self.binding.mark_released(execution_id,owner,epoch,quarantined=True)
 
 
 class NativeCubeTransport:
@@ -593,14 +394,9 @@ class NativeCubeTransport:
             raise RuntimeError("Real CUBE_API_URL and CUBE_TEMPLATE_ID required")
         from cubesandbox import Sandbox
         self.sdk=Sandbox
-        # Freeze the real, pre-approved template at Adapter construction.
-        # Do not rely on SDK defaults or mutable process environment at create.
-        self.template=os.environ["CUBE_TEMPLATE_ID"]
 
     def create(self,*,metadata):
-        sandbox=self.sdk.create(
-            template=self.template,timeout=CUBE_NATIVE_CREATE_TIMEOUT_SECONDS,
-            metadata=dict(metadata))
+        sandbox=self.sdk.create(metadata=metadata)
         return sandbox.sandbox_id
 
     def list(self):

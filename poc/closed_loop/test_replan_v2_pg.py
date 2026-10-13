@@ -64,7 +64,7 @@ class ReplanV2PgTests(unittest.TestCase):
         with self.assertRaises(UnsafeDispatch):
             self.db.complete(self.rid)
         with self.assertRaises(UnsafeDispatch):
-            self.db.start_step(self.rid, "openai", "unverified")
+            self.db.start_step(self.rid, "openai", "unverified", attempt_id="a-"+self.rid)
 
     def test_dispatch_binding_atomic_and_no_ambiguous_duplicate(self):
         key = self.replan.promote(self.rid, lambda _: ProviderState.COMPLETED)
@@ -112,7 +112,7 @@ class ReplanV2PgTests(unittest.TestCase):
         with self.assertRaises(UnsafeDispatch):
             self.db.finish_step(self.rid, "pydantic", "late",
                                 [TypedEvent(self.rid, 1, "run.completed", "pydantic",
-                                            {"result": "late"})])
+                                            {"result": "late"})], attempt_id="a-"+self.rid)
         self.assertEqual(self.db.snapshot(self.rid)["steps"]["pydantic"]["state"],
                          "RUNNING")
         self.assertEqual(self.db.snapshot(self.rid)["plan_version"], 2)

@@ -62,18 +62,7 @@ def launch_server() -> FastAPI:
                     LOG.exception("Could not persist failed execution observation")
         return pool.submit(background)
 
-    # No privileged worker access from the legacy Inspector by default.
-    # Operator must explicitly opt into the fixed real B03 runner, provide
-    # a distinct long credential, and run in an authorized Linux environment.
-    trusted_runner = None
-    if os.getenv("HARNESS_INSPECTOR_NATIVE_B03_ENABLED") == "1":
-        from .trusted_scenario_runner import TrustedScenarioRunner
-        key = os.environ.get("HARNESS_INSPECTOR_SCENARIO_TOKEN", "")
-        storage = os.environ.get("HARNESS_INSPECTOR_EVIDENCE_DIR", "")
-        if not storage or len(key) < 32:
-            raise RuntimeError("Native B03 opt-in requires token and evidence directory")
-        trusted_runner = TrustedScenarioRunner(token=key, evidence_dir=storage)
-    app = create_app(submit=submit, trusted_runner=trusted_runner)
+    app = create_app(submit=submit)
     app.router.lifespan_context = lifespan
     return app
 

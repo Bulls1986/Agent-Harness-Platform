@@ -25,6 +25,12 @@ Run/Plan/Step/Attempt 领域事实与状态机、Plan 版本、Replan 新 Segmen
 - `finish_step` 在同一事务持有 Run 行锁并同时核验 RUNNING + Plan v1，防止 CANCEL_REQUESTED / CANCELLED 之后过期 Worker 重新写入 Step 终态和 Event；既有 Model/Verification 限制不变。
 - 这只涵盖当前模型-only Plan v1 状态保护，不代表已实现版本化 Step/Attempt 全量域模型、同一 Plan 内过期 Attempt 隔离或真实 Provider 安全停机。这些继续按原 M3 1.1～2.3 验收，生产 NO-GO。
 
+### 2026-10-13 第四开发切片：单次 Attempt 身份与重复派发拒绝
+
+- Run/Plan v1 下新增最小 PG `harness_step_attempt(run_id,step_id,ordinal,attempt_id,plan_version,state)`，与 Harness Step 事实一起提交，不镜像 Hatchet Task History。
+- `start_step` 接收独立 Attempt ID；同一个 RUNNING Step 即使原 Hatchet 投递重复也不得再次调用 SDK；没有可信失败终态和 Tool Receipt 的再次执行仍拒绝。已有 COMPLETED 的 PURE 输出按冻结输入复用，不产生新 Attempt。
+- `finish_step` 同时匹配当前 Plan、Step 状态与最新 Attempt ID、版本、状态，在更新 Step 以及事件前拒绝过期结果。SDK 的 Attempt ID 只是业务关联，并非 HC-03 的工具执行授权；模型文本流及 v2、多 Attempt、非 PURE 恢复属于后续原 M3/M4/M7 Gate。
+
 ## Test-first and failure injection
 
 正常验收：已有 Run 在执行 Plan v1 时收到经批准的 Replan → 生成 v2 Plan 和新的 Workflow Segment，旧 Plan/Attempt 仅留审计而不会覆盖。

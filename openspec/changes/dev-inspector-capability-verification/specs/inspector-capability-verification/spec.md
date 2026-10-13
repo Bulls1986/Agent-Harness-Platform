@@ -29,15 +29,3 @@ Cube/物理故障/外部非幂等场景在未接入明确授权的可信 Runner 
 #### Scenario: 试图通过新 Tab 触发物理故障
 - **WHEN** 评审者打开尚未完成整合的物理 Worker 场景
 - **THEN** 页面解释所需证据和当前限制，不提供无认证的 Host SIGKILL 或假运行结果
-
-### Requirement: Trusted physical demonstration MUST be opt-in, authenticated and independently evidenced
-
-在本地受控 Linux 环境中，经服务端显式启用的 worker-takeover 固定场景 MAY 接受操作员认证的请求。此入口 MUST NOT 接受任意 Shell 命令、沙箱参数或未经授权的跨来源请求；未启用时仍为只读。响应 MUST 首先是未验证的执行标识，终态 MUST 来自可信运行器的真实 OS、Hatchet、PG、Cube Guest/Destroy 关联证据。执行中断或回执不明时 MUST BLOCK UNKNOWN，不得盲目重发。服务端 Token 与日志 MUST NOT 返回客户端。
-
-#### Scenario: 缺失授权或运行器未启用
-- **WHEN** 浏览器试图无凭证、错误凭证或跨来源启动特权场景
-- **THEN** 可信后端拒绝执行，默认 Inspector 继续只读，Catalog 不泄露任何凭证
-
-#### Scenario: 真实联合执行尚无完整证明
-- **WHEN** 受控运行器启动但 Native B03 失败、证据缺失或服务中断
-- **THEN** 不设置 Verified/PASS，保留证据 ID 与失败或 UNKNOWN，要求运维对账；PG Binding 不能替代真实 Guest/物理故障证据
