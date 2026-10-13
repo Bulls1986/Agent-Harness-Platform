@@ -34,3 +34,10 @@
 本次完成了多个原始已计划能力的集成交付，而非任意拓展 M7。最有价值的回归是：项目相同不意味着同一用户；SSE 不应仅在建连时鉴权；ArtifactRef 不能泄露可直接下载地址；取消 ACK 不是执行终止；持久 Run 所属与 Turn 所属必须在 PG 中一致。
 
 **DEV-M7 保持 ACTIVE，Production NO-GO**：没有接入真实企业 Gateway/IdP 与外部 Policy、没有经统一 Public API 发起真实多 SDK Agent Run 的端到端证据、也没有真实 OSS Artifact 下载、Approval 事件的完整 UI 联测。当前原 OpenSpec 1.1～2.3 的整阶段门禁不勾选、不归档。后续继续按**原定范围**集中联调，不从本切片衍生新 M7 阶段或新架构产品。
+## PR #86 最新 Head 官方验收与合并（补记）
+
+- [PR #86](https://github.com/Bulls1986/Agent-Harness-Platform/pull/86) 最终 Head `2401f306`，两条官方 CI 全部 SUCCESS：真实 PG/HTTP/原 OpenSpec [38360300342](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38360300342)、架构 [38360300381](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38360300381)。
+- 真实 PG16 CI **14/14 PASS**（原 PG Scope 5 项 + 新版 Conversation/Turn/Run/ArtifactRef/SSE/Cancel/UI 合同 9 项；0 SKIPPED）；独立授权单元 **8/8 PASS**，合计 **22/22**。
+- 合并至 Main，提交 `eb224ff9981d93555bbe75ee88e3d235c65c7184`，没有合并任何私有业务或外部 IAM 适配器。
+- 架构首次失败仅因 `DEVELOPMENT_MILESTONES.md` 和 `DEVELOPMENT_BACKLOG.md` 使用加粗 `**ACTIVE**：`，与既有阶段校验 `| ACTIVE：` 不一致。恢复现有规范写法后两条 CI PASS，**没有修改状态语义或验收合同**。
+- 此实测只证明合成 Server-side Gateway Policy 注入 + 真实 PostgreSQL/HTTP 的限定集成。原 DEV-M7 的真实企业 IdP、公开入口实际启动 Agent、OSS/Approval/既有 Portal 完整 Gate **仍 OPEN**；生产 NO-GO。
