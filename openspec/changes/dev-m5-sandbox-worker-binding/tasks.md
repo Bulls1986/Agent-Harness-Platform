@@ -1,6 +1,6 @@
 # DEV-M5 Cube 可信执行与 Coding Runtime · Tasks
 
-> 状态：**ACTIVE · 可信工具准入首段已通过，真实 Cube/Worker 接管仍 OPEN**。工期、Owner 和 Sprint 需要在真实代码/团队容量基线上评估；所有勾选项以运行证据为准。来源 DEV-HC-03 / HC-03。
+> 状态：**ACTIVE · 真实 Cube MicroVM + Harness PG Binding / B/8 Fencing / Guest 同 ID 重连 / Destroy 已实机 PASS，物理 Hatchet Worker A SIGKILL→B 同 Cube 联合 Gate 仍 OPEN**。工期、Owner 和 Sprint 需要在真实代码/团队容量基线上评估；所有勾选项以运行证据为准。来源 DEV-HC-03 / HC-03。
 
 ## 0. 前置与需求冻结
 - [ ] 0.1 审阅原有 Accepted ADR/HC 与 G01–G20，识别事实 Owner、安全边界和阻断依赖；OpenSpec 四类规划材料 Strict PASS。
@@ -18,6 +18,8 @@
 - [x] A.5 CubeSandbox 创建 ACK 丢失及 Creator A 崩溃时的持久化 UNKNOWN 对账合同：真实 PostgreSQL `ALLOCATING→CREATING` dispatch barrier，外部创建已成功而 PG Binding ACK 丢失时不得盲目新建；官方 SDK Metadata 冻结，受信任 Native List/Connect/GetInfo 只有唯一完整匹配才允许 `BLOCKED_UNKNOWN→ACTIVE`；PG Fencing B 接管 A 的 `CREATING/UNKNOWN` 时仅能查询同一 Cube。**证据**：docs/retrospectives/DEV_M5_CUBE_CREATE_ACK_RECONCILE_20261011.md（Red 38148112088、Green 38148372940，14/14 PG/SDK 合同）。测试为 Fake Cube + PG，真实 Cube 实机继续 OPEN，不勾选正式 1.2/1.3。
 
 - [x] A.6 **真实 Cube MicroVM 原生 SDK 最小生命周期 Demo**：在已有运行中的 CubeMaster/Cubelet/CubeAPI 和 READY 模板上，官方 `cubesandbox==0.7.0` 实际创建 2 次独立 Sandbox（均真实返回 ID），Guest 文件写入/读回、Native `Sandbox.connect(same_id)` 新 SDK 实例读取原字节、`kill()` 确认成功；运行退出码 0，未使用 Fake Transport。可复现脚本 `poc/sandbox/verify_cube_sdk_smoke.py`，证据 `docs/retrospectives/DEV_M5_REAL_CUBE_MICROVM_SMOKE_20261012.md`。**仅 SDK 实机 Smoke PASS**；Harness PG+真 Cube 以及真实 Hatchet A→B+Cube 联合测试尚未通过，1.2/1.3/2.x 保持 OPEN。
+
+> 2026-10-13 原范围集成进展：Native Cube SDK 明确传模板的 TDD Red→Green、真实 PG 合同 14/14 PASS；真实 Cube + PG 绑定/Lease/Fencing B/8/Guest 持久字节/Destroy 已单独实机 PASS。物理 Hatchet Worker A SIGKILL→B 同 Cube 接管尚无真实 PASS，不能勾选 1.3/2.x，不添加新 A.x。证据：docs/retrospectives/DEV_M5_REAL_CUBE_PG_WORKER_GATE_20261013.md。
 
 ## 1. TDD 与集成开发
 - [ ] 1.1 先写无 ExecutionContext、越权、旧 Lease/Fencing 的拒绝测试；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
