@@ -33,3 +33,5 @@ Hatchet 仍持有原生 Workflow/Task/Retry/终止技术事实；Harness PG 只�
 根因：早期 M3 POC 以新 Workflow 是否能运行替代完整业务事实验收；对所有 Tool Intent 一刀切阻断，没有可核验的安全继续策略；旧 Provider 静止、业务 Step completion LOST 未被模型化。架构原则已经禁止从 Hatchet 直接产生业务成功，本次通过独立 PG 业务事实 + 可信证据 Gate 补全。
 
 仍需对照原 DEV-M3 1.1～2.3 全范围 Gate：原生 Worker 真正取消/TERMINATED 证据、多 Attempt 同 Plan 安全 Retry 与 Owner Epoch/Lease Fencing、原生跨 Worker/Cube Guest 联合测试、带真实审批/Tool 的通用 Step/Attempt、更加完整的 Plan 版本链（不只 v1→v2），以及生产级错误/容量/策略。若没有对应 Live 验收，M3 保持 ACTIVE，Production NO-GO，不通过改写规格掩盖缺口。
+## 最终收口回执（2026-10-13）
+本文件此前“待创建 PR/CI”等表述是开发过程历史快照。实际 PR [#83](https://github.com/Bulls1986/Agent-Harness-Platform/pull/83) 已合并 Main，Merge `f6fb667b7d1cd4711bb7d64b3ad37f833dbf8e15`；真实 [Hatchet/PG/双 SDK/Inspector CI 38343878631](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38343878631) **SUCCESS**，[架构 CI 38343879325](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38343879325) **SUCCESS**。详见 [DEV_M3_FINAL_CLOSEOUT_20261013.md](DEV_M3_FINAL_CLOSEOUT_20261013.md)：原始限定 DEV-M3 **CLOSED**，后续多 Attempt/通用 ToolRuntime/跨 Worker/Fencing/生产 GO 仍由现有 M4/M5/M9 承担，不代表风险消失。

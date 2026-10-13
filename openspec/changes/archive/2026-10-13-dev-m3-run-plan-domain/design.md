@@ -49,3 +49,5 @@ Run/Plan/Step/Attempt 领域事实与状态机、Plan 版本、Replan 新 Segmen
 ## Exit gate
 
 一条真实 Hatchet Run 经 Replan 生成 v2 Plan/独立 Segment，旧 Attempt 不得继续完成。。测试 Red/Green/Refactor、真实端到端、CI/架构、OpenSpec 完整核对及复盘均须留下可检索证据。阶段与生产 GO 明确区分。
+## 正式阶段验收（2026-10-13）
+原始限定交付 **CLOSED**：真实 Hatchet v1→v2 独立 Workflow Segment；PG 冻结 Run/Plan/Step/Attempt 和 Provider Binding；旧 Attempt 写入隔离。PR #80/#81/#83 已 Merge；官方 [真实集成 CI 38343878631](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38343878631) 与 [架构 CI 38343879325](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38343879325) SUCCESS。之前各个切片中的 OPEN 属历史开发阶段，现以原始 Proposal 验收范围为准，不将任意 vN、生产 ToolRuntime、M4 物理 Worker 接管、M5 Cube Guest 或 M9 生产门禁反向纳入 M3。

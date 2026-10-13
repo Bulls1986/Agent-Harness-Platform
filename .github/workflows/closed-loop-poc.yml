@@ -8,7 +8,8 @@ on:
       - 'openspec/changes/minimal-run-closed-loop/**'
       - 'openspec/changes/real-model-agent-closed-loop/**'
       - 'openspec/changes/dev-inspector-capability-verification/**'
-      - 'openspec/changes/dev-m3-run-plan-domain/**'
+      - 'openspec/changes/archive/2026-10-13-dev-m3-run-plan-domain/**'
+      - 'openspec/specs/run-plan-domain/**'
       - 'poc/runtime_spi/**'
       - '.github/workflows/closed-loop-poc.yml'
 
@@ -57,6 +58,7 @@ jobs:
       - name: Verify OpenSpec, architecture guards and PG/API TDD contracts
         run: |
           npx --yes @fission-ai/openspec@1.12.0 validate dev-inspector-capability-verification --strict
+          npx --yes @fission-ai/openspec@1.12.0 validate --specs --strict
           python -B -m unittest poc.closed_loop.test_step_attempt_pg poc.closed_loop.test_facts_pg poc.closed_loop.test_inspector_capabilities_pg poc.closed_loop.test_inspector_pg poc.closed_loop.test_real_model poc.closed_loop.test_stream_sse_pg poc.closed_loop.test_plan_guard_pg poc.closed_loop.test_replan_v2_pg poc.closed_loop.test_replan_v2_execution_pg poc.closed_loop.test_replan_non_pure_pg poc.closed_loop.test_replan_orphaned_attempt_pg poc.closed_loop.test_replan_ack_pg poc.closed_loop.test_hatchet_segment_lookup -v
           python -B -m unittest tests.test_architecture_guardrails -v
           python -B poc/verify_repo_navigation.py

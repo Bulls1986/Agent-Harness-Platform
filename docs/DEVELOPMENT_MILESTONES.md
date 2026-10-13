@@ -4,12 +4,12 @@
 
 ## DEV-M0～M9 里程碑
 
-| 阶段 | 平台交付目标 | 截至 2026-10-12 |
+| 阶段 | 平台交付目标 | 截至 2026-10-13 |
 |---|---|---|
 | DEV-M0 架构基线 | Accepted ADR、HC-01/02/03、G01–G20 | 决策已冻结 |
 | DEV-M1 基础可运行平台 | 真 Hatchet/PG、双 Agent SDK、Run Inspector | 开发切片 PASS |
 | DEV-M2 模型及流式交互 | 真实 LiteLLM、Token SSE、持久游标/取消 | 有限开发切片 PASS |
-| DEV-M3 领域内核 | Run/Plan/Step/Attempt、Replan v2、Workflow Segment | ACTIVE：Plan v1 + PURE Hatchet v1→v2 Segment PASS；2026-10-13 A.3/A.4 Step 终态与 PG Attempt ID/重复派发保护已通过真实 PG 和 PR #80/#81 最新 Head CI 并合并；A.5 正在合并 v2 业务终态/确认 Receipt 的非 PURE Replan/旧 PURE Attempt 退出，真实 PG 43/43 PASS，Hatchet 集成和最新 CI 待验；跨 Worker/任意多 Attempt Safe Retry、真实 Cancel/TERMINATED 与完整阶段 Gate OPEN |
+| DEV-M3 领域内核 | Run/Plan/Step/Attempt、Replan v2、Workflow Segment | **CLOSED（原始限定范围）**：真实 Hatchet v1→v2 独立 Segment、Plan/Step/Attempt/Provider Binding、旧 Attempt 拒绝均有主干代码与实际 CI。PR #80/#81/#83 Merge；[实际 PG/Hatchet/双 SDK CI 38343878631](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38343878631) 与 [架构 CI 38343879325](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38343879325) SUCCESS。通用 Retry/恢复归 M4、可信 Worker/Cube 归 M5、Production GO 归 M9。|
 | DEV-M4 一致性与恢复 | Outbox/Inbox、ACK-loss、UNKNOWN/非幂等 Receipt | ACTIVE：实际 Worker A 进程 SIGKILL→独立 B 领取 Native Task、非幂等 Receipt/PG Fencing 子切片 PASS；通用 ToolRuntime/Inbox/跨宿主完整 Gate OPEN |
 | DEV-M5 Cube 可信执行 | WorkspaceRef/Scope/Lease/Fencing、跨 Worker 接管 | ACTIVE：**真实 Cube Native SDK MicroVM Create/Guest Files/Connect/Destroy 最小 Demo PASS（本机两次）**；PG Binding/Fencing + 物理 Hatchet A→B + 同 Cube Workspace 联合 Gate、Guest/OCI 仍 OPEN |
 | DEV-M6 多 Agent Recipe | 跨 Runtime 交接、Verifier、Artifact、Approval | PLANNED |
@@ -23,11 +23,11 @@
 
 第一波：M3 领域事实、M5 可信执行并行；M4 故障负例可以并行准备。第二波：M4 集成与 M7 API/SDK；第三波：M6 多 Agent Recipe 与 M8 独立合成客户端联调；最终 M9 的平台生产故障与安全门禁。Owner、工期与上线日期需根据真实资源独立基线化，不虚构排期。
 
-## 前置依赖与当前阻断（2026-10-11）
+## 前置依赖与当前阻断（2026-10-13）
 
 | 阶段 | 真正前置与并行边界 | 未满足的完整阶段退出 Gate |
 |---|---|---|
-| M3 | M1 Run/PG/Hatchet 已有有限实测；M3 内核开发可独立推进 | PURE PG+Hatchet v1→v2 子切片 PASS；运行中旧 Worker 结束确认、非 PURE/完整 Step-Attempt/业务终态仍 OPEN |
+| M3 | M1 PG/Hatchet Run 基础已就绪，原限定 Replan 交付已完成 | **CLOSED**：v1→v2 独立 Segment 与过期 Attempt 隔离，后续 M4/M5/M9 Gate 不重复列为 M3 门禁 |
 | M4 | M3 Domain/Segment 事实是完整恢复对账的前置；故障负例可先并行 TDD | 物理 Worker A SIGKILL→B、Receipt Fencing 限定场景 PASS；通用 Inbox/多 Attempt、跨宿主与生产 Tool Runtime Gate OPEN |
 | M5 | HC-03 是约束；Cube Allocate/Bind/Release 可与 M3/M4 并行；A→B 恢复需要相关执行事实 | 真 Cube MicroVM 原生创建、Guest 文件读写、同 ID 重连与销毁最小 Demo PASS；Harness PG/Worker B 联合 Fencing/Guest OCI/生产资源回收仍 OPEN |
 | M6 | 依赖 M3/M4/M5 相关真实执行、安全和恢复 Gate | 通用合成 Recipe 的跨 Runtime、Approval、Artifact/Evidence、Verifier 实测 |
@@ -35,13 +35,13 @@
 | M8 | 依赖 M7 版本化公共 API/SDK 与相关 M3～M6 合同；只使用独立合成客户端 | 身份隔离、取消、游标和失败传播的真实公共 API 联调 |
 | M9 | 依赖 M3～M7 适用的平台真实 Gate 与本阶段安全/容量/恢复/回滚门禁；公开 API 可纳入 M8 合成合同证明 | 100 Active Runs、故障注入、平台 IAM/Scope/Receipt/回退实测，Production NO-GO |
 
-**依赖方向不得颠倒：**M7 公共 API 是 M8 合成消费者测试的前置；任何特定业务消费者的开发、迁移或上线均不是 M6/M7/M9 的前置。各阶段 Tasks 的 `0.1/0.2` 只有对应全范围证据齐备后方可勾选；子切片 PASS 不等于阶段完成。
+**依赖方向不得颠倒：**M7 公共 API 是 M8 合成消费者测试的前置；任何特定业务消费者的开发、迁移或上线均不是 M6/M7/M9 的前置。各阶段 Tasks 的 `0.1/0.2` 只有对应**冻结的原始交付范围**证据齐备后方可勾选；子切片 PASS 不等于阶段完成，跨阶段的通用能力不得自动追加为前一阶段门禁。
 
 ## OpenSpec 阶段计划
 
 | 阶段 | Change |
 |---|---|
-| DEV-M3 | [dev-m3-run-plan-domain](../openspec/changes/dev-m3-run-plan-domain/) |
+| DEV-M3 | [dev-m3-run-plan-domain（已归档）](../openspec/changes/archive/2026-10-13-dev-m3-run-plan-domain/) |
 | DEV-M4 | [dev-m4-reliable-task-facts](../openspec/changes/dev-m4-reliable-task-facts/) |
 | DEV-M5 | [dev-m5-sandbox-worker-binding](../openspec/changes/dev-m5-sandbox-worker-binding/) |
 | DEV-M6 | [dev-m6-agent-recipe-execution](../openspec/changes/dev-m6-agent-recipe-execution/) |
