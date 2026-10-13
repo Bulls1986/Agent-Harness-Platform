@@ -13,7 +13,7 @@
 | DEV-M4 一致性与恢复 | Outbox/Inbox、ACK-loss、UNKNOWN/非幂等 Receipt | **CLOSED（原始限定范围）**：平台 PG Outbox/Native Lookup + Provider Observation Inbox 去重；三独立 PG 的非幂等 Tool 在真正 SIGKILL、原生 Retry、物理 A→B 接管后 UNKNOWN→唯一外部 Receipt 对账，未盲重放。原 A.1～A.4 有官方真实 CI；本次 Inbox 集成随归档 PR 最新 Head CI 通过后生效。通用 Tool Runtime 属后续增强，Cube 跨宿主/生产级 Gate 归 M5/M9。|
 | DEV-M5 Cube 可信执行 | WorkspaceRef/Scope/Lease/Fencing、跨 Worker 接管 | ACTIVE：**真实 Cube Native SDK MicroVM Create/Guest Files/Connect/Destroy 最小 Demo PASS（本机两次）**；PG Binding/Fencing + 物理 Hatchet A→B + 同 Cube Workspace 联合 Gate、Guest/OCI 仍 OPEN |
 | DEV-M6 多 Agent Recipe | 跨 Runtime 交接、Verifier、Artifact、Approval | PLANNED |
-| DEV-M7 公共 API/SDK | Conversation/Turn/Run、鉴权、Typed SSE、错误合同 | ACTIVE：PR #65/#67 授权边界和 PG Owner、#86 版本化 API/Conversation/ArtifactRef/SSE、#88 真实 Hatchet 双 SDK 运行、#90 本地 Inspector M7 演示均已通过官方真实 PG/HTTP/Native/架构 CI。2026-10-13 对原任务逐条最终核对：0.1/0.2/1.1/1.4/2.2 已有验收证据，Tool/审批/Artifact 合成类型事件结果页及 >250 条历史游标分页已 Red→Green；1.2/1.3/2.1/2.3 的真实外部 Gateway/Policy 和用户 Tool/审批/存储事件来源联合 Gate 仍 OPEN，不能归档或宣称生产可用。详见 [M7 原范围审计](retrospectives/DEV_M7_ORIGINAL_GATE_CLOSEOUT_AUDIT_20261013.md)。|
+| DEV-M7 公共 API/SDK | Conversation/Turn/Run、鉴权、Typed SSE、错误合同 | ACTIVE：PR #65/#67 授权边界和 PG Owner、#86 版本化 API/Conversation/ArtifactRef/SSE、#88 真实 Hatchet 双 SDK 运行、#90 本地 Inspector M7 演示均已通过官方真实 PG/HTTP/Native/架构 CI。2026-10-13 对原任务逐条核对：0.1/0.2/1.1/1.4/2.2 仅具备独立子证据，主 Tasks 仍保持未勾选，Tool/审批/Artifact 合成类型事件结果页及 >250 条历史游标分页已 Red→Green；1.2/1.3/2.1/2.3 的真实外部 Gateway/Policy 和用户 Tool/审批/存储事件来源联合 Gate 仍 OPEN，不能归档或宣称生产可用。详见 [M7 原范围审计](retrospectives/DEV_M7_ORIGINAL_GATE_CLOSEOUT_AUDIT_20261013.md)。|
 | DEV-M8 通用消费者互通 | **只用合成数据**验证独立客户端对 Harness 公共 API 的调用、身份隔离和故障语义 | PLANNED |
 | DEV-M9 生产交付 | 容量/安全/可靠性/部署/回退（含 100 Active Runs 实测） | PLANNED，Production NO-GO |
 
