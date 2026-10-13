@@ -131,7 +131,7 @@ Hatchet 负责两个节点的调度；Harness 保存业务 Run、每步输入输
 <section id="view-capabilities" role="tabpanel" aria-labelledby="tab-capabilities" hidden>
 <section class="panel intro">
 <h2>这个 Tab 用来验证什么？</h2>
-<p>每个场景说明<strong>使用场景、证明什么能力、实际步骤、实际验收证据与不能证明的部分</strong>。可直接执行的双 Agent 场景仍通过原 Tab 提交；Cube / 故障接管 / 非幂等 Tool 场景，当前仅支持读取真实数据库证据，不能在浏览器中伪造或触发特权执行。</p>
+<p>每个场景说明<strong>使用场景、证明什么能力、实际步骤、实际验收证据与不能证明的部分</strong>。双 Agent 原演示继续在第一个 Tab；DEV-M7 公共 API 双 Agent 场景可在本 Tab 的本地演示区提交。Cube / 故障接管 / 非幂等 Tool 仍只读，绝不从浏览器触发特权故障。</p>
 <p class="notice" style="margin-top:10px"><strong>重要：</strong>已观察到的 PostgreSQL 事件 ≠ 真实 Cube Guest 校验通过 ≠ Hatchet Worker 实际 SIGKILL 后恢复。未接入可信场景运行器前，整条能力验证明确为“待验收”，不显示假 PASS。</p>
 </section>
 <section class="panel">
