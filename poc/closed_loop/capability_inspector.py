@@ -138,7 +138,7 @@ def catalog(*, m7_demo_enabled: bool = False) -> dict:
         "scenarios": scenarios,
         "production_ready": False,
         "evidence_note": (
-            "所有场景说明与查询只读。只有可信运行器返回完整实机验证证据后，"
+            "只有显式启用的本地 M7 公共 API 场景可发起普通双 SDK Run；其他 Cube、Worker 故障和非幂等 Tool 场景仍只读。只有可信运行器返回完整实机验证证据后，"
             "才能将物理 Worker / 真实 Cube / 非幂等效果标为通过；单凭 PostgreSQL 事件不构成证明。"
         ),
     }
