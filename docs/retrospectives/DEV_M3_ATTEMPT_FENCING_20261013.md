@@ -18,6 +18,10 @@
 - Architecture Guards **8/8 PASS**；OpenSpec Strict **3/3 PASS**。
 - 本地 Docker Hatchet 联合 E2E 第一轮 Sidecar 下载遭遇 TLS `UNEXPECTED_EOF_WHILE_READING`；第二轮因执行工具安全检查未启动，**本地 E2E 非 PASS**。将新 PG 测试纳入原 GitHub Actions，并以新 PR 最新 Head 的真实 Hatchet/Dual-SDK/Inspector CI 决定联测结论。
 
+### 官方 CI / Merge 最终验收（补记）
+
+PR [#81](https://github.com/Bulls1986/Agent-Harness-Platform/pull/81) 的最新 Head `d6776e7` 通过四条官方 CI：真实 PG/Hatchet 双 SDK/Inspector [38341410835](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38341410835) SUCCESS；M4 非幂等 Receipt/真实 Worker A SIGKILL→B [38341410826](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38341410826) SUCCESS；M5 Cube Binding [38341410883](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38341410883) SUCCESS；Architecture [38341410872](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38341410872) SUCCESS。无 PR Review Thread，已 squash merge main，合并提交 `e0fee11116ea4fc1387d551c82bee24802c01579`。**仅 A.4 模型-only 单次 Attempt 合同完成，整阶段 M3 仍 ACTIVE / OPEN；生产 NO-GO。**
+
 ## 根因、改进与遗留风险
 根因是 `harness_step.attempts` 只当计数器，不是能识别执行来源的不可变业务 Attempt ID。当前 Attempt ID 是审计/关联键，**不是授权 Token**；真实 Tool 仍须 HC-03 Lease/Fencing/Scope、HC-02 Receipt 的独立认证授权。老数据中已 RUNNING 但无 Attempt row 的步骤采用 Fail Closed，禁止静默补绑伪造资格。
 
