@@ -31,13 +31,15 @@ class CapabilityTabTests(unittest.TestCase):
         self.assertEqual(res.status_code,200,res.text)
         scenarios=res.json()["scenarios"]
         self.assertEqual([s["id"] for s in scenarios],[
-            "agent-handoff","cube-workspace","worker-takeover","tool-receipt",
+            "agent-handoff","public-api-agent-run","cube-workspace",
+            "worker-takeover","tool-receipt",
         ])
         for s in scenarios:
             for key in ("title","use_case","capability","execution_steps",
                         "required_evidence","limitations","availability"):
                 self.assertTrue(s[key],(s["id"],key))
         self.assertEqual(scenarios[0]["availability"],"EXECUTABLE_EXISTING_TAB")
+        self.assertEqual(scenarios[1]["id"],"public-api-agent-run")
         for s in scenarios[1:]:
             self.assertEqual(s["availability"],"READ_ONLY_NOT_EXECUTABLE")
             self.assertFalse(s["verified_by_inspector"])
@@ -97,6 +99,10 @@ class CapabilityTabTests(unittest.TestCase):
         self.assertIn('id="view-capabilities"',page)
         self.assertIn('role="tablist"',page)
         self.assertIn("能力验证",page)
+        self.assertIn('id="m7-capability-demo"',page)
+        self.assertIn('id="m7-start"',page)
+        self.assertIn("DEV-M7 · 公共 API 真实执行",page)
+        self.assertEqual(page.count('role="tab"'),2)
         self.assertIn("需求分析与独立审核",page)
         self.assertIn("结构化需求",page)
         self.assertIn("使用场景",page)
