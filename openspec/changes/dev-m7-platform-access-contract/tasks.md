@@ -10,6 +10,8 @@
 
 - [x] A.2 `PgFacts.create` 在真实 PostgreSQL 16 固定 Project/Initiator，`PgRunReader` 按 Run PG 归属读取并在 HTTP 政策拒绝前屏蔽历史无 Scope Run；禁止数据库归属 UPDATE/原地补绑；**证据**：docs/retrospectives/DEV_M7_PG_RUN_BINDING_20261011.md（2 次 Red→Green、PG 5 项和已有 8 项 HTTP 单测，CI 38140021577 / 38140021573）。真实企业 Gateway/IdP、完整 SSE、ArtifactRef/OSS、Conversation/Turn、UI 仍 OPEN。
 
+> 2026-10-13 DEV-M7 原范围集成推进：在已有 PR #65/#67 的受信任授权 Run 读取/真实 PG 归属基础上，补充 PostgreSQL Conversation→Turn→Run 事实、版本化 `/api/v1`、授权 SSE/游标、ArtifactRef 元数据、取消请求与只读结果 UI。真实 PG+HTTP 跨项目/跨用户/撤权负例已写；原 `dev-m7-access.yml` 负责最新 Head 官方实机 CI。**本切片不声称真实企业 IdP、现网旧 UI/OSS 签名/Agent 创建运行完整集成已完成；这些属于本阶段原 1.1～2.1 未完成验收项，保持 OPEN，不增设新任务编号。** 证据：docs/retrospectives/DEV_M7_PLATFORM_API_INTEGRATION_20261013.md。
+
 ## 0. 前置与需求冻结
 
 > 现状：DEV-M2 Token SSE/游标实测已完成有限切片；DEV-M3 真实 Replan/完整 Domain Gate 未完成。0.1/0.2 尚无全阶段冻结与真实 Gateway/PG/权限/失败样本的完整证据，因此维持未勾选，不能据此宣称可进行整阶段验收。
