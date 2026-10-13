@@ -10,6 +10,10 @@ from __future__ import annotations
 import hashlib
 import os
 import unittest
+import re
+import subprocess
+import tempfile
+from pathlib import Path
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -93,14 +97,25 @@ class PublicClientEventContractPgTests(unittest.TestCase):
         self.assertEqual(second.status_code,200)
         self.assertGreater(len(second.json()["events"]),0)
         self.assertEqual(second.json()["events"][0]["seq"],after+1)
-        self.assertEqual(second.json()["events"][-1]["seq"],self.db.events_since(self.run_id)[-1]["seq"]
-                         if len(self.db.events_since(self.run_id))<250 else len(self.db.snapshot(self.run_id)["events"]))
+        self.assertEqual(second.json()["events"][-1]["seq"],260)  # 1 RunCreated + 6 event types + 253 deltas
         self.current=SecurityContext("user-foreign","USER","project-demo")
         self.assertEqual(self.client.get(f"/api/v1/runs/{self.run_id}/events?after={after}").status_code,404)
         self.assertEqual(self.client.get(f"/api/v1/runs/{self.run_id}/artifacts").status_code,404)
         self.current=SecurityContext("user-demo","USER","project-demo")
         self.allowed=False
         self.assertEqual(self.client.get(f"/api/v1/runs/{self.run_id}/stream").status_code,404)
+
+    def test_public_readonly_result_page_embedded_javascript_parses(self):
+        page=self.client.get(f"/ui/conversations/{self.cid}")
+        self.assertEqual(page.status_code,200)
+        matches=re.findall(r"<script>(.*?)</script>",page.text,re.DOTALL)
+        self.assertEqual(len(matches),1)
+        with tempfile.TemporaryDirectory() as tmp:
+            script=Path(tmp)/"m7-public-client.js"
+            script.write_text(matches[0],encoding="utf-8")
+            result=subprocess.run(["node","--check",str(script)],
+                                  capture_output=True,text=True,timeout=20)
+        self.assertEqual(result.returncode,0,result.stderr)
 
     def test_readable_page_supports_tool_approval_artifact_and_paged_history(self):
         page=self.client.get(f"/ui/conversations/{self.cid}")
