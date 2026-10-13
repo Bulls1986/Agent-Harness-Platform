@@ -7,7 +7,7 @@
 | 任务编号 | 里程碑 | 交付 | 验收状态 |
 |---|---|---|---|
 | DEV-HC-01 | DEV-M3 | Run/Plan/Step/Attempt、Workflow Segment/Replan v2 与旧 Attempt 保护 | **CLOSED（2026-10-13，仅原始限定交付）**：真实 Hatchet v1→v2 独立 Workflow、PG 版本化领域事实和 Provider Binding、旧 Attempt 写入拒绝已验证。PR #80/#81/#83 Main Merge；CI [38343878631](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38343878631)、[38343879325](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38343879325) SUCCESS；[正式验收](retrospectives/DEV_M3_FINAL_CLOSEOUT_20261013.md)。通用 Retry/ToolRuntime 和 Cube Worker 接管继续归 M4/M5。|
-| DEV-HC-02 | DEV-M4 | Outbox/Inbox、丢 ACK 对账、非幂等 Tool Receipt UNKNOWN | ACTIVE：实际 Hatchet Worker A 进程 SIGKILL→独立 B Native 接管、PG Receipt/Owner Fencing PASS（PR #72）；通用 ToolRuntime/Inbox/跨宿主 Gate OPEN |
+| DEV-HC-02 | DEV-M4 | Outbox/Inbox、丢 ACK 对账、非幂等 Tool Receipt UNKNOWN | **CLOSED（原始限定交付）**：原 A.1～A.4 的 Native ACK-loss、独立外部账本实际 Commit→SIGKILL、Hatchet Worker A→B Native Retry + PG Owner Fencing 均有真实官方 CI；追加可信 Native Provider Observation Inbox/单调去重/终态拒绝并纳入原物理 Worker 联合门禁。阶段只要求未知副作用不得盲重放，不宣布通用 ToolRuntime 或 M9 Production GO；[正式收口](retrospectives/DEV_M4_FINAL_CLOSEOUT_20261013.md)。|
 | DEV-HC-03 | DEV-M5 | ExecutionContext、Cube Scope/Lease/Fencing/WorkspaceRef、Worker A→B 安全接管 | PR #74 PG ACK-loss 合同 PASS；**2026-10-12 真 Cube Native MicroVM 创建/Guest Files/同 ID 重连/Destroy Smoke PASS**；真实 PG + Worker B + Cube 联合 Gate、OCI/Guest 隔离仍 OPEN |
 | DEV-RECIPE-01 | DEV-M6 | Provider-neutral Recipe、Artifact/Evidence、Verifier 与 Approval | PLANNED |
 | DEV-API-01 | DEV-M7 | 稳定公共 Run/Conversation/SSE/Cancel/ArtifactRef API/SDK 与服务身份合同 | ACTIVE：PR #65 授权读取与 PR #67 PG 归属/不可变性集成子切片 PASS；真实 IAM/Policy+PG、SSE/Artifact/UI Gate OPEN |

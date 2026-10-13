@@ -25,7 +25,8 @@ from uuid import uuid4
 from hatchet_sdk import ClientConfig, Context, EmbeddedHatchetConfig, Hatchet
 from pydantic import BaseModel
 
-from poc.closed_loop.facts import PgFacts, UnsafeDispatch
+from poc.closed_loop.facts import PgFacts, UnsafeDispatch, sha
+from poc.closed_loop.provider_observation_inbox import ProviderObservationInbox, Observation
 from poc.closed_loop.tool_receipt import ToolReceiptJournal
 from poc.closed_loop.tool_recovery_owner import ToolRecoveryOwner
 from poc.closed_loop.external_ledger_demo import ExternalLedger
@@ -198,8 +199,25 @@ def verify():
             raise RuntimeError("Hatchet did not genuinely reassign the task")
         if len(ledger.find(eid))!=1:
             raise RuntimeError("Non-idempotent effect duplicated")
+        # Actual Native Task result, queried from Hatchet by the trusted
+        # controller. Duplicated observations must project only once and
+        # must never imply Platform Run.Completed by themselves.
+        observation=Observation(
+            run_id=rid,plan_version=1,provider_workflow_id=ref.workflow_run_id,
+            provider_task_ref="physical_tool_task",
+            native_event_key="verified-native-retry-"+str(proof["native_retry_count"]),
+            source_sequence=proof["native_retry_count"]+1,
+            provider_state="SUCCEEDED",
+            result_digest=sha(json.dumps(proof,sort_keys=True)),
+        )
+        inbox=ProviderObservationInbox(db)
+        if (inbox.observe(observation)!="APPLIED"
+                or ProviderObservationInbox(PgFacts()).observe(observation)!="ALREADY_APPLIED"):
+            raise RuntimeError("Native retry produced conflicting Inbox observations")
+        if db.run_state(rid)!="RUNNING":
+            raise RuntimeError("Provider SUCCEEDED incorrectly finalized Platform Run")
         events=db.snapshot(rid)["events"]
-        required={"tool.dispatched":1,"tool.outcome.unknown":1,
+        required={"provider.observed":1,"tool.dispatched":1,"tool.outcome.unknown":1,
                   "tool.recovery.owner.transferred":1,
                   "tool.receipt.confirmed":1}
         for name,count in required.items():
@@ -211,6 +229,8 @@ def verify():
             "provider_workflow_run_id":ref.workflow_run_id,
             "worker_A_pid":a.pid,"worker_A_exit_code":a.returncode,
             "worker_B_pid":b.pid,"native_retry_count":proof["native_retry_count"],
+            "native_observation_inbox":"APPLIED_ONCE",
+            "duplicate_native_observation":"ALREADY_APPLIED",
             "external_effect_count":1,"receipt_state":journal.inspect(eid)["state"],
             "recovery_fencing_epoch":8,
             "cube_workspace_reconnect":"NOT_TESTED",

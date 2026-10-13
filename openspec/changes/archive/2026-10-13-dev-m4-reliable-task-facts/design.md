@@ -52,3 +52,6 @@ PG transactional Outbox/Inbox、Provider 查询/ACK-loss Reconciliation、Tool I
 ## Exit gate
 
 真实 PG/Hatchet 和非幂等工具在丢 ACK/SIGKILL/并发重试下可核对且不盲目重复副作用。。测试 Red/Green/Refactor、真实端到端、CI/架构、OpenSpec 完整核对及复盘均须留下可检索证据。阶段与生产 GO 明确区分。
+## 正式阶段验收与范围冻结（2026-10-13）
+最初交付仅为真实 PG/Hatchet + 合成非幂等 Tool 在 ACK-loss、SIGKILL 和并发 Retry 下不盲目重放的可核对任务恢复。A.1～A.4 真实原生引擎、双库及物理 Worker A→B 的证据已经独立通过；仅补最小 `ProviderObservationInbox`：可信 Adapter 读取当前 Native Task 结果，以冻结 Provider Binding/Plan Version 和单调 source sequence 校验，Run 行锁下按 native event key/fingerprint 同事务去重、只生成一条平台观察 Domain Event；Native Task SUCCEEDED **不直接将平台 Run COMPLETED**。纳入现有物理 Worker 联测，在同一个真实 Native Retry 结果上重复观察 2 次，必须只应用一次。仅此为本阶段原有 Inbox/Domain Projection 必要缺口。
+阶段保持非目标：通用事件总线/通用 ToolRunner、任意外部系统 exactly-once、跨宿主 Cube 恢复或 M9 安全容量；HC-02 的 UNKNOWN 坚持 Fail Closed。审查者应以本归档 PR 最新 Head 官方 CI PASS 及合并为正式 CLOSED 生效条件；不能以本地孤立单测冒充完整阶段 Gate。
