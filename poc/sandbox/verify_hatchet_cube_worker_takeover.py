@@ -249,7 +249,9 @@ def verify() -> dict:
                 or proof.get("provider_workflow_run_id") != ref.workflow_run_id
                 or proof.get("sandbox_id") != sid
                 or proof.get("fencing_epoch") != 8
-                or proof.get("original_guest_bytes") is not True):
+                or proof.get("original_guest_bytes") is not True
+                or proof.get("native_guest_git") is not True
+                or proof.get("host_shell_fallback") is not False):
             raise RuntimeError("Hatchet/PG/real Cube identity mismatch " + repr(out))
         snapshot = db.snapshot(run_id)
         events = snapshot["events"]
