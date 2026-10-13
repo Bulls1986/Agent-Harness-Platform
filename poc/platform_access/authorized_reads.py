@@ -85,6 +85,10 @@ def create_read_app(
                 or binding.run_id != run_id
                 or context.project_scope != binding.project_scope):
             raise HTTPException(404, "Run not found")
+        # A project-wide ALLOW cannot grant access to another USER's Run.
+        if (context.principal_type == "USER"
+                and context.principal_id != binding.initiator_principal_id):
+            raise HTTPException(404, "Run not found")
         try:
             decision = authorize(context, binding, action)
         except Exception:
@@ -92,6 +96,7 @@ def create_read_app(
         # Only an explicit ALLOW from the current Policy Decision grants access.
         if decision is not True:
             raise HTTPException(404, "Run not found")
+        return context, binding
 
     @app.get("/api/runs/{run_id}")
     def read_run(run_id: str, request: Request):
@@ -116,5 +121,9 @@ def create_read_app(
             raise HTTPException(503, "Run events unavailable") from None
         return {"run_id": run_id, "events": events,
                 "cursor": events[-1]["seq"] if events else after}
+
+    # Reuse the exact same trusted identity/Policy gate for versioned M7
+    # run APIs and SSE; do not add a second or header-auth fallback path.
+    app.state.require_run_access = allowed
 
     return app

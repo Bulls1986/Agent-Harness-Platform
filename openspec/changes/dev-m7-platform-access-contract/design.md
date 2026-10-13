@@ -30,6 +30,15 @@ DEV-M2 Typed SSE 和 DEV-M3 持久 Run 所属事实构成完整 API 的内部依
 - 完整 HTTP 授权流程仍必须由已验证的外部 Gateway Identity 和当前 Policy 授权结果注入；**本切片只用合成身份，未联调真实 IdP**。不开发匿名回退、Inspector 对外转接、流式 SSE 中途撤权、OSS Artifact 或 Conversation/Turn。
 - PostgreSQL 16 CI 新增真实 DB 合同与越权负例，原有 8 项无数据库单测保留。PG 单测绿灯属于 DEV-M7 的受限集成子门禁，非全阶段 Gate。
 
+### 第三开发切片：统一版本化 API / PG Conversation-Run / 授权 SSE 与 ArtifactRef（原定 M7 范围）
+
+- 在现有外部 Gateway SecurityContext、当前 Policy 和真实 PG Run 归属上增加 `create_platform_app`（`/api/v1`），沿用 `create_read_app` 的受信任身份及策略边界；旧版 Run 读取也增加普通用户跨项目内 Initiator 的硬拒绝。无 Header 自报身份、匿名回退或内置 IdP。
+- `PgConversationStore` 只新增已批准的 Conversation/Turn、Turn→已有 Run 不可变关联、Artifact 元数据引用（Ref/Digest/Media/Size）；Runtime/Recipe 选择作为冻结 Turn 元数据，**不自建通用 Recipe 引擎或 ToolRuntime**。Turn→Run 链接必须在 PG 核验其 Project/Initiator 与 Conversation Creator 完全一致；重复相同绑定幂等，绑定不同 Turn 409。
+- 正式 `/api/v1/runs/{id}/events` 读平台持久化 Event/游标，`/stream` 使用 SSE `id=run:seq`、类型化 Event 与 Last-Event-ID；事件按批重新校验真实 Run 归属和当前策略、撤权中断，不把缓冲历史冒充 live token；与开发用无鉴权 Inspector 路由彻底分离。
+- `/api/v1/.../artifacts` 仅返回授权后的 ArtifactRef 元数据（SHA-256/类型/大小），不向未验证的 User 提供可直接访问 OSS 的 Presigned URL；Storage Adapter 的签名分发需经过其独立授权。取消只走平台已持久的 `run.cancel.requested`，没有 Native 终止证据绝不声称业务 CANCELLED。
+- `/ui/conversations/{id}` 是使用同源受信任 Gateway Cookies 的简单只读合成验收页面，通过安全 `textContent` 显示 Turn/Run/Result/Step/Tool/Approval/Artifact 元数据；不注入未可信 HTML、Token/Project Header，也不在此自建真实企业 UI。
+- 真实 PG + FastAPI TestClient TDD 正反例涵盖两用户同项目隔离、跨项目、撤权、错误游标、SSE 中途撤权、失败后不泄密、跨 Turn 绑定拒绝、ArtifactRef 隐藏 OSS URL、只申请取消；在已有 `dev-m7-access.yml` 新增对应真实 PG+HTTP CI。该测试注入**合成可信 Gateway/Policy 回调**，并非真实企业 IdP、完整 Hatchet Agent Run 创建、OSS 签名或 M7 整阶段最终 Gate。后续原任务 1.1～2.3 是否关闭依实际集成证据而定。
+
 ## Test-first and failure injection
 
 正常验收：同一会话内不同 SDK 产生文本、工具、文件和审批事件 → 统一 API/页面关联 Turn/Run/Step、流式进度和最终结果。
