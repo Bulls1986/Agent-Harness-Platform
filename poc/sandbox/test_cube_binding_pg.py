@@ -6,6 +6,7 @@ report success when no actual Cube endpoint/template is configured.
 """
 import os
 from concurrent.futures import ThreadPoolExecutor
+from types import SimpleNamespace
 from uuid import uuid4
 import unittest
 from poc.closed_loop.facts import PgFacts, UnsafeDispatch
@@ -17,6 +18,7 @@ class CountingCubeTransport:
         self.created=[]
         self.connected=[]
         self.killed=[]
+        self.commands=[]
         self.files={}
         self.metadata={}
     def create(self,*,metadata):
@@ -39,6 +41,9 @@ class CountingCubeTransport:
         self.files[sandbox][path]=data
     def read(self, sandbox, path):
         return self.files[sandbox][path]
+    def command(self,sandbox,cmd):
+        self.commands.append((sandbox,cmd))
+        return SimpleNamespace(stdout='git version 2.40.0\n',stderr='',exit_code=0)
     def kill(self, sandbox):
         self.killed.append(sandbox)
 
@@ -65,6 +70,44 @@ class CubePgBindingTests(unittest.TestCase):
             environment_digest=self.digest,owner_id="worker-A",
             fencing_epoch=7,lease_seconds=40,
         )
+
+    def test_guest_command_only_after_trusted_active_pg_binding_and_fencing(self):
+        # TDD red: neither guest Shell nor Git may bypass Cube Workspace PG owner.
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.command(self.execution,"worker-A",7,"git --version")
+        self.assertEqual(self.transport.commands,[])
+        sid=self.gateway.allocate(self.execution,"worker-A",7)
+        out=self.gateway.command(self.execution,"worker-A",7,"git --version")
+        self.assertEqual(out.exit_code,0)
+        self.assertIn("git version",out.stdout)
+        self.assertEqual(self.transport.commands,[(sid,"git --version")])
+        for cmd in ("", " ", "\n", "x"*4097):
+            with self.subTest(cmd=cmd[:12]),self.assertRaises(UnsafeDispatch):
+                self.gateway.command(self.execution,"worker-A",7,cmd)
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.command(self.execution,"worker-X",7,"git --version")
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.command(self.execution,"worker-A",6,"git --version")
+        with self.db.tx() as c:
+            c.execute("UPDATE harness_cube_binding "
+                      "SET lease_expires_at=now()-interval '1 second' "
+                      "WHERE execution_id=%s",(self.execution,))
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.command(self.execution,"worker-A",7,"git --version")
+        b=self.binding.takeover(self.execution,7,"worker-B",
+                                self.scope,self.workspace,self.digest)
+        self.assertEqual(b.sandbox_id,sid)
+        self.assertEqual(b.fencing_epoch,8)
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.command(self.execution,"worker-A",7,"git --version")
+        out=self.gateway.command(self.execution,"worker-B",8,"git --version")
+        self.assertEqual(out.exit_code,0)
+        self.assertEqual(len(self.transport.commands),2)
+        self.assertEqual(self.transport.connected[-1],sid)
+        self.gateway.release(self.execution,"worker-B",8)
+        with self.assertRaises(UnsafeDispatch):
+            self.gateway.command(self.execution,"worker-B",8,"git --version")
+        self.assertEqual(len(self.transport.commands),2)
 
     def test_create_write_expiry_handoff_read_same_workspace(self):
         sb=self.gateway.allocate(self.execution,"worker-A",7)
@@ -268,6 +311,13 @@ class CubePgBindingTests(unittest.TestCase):
                         })
                         self.assertEqual(transport.read(sb,"/workspace/abc"),
                                          "from-guest")
+                        native.commands.run.return_value=SimpleNamespace(
+                            stdout="git version 2.40.0",stderr="",exit_code=0)
+                        result=transport.command(sb,"git --version")
+                        self.assertEqual(result.exit_code,0)
+                        native.commands.run.assert_called_once_with(
+                            "git --version",cwd="/workspace",timeout=30)
+
 
     def test_creator_crashes_in_creating_then_b_safely_reconciles(self):
         # Worker A may die after contacting Cube but before it marks UNKNOWN.
