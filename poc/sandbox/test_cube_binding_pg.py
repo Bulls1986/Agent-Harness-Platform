@@ -257,7 +257,7 @@ class CubePgBindingTests(unittest.TestCase):
                         self.assertEqual(
                             transport.create(metadata={"harness_execution_id":"ex"}),
                             "sandbox-native")
-                        create.assert_called_once_with(metadata={"harness_execution_id":"ex"})
+                        create.assert_called_once_with(template="tpl-synthetic",metadata={"harness_execution_id":"ex"})
                         self.assertEqual(len(transport.list()),1)
                         listing.assert_called_once_with()
                         sb=transport.connect("sandbox-native")
