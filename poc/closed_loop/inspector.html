@@ -430,6 +430,117 @@ $("start").addEventListener("click",async()=>{
   }catch(err){$("message").textContent="未能提交："+err.message}
   finally{$("start").disabled=false}
 });
+
+/* Existing, authoritative M7 Public API is mounted only for local Inspector
+ * demonstrations. No fake Run status and no client-supplied identity headers. */
+const m7Base="/m7-demo/api/v1";
+let m7Session=null,m7Cursor=0,m7Timer=null,m7Stream=null,m7Busy=false;
+function m7Stop(){
+  if(m7Timer){clearInterval(m7Timer);m7Timer=null}
+  if(m7Stream){m7Stream.close();m7Stream=null}
+}
+async function m7Refresh(){
+  if(!m7Session||m7Busy)return;
+  m7Busy=true;
+  try{
+    const runId=encodeURIComponent(m7Session.run_id);
+    const run=await api(m7Base+"/runs/"+runId);
+    $("m7-state").textContent=run.outbox==="BLOCKED_UNKNOWN"?
+      "状态不确定":(stateLabels[run.state]||run.state);
+    $("m7-state").className="status "+(run.state==="COMPLETED"?"ok":
+      run.outbox==="BLOCKED_UNKNOWN"?"wait":"");
+    $("m7-ids").replaceChildren();
+    for(const [name,value] of [
+      ["Conversation",m7Session.conversation_id],["Turn",m7Session.turn_id],
+      ["Run",run.run_id],["Hatchet Workflow",run.provider_workflow_run_id||"尚未绑定"],
+      ["Plan",run.plan_version],["Outbox",run.outbox]]){
+      $("m7-ids").append(evidenceItem(name,value));
+    }
+    $("m7-steps").replaceChildren();
+    for(const id of ["pydantic","openai"]){
+      const step=run.steps?.[id];if(!step)continue;
+      const card=node("article","","step");
+      const head=node("div","","headrow");
+      head.append(node("h3",stageInfo[id].name),
+                  node("span",stateLabels[step.state]||step.state,"status"));
+      card.append(head,node("p",stageInfo[id].role));
+      field(card,"持久化输入",step.input??"尚未调度");
+      field(card,"持久化输出",step.output??"等待节点完成");
+      $("m7-steps").append(card);
+    }
+    $("m7-final").textContent=run.result?.final_output??"等待节点 B 提交最终输出…";
+    const events=await api(m7Base+"/runs/"+runId+"/events?after="+m7Cursor+"&limit=250");
+    for(const item of events.events){
+      if(item.seq<=m7Cursor)continue;
+      const li=document.createElement("li");
+      li.append(node("span",String(item.seq).padStart(3,"0"),"index"),
+                node("span",(eventLabels[item.type]||item.type)+
+                    (item.data?.step_id?" · "+item.data.step_id:"")));
+      $("m7-events").append(li);m7Cursor=item.seq;
+    }
+    if(run.state==="COMPLETED"){
+      const proven=Boolean(run.provider_workflow_run_id &&
+        run.steps?.pydantic?.state==="COMPLETED" &&
+        run.steps?.openai?.state==="COMPLETED" &&
+        run.result?.final_output);
+      $("m7-message").textContent=proven?
+        "本次双 SDK Run 已完成；Workflow ID、步骤、最终结果均来自真实公共 API/PG。":
+        "业务状态显示 COMPLETED，但缺少本演示所需的完整节点证据，不能判为通过。";
+      m7Stop();$("m7-start").disabled=false;
+    }else if(run.outbox==="BLOCKED_UNKNOWN" ||
+             ["CANCELLED","FAILED"].includes(run.state) ||
+             run.events?.some(e=>e.type==="workflow.observation_error")){
+      $("m7-message").textContent="执行未成功或状态不确定；禁止盲重派发。请检查事件/Outbox。";
+      m7Stop();$("m7-start").disabled=false;
+    }else{
+      $("m7-message").textContent="真实 Hatchet 正在执行，事件来自公共 API 的持久游标。";
+    }
+  }catch(err){
+    $("m7-message").textContent="真实 API 读取失败："+err.message;
+    m7Stop();$("m7-start").disabled=false;
+  }finally{m7Busy=false}
+}
+$("m7-start").addEventListener("click",async()=>{
+  m7Stop();m7Session=null;m7Cursor=0;
+  $("m7-start").disabled=true;$("m7-state").textContent="正在创建";
+  $("m7-message").textContent="正在通过版本化公共 API 创建 Conversation、Turn、Run…";
+  $("m7-events").replaceChildren();$("m7-ids").replaceChildren();
+  $("m7-steps").replaceChildren();$("m7-final").textContent="等待真实 SDK 输出…";
+  try{
+    const prompt=$("m7-prompt").value.trim();
+    if(!prompt||prompt.length>4096)throw new Error("请提供不超过 4096 字符的合成需求");
+    const headers={"Content-Type":"application/json"};
+    const conversation=await api(m7Base+"/conversations",{
+      method:"POST",headers,body:JSON.stringify({title:"Inspector 公共 API 能力验证"})
+    });
+    const turn=await api(m7Base+"/conversations/"+
+      encodeURIComponent(conversation.conversation_id)+"/turns",{
+      method:"POST",headers,body:JSON.stringify({message:prompt,
+        agent_ref:"dual-sdk-requirements-review@v1",
+        recipe_ref:"requirements-review@v1"})
+    });
+    const result=await api(m7Base+"/turns/"+encodeURIComponent(turn.turn_id)+"/runs",{
+      method:"POST",headers:{"Idempotency-Key":"inspector-"+crypto.randomUUID()}
+    });
+    m7Session={conversation_id:conversation.conversation_id,
+      turn_id:turn.turn_id,run_id:result.run_id};
+    m7Stream=new EventSource(m7Base+"/runs/"+encodeURIComponent(result.run_id)+"/stream");
+    m7Stream.onopen=()=>{$("m7-sse").textContent="Typed SSE：已连接，支持 Last-Event-ID 断点恢复"};
+    m7Stream.onerror=()=>{$("m7-sse").textContent="Typed SSE：断线重连，PG 事件游标仍可查询"};
+    for(const kind of ["run.created","workflow.bound","step.started","step.completed",
+                       "runtime.run.completed","run.completed","response.output_text.delta",
+                       "workflow.observation_error"]){
+      m7Stream.addEventListener(kind,()=>{void m7Refresh()});
+    }
+    await m7Refresh();
+    if(m7Stream)m7Timer=setInterval(()=>{void m7Refresh()},1200);
+  }catch(err){
+    $("m7-message").textContent="本次提交未确认："+err.message+
+      "。如果已有持久 Run ID，应先对账，勿直接重复执行。";
+    m7Stop();$("m7-start").disabled=false;
+  }
+});
+
 api('/api/config').then(cfg=>{
   const live=cfg.mode==='live';
   $('mode-notice').textContent=live?
