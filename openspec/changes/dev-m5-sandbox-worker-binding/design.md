@@ -44,6 +44,11 @@ SandboxProvider→Cube Scope/Lease/Fencing/WorkspaceRef 绑定、按需分配释
 - 官方 Cube Python SDK `Sandbox.create(template=...)` 真正创建 MicroVM；Guest SDK `files.write/read`；通过 `Sandbox.connect(same_native_id)` 建立第二个 SDK 连接，并读取同一原字节；执行原生 `kill` 收到销毁确认。测试不使用 Fake Cube、Docker 代替 Sandbox、Host Shell 文件回退。
 - 已两次完成真实本地 MicroVM Smoke 并记录匿名真实 Sandbox ID（2026-10-12，详见 `docs/retrospectives/DEV_M5_REAL_CUBE_MICROVM_SMOKE_20261012.md`）。常规 PG 合同 CI 仍无法代替真实 Cube 实机；仅当真正携带 Harness PG 权威 Binding/Fencing、真实物理 Hatchet Worker A→B、Guest Workspace 数据保持及跨 Scope/旧授权拒绝后，才可以评估正式 1.2/1.3/2.x 退出 Gate。
 
+### 第七开发切片：真实 Harness PG + Cube Native MicroVM，同 Workspace Owner Fencing
+
+- `verify_cube_live.py` 在本机启动一个隔离真实 PostgreSQL 16，配合已运行的 CubeMaster/Cubelet/API/Proxy 与 Ready 模板验证：Harness PG 落库 Sandbox/Run/Scope/WorkspaceRef/EnvironmentDigest/Owner/Lease/Fencing，Native Cube SDK Create/Files.Write/Files.Read，PG 服务器时钟 A/7→B/8 接管、旧 Owner 被拒绝，新 `PgFacts` + Native SDK Connect 同 ID 读原字节，Cube Native Kill 与 PG Release 同步确认。已取得真实 Sandbox ID、Run ID、Workspace ID、退出码 0；详见 `docs/retrospectives/DEV_M5_REAL_PG_CUBE_FENCING_20261012.md`。
+- **这仍是同一进程内的逻辑 Owner 转移**，不等于物理 Hatchet Worker A→B + Cube 的联合容灾，也不代表异步 Guest 内已进入执行的命令可以被 PG Fencing 撤销。新增的 `verify_hatchet_cube_worker_takeover.py` 须独立以实际 A SIGKILL、原生 Hatchet Retry、原 Cube ID/Guest 数据、B SDK Connect/PG Epoch/Release 的实机证据判定，保持 Test-first，未测试即 OPEN。
+
 ## Test-first and failure injection
 
 正常验收：Worker A 在授权 Cube 中工作后中断 → Worker B 持有新 Lease 绑定同一 Workspace，恢复操作和已有文件。

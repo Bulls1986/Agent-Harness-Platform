@@ -46,7 +46,7 @@ jobs:
         run: python -B -m unittest poc.sandbox.test_cube_binding_pg -v
       - name: Compile genuine Cube smoke and require fail-closed when no endpoint
         run: |
-          python -m py_compile poc/sandbox/verify_cube_sdk_smoke.py
+          python -m py_compile poc/sandbox/verify_cube_sdk_smoke.py poc/sandbox/verify_hatchet_cube_worker_takeover.py
           if env -u CUBE_API_URL -u CUBE_TEMPLATE_ID python -B -m poc.sandbox.verify_cube_sdk_smoke; then
             echo 'Cube smoke incorrectly passed without a real endpoint'
             exit 1

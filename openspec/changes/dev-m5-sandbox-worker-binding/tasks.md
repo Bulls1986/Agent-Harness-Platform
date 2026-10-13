@@ -19,6 +19,8 @@
 
 - [x] A.6 **真实 Cube MicroVM 原生 SDK 最小生命周期 Demo**：在已有运行中的 CubeMaster/Cubelet/CubeAPI 和 READY 模板上，官方 `cubesandbox==0.7.0` 实际创建 2 次独立 Sandbox（均真实返回 ID），Guest 文件写入/读回、Native `Sandbox.connect(same_id)` 新 SDK 实例读取原字节、`kill()` 确认成功；运行退出码 0，未使用 Fake Transport。可复现脚本 `poc/sandbox/verify_cube_sdk_smoke.py`，证据 `docs/retrospectives/DEV_M5_REAL_CUBE_MICROVM_SMOKE_20261012.md`。**仅 SDK 实机 Smoke PASS**；Harness PG+真 Cube 以及真实 Hatchet A→B+Cube 联合测试尚未通过，1.2/1.3/2.x 保持 OPEN。
 
+- [x] A.7 **Harness PG Binding/Fencing + 真 Cube MicroVM + 相同 WorkspaceRef 的实际跨逻辑 Owner 接管**：本机隔离 PostgreSQL 16 + 已运行 Cube Node 实际执行 `verify_cube_live.py`，原生 Cube ID `ad3ea8818a7e45a2a49c9d1518102b59`，真实 Run `m5-cube-live-1bbc0dc3f09b412aaded954d75d90b8b`，PG A/7→B/8、旧 Owner 阻断、新 SDK 连接读原 Guest 文件并 Native Destroy/PG RELEASED，**进程退出码 0、真 Cube 实机 PASS**。证据：`docs/retrospectives/DEV_M5_REAL_PG_CUBE_FENCING_20261012.md`。未杀 Worker A，也未验证跨宿主/Guest 侧 in-flight Fencing；正式 1.2/1.3/2.x 综合退出 Gate 仍 OPEN。
+
 ## 1. TDD 与集成开发
 - [ ] 1.1 先写无 ExecutionContext、越权、旧 Lease/Fencing 的拒绝测试；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
 - [ ] 1.2 完成真实 Cube Provider Allocate/Bind/Release 与 WorkspaceRef；**证据**：失败/通过测试、实际 Run/Provider/Receipt/Workspace 等 ID（适用时）、CI 链接。
