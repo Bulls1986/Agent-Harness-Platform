@@ -19,6 +19,12 @@ Run/Plan/Step/Attempt 领域事实与状态机、Plan 版本、Replan 新 Segmen
 - 旧版本的 POC `start_step/finish_step/complete` 增加计划版本防护，避免 v2 提交后旧 Attempt 抢写终态；v2 Worker 准入同时校验冻结版本、PG Segment CONFIRMED 及实际 Hatchet Workflow ID。
 - `verify_replan_v2_hatchet.py` 真实运行两个独立 Hatchet WorkflowRun，记录 native v1 COMPLETED、v2 Provider Binding、同 Run 的 PG 事件。此路径只支持 PURE/确定性模型任务，**没有验证运行中 Cancel/TERMINATED、非幂等 Tool/Receipt、真实多 Worker 接管、通用 v2 Step/Attempt 完整终态**；因此不能以此关闭整个 DEV-M3 Gate。
 
+### 2026-10-13 第三开发切片：Step 准入/迟到完成的最小领域保护
+
+- M1 的 PostgreSQL POC 层 `start_step` 必须证明 Run 正处于 RUNNING 与冻结 Plan v1，禁止 CREATED/Outbox PENDING 时尚无有效 Provider Binding 就执行 SDK。此项不产生额外 Hatchet 或 Scheduler。
+- `finish_step` 在同一事务持有 Run 行锁并同时核验 RUNNING + Plan v1，防止 CANCEL_REQUESTED / CANCELLED 之后过期 Worker 重新写入 Step 终态和 Event；既有 Model/Verification 限制不变。
+- 这只涵盖当前模型-only Plan v1 状态保护，不代表已实现版本化 Step/Attempt 全量域模型、同一 Plan 内过期 Attempt 隔离或真实 Provider 安全停机。这些继续按原 M3 1.1～2.3 验收，生产 NO-GO。
+
 ## Test-first and failure injection
 
 正常验收：已有 Run 在执行 Plan v1 时收到经批准的 Replan → 生成 v2 Plan 和新的 Workflow Segment，旧 Plan/Attempt 仅留审计而不会覆盖。
