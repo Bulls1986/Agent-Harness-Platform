@@ -174,22 +174,42 @@ class PgFacts:
         ):
             raise ValueError("Scoped Run requires project and initiator identity")
         with self.tx() as c:
-            if model_mode not in ('deterministic_local_model', 'live'):
-                raise ValueError('Unsupported POC model mode')
-            if model_mode == 'live' and not model_id:
-                raise ValueError('Live Run requires pinned model')
-            c.execute("INSERT INTO harness_run("
-                      "id,plan_version,state,input_prompt,model_mode,model_id,"
-                      "project_scope,initiator_principal_id) "
-                      "VALUES (%s,1,'CREATED',%s,%s,%s,%s,%s)",
-                      (rid, prompt, model_mode, model_id,
-                       project_scope, initiator_principal_id))
-            for name in ("pydantic", "openai"):
-                c.execute("INSERT INTO harness_step(run_id,id,state) "
-                          "VALUES (%s,%s,'PENDING')", (rid, name))
-            c.execute("INSERT INTO harness_outbox VALUES (%s,%s,'PENDING')",
-                      (key, rid))
-            self.event(c, rid, "run.created", {"plan_version": 1})
+            self.create_in_tx(c, rid, prompt, model_mode, model_id,
+                              project_scope=project_scope,
+                              initiator_principal_id=initiator_principal_id)
+        return key
+
+    def create_in_tx(self, c, rid: str, prompt: str | None,
+                     model_mode: str, model_id: str | None,
+                     *, project_scope: str | None,
+                     initiator_principal_id: str | None) -> str:
+        """Shared Run/Outbox creation in an already-open Harness PG transaction.
+
+        M7 can atomically attach Run to frozen Turn without duplicating this
+        domain creation logic. Caller must hold the Turn serialization lock.
+        """
+        if model_mode not in ('deterministic_local_model', 'live'):
+            raise ValueError('Unsupported POC model mode')
+        if model_mode == 'live' and not model_id:
+            raise ValueError('Live Run requires pinned model')
+        owner=(project_scope,initiator_principal_id)
+        if owner != (None,None) and not all(
+            isinstance(v,str) and bool(v.strip()) and v==v.strip() for v in owner
+        ):
+            raise ValueError('Scoped Run requires project and initiator identity')
+        key=f"{rid}:segment-0:create:v1"
+        c.execute("INSERT INTO harness_run("
+                  "id,plan_version,state,input_prompt,model_mode,model_id,"
+                  "project_scope,initiator_principal_id) "
+                  "VALUES (%s,1,'CREATED',%s,%s,%s,%s,%s)",
+                  (rid, prompt, model_mode, model_id,
+                   project_scope,initiator_principal_id))
+        for name in ("pydantic","openai"):
+            c.execute("INSERT INTO harness_step(run_id,id,state) "
+                      "VALUES (%s,%s,'PENDING')",(rid,name))
+        c.execute("INSERT INTO harness_outbox VALUES (%s,%s,'PENDING')",
+                  (key,rid))
+        self.event(c,rid,"run.created",{"plan_version":1})
         return key
 
     def assert_model_binding(self, rid: str, mode: str, model_id: str | None):

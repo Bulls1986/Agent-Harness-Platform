@@ -10,7 +10,7 @@
 | DEV-HC-02 | DEV-M4 | Outbox/Inbox、丢 ACK 对账、非幂等 Tool Receipt UNKNOWN | **CLOSED（原始限定交付）**：原 A.1～A.4 的 Native ACK-loss、独立外部账本实际 Commit→SIGKILL、Hatchet Worker A→B Native Retry + PG Owner Fencing 均有真实官方 CI；追加可信 Native Provider Observation Inbox/单调去重/终态拒绝并纳入原物理 Worker 联合门禁。阶段只要求未知副作用不得盲重放，不宣布通用 ToolRuntime 或 M9 Production GO；[正式收口](retrospectives/DEV_M4_FINAL_CLOSEOUT_20261013.md)。|
 | DEV-HC-03 | DEV-M5 | ExecutionContext、Cube Scope/Lease/Fencing/WorkspaceRef、Worker A→B 安全接管 | PR #74 PG ACK-loss 合同 PASS；**2026-10-12 真 Cube Native MicroVM 创建/Guest Files/同 ID 重连/Destroy Smoke PASS**；真实 PG + Worker B + Cube 联合 Gate、OCI/Guest 隔离仍 OPEN |
 | DEV-RECIPE-01 | DEV-M6 | Provider-neutral Recipe、Artifact/Evidence、Verifier 与 Approval | PLANNED |
-| DEV-API-01 | DEV-M7 | 稳定公共 Run/Conversation/SSE/Cancel/ArtifactRef API/SDK 与服务身份合同 | ACTIVE：PR #65 授权只读与 #67 真 PG Run 归属已 PASS；2026-10-13 增加原范围版本化 /api/v1、真实 PG Conversation/Turn→Run、授权 SSE/游标/逐批撤权、ArtifactRef 元数据和可读只读 UI、持久取消请求的组合验收切片（PR #86 最新 Head PG/HTTP CI 38360300342、架构 CI 38360300381 均 SUCCESS，已合并 main）。真实企业 Gateway/IdP、统一入口发起真实 Agent Run、OSS 下载/旧 UI Live Gate 仍 OPEN；Production NO-GO。|
+| DEV-API-01 | DEV-M7 | 稳定公共 Run/Conversation/SSE/Cancel/ArtifactRef API/SDK 与服务身份合同 | ACTIVE：PR #65 授权只读与 #67 真 PG Run 归属已 PASS；2026-10-13 增加原范围版本化 /api/v1、真实 PG Conversation/Turn→Run、授权 SSE/游标/逐批撤权、ArtifactRef 元数据和可读只读 UI、持久取消请求的组合验收切片（PR #86 最新 Head PG/HTTP CI 38360300342、架构 CI 38360300381 均 SUCCESS，已合并 main）。2026-10-13 在原 M7 范围内完成 API 创建持久 Run/Outbox/Turn 的可信提交入口、幂等防盲重派与原 Hatchet 双 SDK Native 验收脚本（最新 Head 官方 CI 待验）；企业 Gateway/IdP、OSS 下载与旧 UI Gate 仍 OPEN；Production NO-GO。|
 | DEV-CONSUMER-01 | DEV-M8 | 只使用**合成数据**的独立客户端与平台公共 API 联调 | PLANNED |
 | DEV-OPERATIONS-01 | DEV-M9 | 容量/中断/安全/运维/回退 GO/NO-GO | PLANNED |
 

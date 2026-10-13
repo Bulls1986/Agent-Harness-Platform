@@ -34,6 +34,13 @@
 本次完成了多个原始已计划能力的集成交付，而非任意拓展 M7。最有价值的回归是：项目相同不意味着同一用户；SSE 不应仅在建连时鉴权；ArtifactRef 不能泄露可直接下载地址；取消 ACK 不是执行终止；持久 Run 所属与 Turn 所属必须在 PG 中一致。
 
 **DEV-M7 保持 ACTIVE，Production NO-GO**：没有接入真实企业 Gateway/IdP 与外部 Policy、没有经统一 Public API 发起真实多 SDK Agent Run 的端到端证据、也没有真实 OSS Artifact 下载、Approval 事件的完整 UI 联测。当前原 OpenSpec 1.1～2.3 的整阶段门禁不勾选、不归档。后续继续按**原定范围**集中联调，不从本切片衍生新 M7 阶段或新架构产品。
+## 2026-10-13 公共 API 启动真实 Native Run 联合验收候选（原 M7 1.2/1.3）
+
+- **Red**：真实 PG/HTTP 先写 `test_public_run_launch_pg`，因公共 API 不接受 `start_run` 注入导致全部 6 项报缺失实现；未用内存替代 PG。
+- **Green**：复用原 `PgFacts.create` 的同事务 `create_in_tx`，由 `PgConversationStore` 用 Turn 行锁、可信 Owner 和受控 `Idempotency-Key` 冻结 Run/Outbox/Turn Binding，拒绝无权限、未知 Agent/Recipe、缺配置及失败后盲重派；以与原 Inspector 相同的 `execute` Process Adapter 交由真实 Hatchet Worker/两个 SDK 完成。实际 PG+HTTP 启动/幂等/失败合同新增 7 项，连同原有 M7 22 项在本地 **29/29 PASS、0 SKIPPED**。
+- **Native 真实 Gate**：`verify_public_api_hatchet.py` 已纳入原 `closed-loop-poc.yml`，校验端到端同一 `run_id/turn_id`、真实 `provider_workflow_run_id`、Native Pydantic AI→OpenAI Agents SDK Step Results、Run.COMPLETED、PG Typed SSE Cursor、跨身份和撤权拒绝。此处真实 Hatchet/SDK 使用**确定性本地模型**，不是外部 LLM Live；最终官方最新 Head CI 未验收前，绝不能宣称 LIVE PASS。
+- **复盘/边界**：HTTP 首次提交 ACK 可能未知，重复请求仅返回相同持久 Run，不直接重派；Provider 创建 ACK 的进一步对账仍由既有 HC-02 负责。本 PR 没有增加第二 Engine、Run Scheduler、企业 IAM/OSS、M5/M6/M9 需求。M7 整阶段仍 ACTIVE。
+
 ## PR #86 最新 Head 官方验收与合并（补记）
 
 - [PR #86](https://github.com/Bulls1986/Agent-Harness-Platform/pull/86) 最终 Head `2401f306`，两条官方 CI 全部 SUCCESS：真实 PG/HTTP/原 OpenSpec [38360300342](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38360300342)、架构 [38360300381](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38360300381)。

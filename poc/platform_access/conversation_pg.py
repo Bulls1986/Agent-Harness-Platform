@@ -138,6 +138,13 @@ class PgConversationStore:
         return {"conversation_id":row[0],"project_scope":row[1],
                 "creator_principal_id":row[2]}
 
+    def turn_selection(self, tid: str):
+        with self.facts.tx() as c:
+            row=c.execute("SELECT agent_ref,recipe_ref FROM harness_turn WHERE id=%s",
+                          (tid,)).fetchone()
+        if not row:raise KeyError(tid)
+        return row
+
     def link_run(self,tid:str,rid:str):
         # Even if a compromised API adapter attempts a different conversation
         # scope, the Run and Turn associations must match frozen PG owners.
@@ -157,6 +164,55 @@ class PgConversationStore:
                 return
             c.execute("INSERT INTO harness_turn_run(turn_id,run_id) VALUES (%s,%s)",
                       (tid,rid))
+
+    def create_run_for_turn(self, tid: str, request_key: str,
+                            *, project_scope: str, principal_id: str,
+                            model_mode: str, model_id: str | None):
+        """Atomic durable Turn→Run allocation and stable idempotency claim.
+
+        No second queue or Runner exists here. Only the *new* claim may go to
+        the caller's trusted Hatchet submission port. On uncertain dispatch,
+        later identical HTTP requests return the same Run without redispatch.
+        """
+        import hashlib
+        if (not isinstance(request_key,str)
+                or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}",request_key)):
+            raise ValueError("Invalid Idempotency-Key")
+        rid="run-"+hashlib.sha256(
+            "\x1f".join((tid,request_key,project_scope,principal_id)).encode("utf-8")
+        ).hexdigest()[:32]
+        key=f"{rid}:segment-0:create:v1"
+        with self.facts.tx() as c:
+            turn=c.execute(
+                "SELECT c.project_scope,c.creator_principal_id,t.user_message "
+                "FROM harness_turn t JOIN harness_conversation c "
+                "ON c.id=t.conversation_id WHERE t.id=%s FOR UPDATE OF t",
+                (tid,),
+            ).fetchone()
+            if not turn or turn[0]!=project_scope or turn[1]!=principal_id:
+                raise KeyError(tid)
+            existing=c.execute(
+                "SELECT input_prompt,model_mode,model_id,project_scope,"
+                "initiator_principal_id FROM harness_run WHERE id=%s",
+                (rid,),
+            ).fetchone()
+            if existing is not None:
+                # Reject inconsistent model binding even for the same key.
+                if existing!=(turn[2],model_mode,model_id,project_scope,principal_id):
+                    raise UnsafeDispatch("Idempotency-Key reused with changed frozen Run")
+                linked=c.execute(
+                    "SELECT turn_id FROM harness_turn_run WHERE run_id=%s",(rid,)
+                ).fetchone()
+                if linked!=(tid,):
+                    raise UnsafeDispatch("Run ownership/Turn association is inconsistent")
+                return rid,key,turn[2],False
+            self.facts.create_in_tx(
+                c,rid,turn[2],model_mode,model_id,
+                project_scope=project_scope,initiator_principal_id=principal_id,
+            )
+            c.execute("INSERT INTO harness_turn_run(turn_id,run_id) VALUES (%s,%s)",
+                      (tid,rid))
+        return rid,key,turn[2],True
 
     def register_artifact(self,artifact_id:str,rid:str,object_ref:str,digest:str,
                           media_type:str,size_bytes:int):
