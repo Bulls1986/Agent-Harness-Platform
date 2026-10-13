@@ -75,12 +75,15 @@ class SegmentReconciler:
             raise UnsafeDispatch("Native Provider metadata mismatches frozen segment")
 
         with self.facts.tx() as c:
+            # Lock Run before Segment, matching M3 Claim/Bind/Cancel and
+            # avoiding opposing row lock order during late ACK reconciliation.
+            c.execute("SELECT id FROM harness_run WHERE id=%s FOR UPDATE", (rid,))
             current = c.execute(
                 "SELECT s.run_id,s.state,s.provider_workflow_id,"
                 "s.from_provider_workflow_id,r.plan_version,r.state "
                 "FROM harness_replan_segment_v2 AS s "
                 "JOIN harness_run AS r ON r.id=s.run_id "
-                "WHERE s.command_key=%s FOR UPDATE OF s,r", (command_key,),
+                "WHERE s.command_key=%s FOR UPDATE OF s", (command_key,),
             ).fetchone()
             if current and current[1] == "CONFIRMED" and current[2] == evidence.workflow_run_id:
                 return evidence.workflow_run_id

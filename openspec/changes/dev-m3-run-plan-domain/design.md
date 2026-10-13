@@ -31,6 +31,15 @@ Run/Plan/Step/Attempt 领域事实与状态机、Plan 版本、Replan 新 Segmen
 - `start_step` 接收独立 Attempt ID；同一个 RUNNING Step 即使原 Hatchet 投递重复也不得再次调用 SDK；没有可信失败终态和 Tool Receipt 的再次执行仍拒绝。已有 COMPLETED 的 PURE 输出按冻结输入复用，不产生新 Attempt。
 - `finish_step` 同时匹配当前 Plan、Step 状态与最新 Attempt ID、版本、状态，在更新 Step 以及事件前拒绝过期结果。SDK 的 Attempt ID 只是业务关联，并非 HC-03 的工具执行授权；模型文本流及 v2、多 Attempt、非 PURE 恢复属于后续原 M3/M4/M7 Gate。
 
+### 2026-10-13 第五开发切片：v2 业务终态、已确认 Tool Receipt 安全继续、旧 PURE Attempt 退出
+
+- 在真实 PostgreSQL 中新增 v2 的 `harness_plan_step` / `harness_plan_step_attempt`（Run+Version+Step/Attempt），显式区分旧 v1 POC 历史；v2 Native Worker 必须校验确认的 Provider Binding 后启动新 Step、生成 Attempt、写入完成事实，只有实际 Provider Native COMPLETED + Verified Output 与 PG 完全匹配才能原子写 Run 终态。Provider SUCCEEDED 本身不产生业务成功。
+- 非 PURE Replan 默认仍为 `PURE_ONLY` 禁止；显式 `CONFIRMED_RECEIPTS_ONLY` 时要求 M4 Journal 的所有历史 v1 外部 Tool Intent 均有独立可信外部证据和 `CONFIRMED_SUCCESS`/ReceiptRef，不能把 UNKNOWN/无 ExternalRef/后来新增 v2 Tool 意图混作 PURE；Run Terminal 保留 Execution ID/ReceiptRef lineage。
+- 只有旧 Provider 已通过 **真实 Hatchet 原生状态查询**证明 COMPLETED、无外部 Intent、原 v1 Step/Attempt 身份完整，且显式请求 `resolve_inflight_pure`，才能在同一次 Replan PG 事务中把旧 RUNNING Step/Attempt 标为 `SUPERSEDED`，使丢失旧完成回调的 PURE Run 安全转到独立新 Plan。Cancel ACK、Provider FAILED/UNKNOWN、旧 Attempt 缺失、任何非 PURE Tool 一律拒绝；不重启旧 Provider 或将 Native Retry 隐式映射为 New Attempt。
+- Segment Claim/Bind 与 Cancel 按 Run→Segment 行锁串行化；业务终态之后不追加新的 Domain Event，技术 ACK UNKNOWN 的持久证据与业务终态区分。
+- 真实合成数据回归：43/43 PG PASS（旧纯执行、v2 Step/Attempt、冻结绑定、两阶段 ACK-loss、物理业务终态、Receipt UNKNOWN 阻断、旧 PURE Attempt supersede、取消竞态、SSE）；官方新 Head Hatchet+独立外部 PG 账本四场景仍须 CI PASS，不能把离线 Typed ProviderState 当实际 Provider 证据。
+- **范围**：这证明 v1→v2 的单次 Step/Attempt 和安全继续，不证明任意 vN 版本、多次 Attempt 可信重试、跨 Worker Epoch/Cube Guest、通用非 PURE ToolRuntime/Approval 或平台生产 GO。上述仍属当前 DEV-M3/M4/M5 退出条件。
+
 ## Test-first and failure injection
 
 正常验收：已有 Run 在执行 Plan v1 时收到经批准的 Replan → 生成 v2 Plan 和新的 Workflow Segment，旧 Plan/Attempt 仅留审计而不会覆盖。
