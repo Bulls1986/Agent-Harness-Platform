@@ -31,6 +31,26 @@ SCENARIOS = [
         "verified_by_inspector": False,
     },
     {
+        "id": "public-api-agent-run",
+        "title": "DEV-M7 · 公共 API 发起真实双 Agent Run",
+        "use_case": "产品/研发客户端通过统一的 Conversation → Turn → Run API 提交任务，不直接调用 Hatchet 或依赖 Inspector 旧调试接口。",
+        "capability": "受信任的本地演示身份调用已合并的版本化公共 API：冻结 Agent/Recipe、幂等创建 Run/Outbox，交给原 Hatchet Worker；两套 SDK 执行后通过授权 API/SSE 查看持久状态和结果。",
+        "execution_steps": [
+            "创建 Conversation 并选定 Turn 的 Agent/Recipe 引用",
+            "携带 Idempotency-Key 调用公共 API 创建并启动 Run",
+            "Hatchet 调度 Pydantic AI → OpenAI Agents SDK，Harness 写入 Step/业务终态",
+            "通过公共 API 获取 Workflow ID、Typed Event、两个节点结果和最后输出",
+        ],
+        "required_evidence": [
+            "同一 Conversation/Turn/Run ID 和真实 Provider WorkflowRun ID",
+            "两个 SDK 的持久 Step 输出、Run.COMPLETED 与最终来源节点",
+            "幂等 HTTP 提交不产生第二个 Workflow；事件序号可恢复",
+        ],
+        "limitations": "仅显式启用的本地 Inspector 开发环境，使用服务端固定合成身份；不证明企业 Gateway/IdP、外部 LLM、M5 Cube 或生产准入。只能凭实际 Run 事实说明本次执行结果。",
+        "availability": "READ_ONLY_NOT_EXECUTABLE",
+        "verified_by_inspector": False,
+    },
+    {
         "id": "cube-workspace",
         "title": "Cube Sandbox Workspace 恢复",
         "use_case": "研发 Agent 中断或更换执行者后，继续在原文件工作空间读写，无需从空目录重新开始。",
@@ -106,12 +126,19 @@ _EVENT_ALLOWLIST = {
 }
 
 
-def catalog() -> dict:
+def catalog(*, m7_demo_enabled: bool = False) -> dict:
+    scenarios = [dict(s) for s in SCENARIOS]
+    for scenario in scenarios:
+        if scenario["id"] == "public-api-agent-run":
+            scenario["availability"] = (
+                "EXECUTABLE_M7_CAPABILITY_TAB" if m7_demo_enabled
+                else "READ_ONLY_NOT_EXECUTABLE"
+            )
     return {
-        "scenarios": SCENARIOS,
+        "scenarios": scenarios,
         "production_ready": False,
         "evidence_note": (
-            "所有场景说明与查询只读。只有可信运行器返回完整实机验证证据后，"
+            "只有显式启用的本地 M7 公共 API 场景可发起普通双 SDK Run；其他 Cube、Worker 故障和非幂等 Tool 场景仍只读。只有可信运行器返回完整实机验证证据后，"
             "才能将物理 Worker / 真实 Cube / 非幂等效果标为通过；单凭 PostgreSQL 事件不构成证明。"
         ),
     }

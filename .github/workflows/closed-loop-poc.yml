@@ -39,6 +39,7 @@ jobs:
       HATCHET_POC_DATABASE_URL: 'postgres://harness_poc:local_ci_disposable@127.0.0.1:5432/hatchet_poc'
       HARNESS_POC_DATABASE_URL: 'postgresql://harness_poc:local_ci_disposable@127.0.0.1:5432/harness_poc'
       HARNESS_LEDGER_DATABASE_URL: 'postgresql://harness_poc:local_ci_disposable@127.0.0.1:5432/harness_external_m3'
+      HARNESS_INSPECTOR_M7_DEMO_ENABLED: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -60,7 +61,7 @@ jobs:
         run: |
           npx --yes @fission-ai/openspec@1.12.0 validate dev-inspector-capability-verification --strict
           npx --yes @fission-ai/openspec@1.12.0 validate --specs --strict
-          python -B -m unittest poc.closed_loop.test_step_attempt_pg poc.closed_loop.test_facts_pg poc.closed_loop.test_inspector_capabilities_pg poc.closed_loop.test_inspector_pg poc.closed_loop.test_real_model poc.closed_loop.test_stream_sse_pg poc.closed_loop.test_plan_guard_pg poc.closed_loop.test_replan_v2_pg poc.closed_loop.test_replan_v2_execution_pg poc.closed_loop.test_replan_non_pure_pg poc.closed_loop.test_replan_orphaned_attempt_pg poc.closed_loop.test_replan_ack_pg poc.closed_loop.test_hatchet_segment_lookup -v
+          python -B -m unittest poc.closed_loop.test_step_attempt_pg poc.closed_loop.test_facts_pg poc.closed_loop.test_inspector_capabilities_pg poc.closed_loop.test_inspector_pg poc.closed_loop.test_inspector_m7_pg poc.closed_loop.test_real_model poc.closed_loop.test_stream_sse_pg poc.closed_loop.test_plan_guard_pg poc.closed_loop.test_replan_v2_pg poc.closed_loop.test_replan_v2_execution_pg poc.closed_loop.test_replan_non_pure_pg poc.closed_loop.test_replan_orphaned_attempt_pg poc.closed_loop.test_replan_ack_pg poc.closed_loop.test_hatchet_segment_lookup -v
           python -B -m unittest tests.test_architecture_guardrails -v
           python -B poc/verify_repo_navigation.py
       - name: Check capability tab browser JavaScript syntax
@@ -109,6 +110,7 @@ jobs:
               raise RuntimeError('Inspector failed to start')
           PY
           python -B -m poc.closed_loop.verify_inspector_live | tee /tmp/harness-inspector-e2e.json
+          python -B -m poc.closed_loop.verify_inspector_m7_live | tee /tmp/harness-inspector-m7-e2e.json
           RUN_ID="$(python -c 'import json;print(json.load(open("/tmp/harness-inspector-e2e.json"))["run_id"])')"
           stop_server
           setsid python -B -m poc.closed_loop.serve >> /tmp/harness-inspector.log 2>&1 &
