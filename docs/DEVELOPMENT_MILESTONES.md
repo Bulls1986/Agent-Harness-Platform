@@ -11,7 +11,7 @@
 | DEV-M2 模型及流式交互 | 真实 LiteLLM、Token SSE、持久游标/取消 | 有限开发切片 PASS |
 | DEV-M3 领域内核 | Run/Plan/Step/Attempt、Replan v2、Workflow Segment | **CLOSED（原始限定范围）**：真实 Hatchet v1→v2 独立 Segment、Plan/Step/Attempt/Provider Binding、旧 Attempt 拒绝均有主干代码与实际 CI。PR #80/#81/#83 Merge；[实际 PG/Hatchet/双 SDK CI 38343878631](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38343878631) 与 [架构 CI 38343879325](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38343879325) SUCCESS。通用 Retry/恢复归 M4、可信 Worker/Cube 归 M5、Production GO 归 M9。|
 | DEV-M4 一致性与恢复 | Outbox/Inbox、ACK-loss、UNKNOWN/非幂等 Receipt | **CLOSED（原始限定范围）**：平台 PG Outbox/Native Lookup + Provider Observation Inbox 去重；三独立 PG 的非幂等 Tool 在真正 SIGKILL、原生 Retry、物理 A→B 接管后 UNKNOWN→唯一外部 Receipt 对账，未盲重放。原 A.1～A.4 有官方真实 CI；本次 Inbox 集成随归档 PR 最新 Head CI 通过后生效。通用 Tool Runtime 属后续增强，Cube 跨宿主/生产级 Gate 归 M5/M9。|
-| DEV-M5 Cube 可信执行 | WorkspaceRef/Scope/Lease/Fencing、跨 Worker 接管 | ACTIVE：**真实 Cube Native SDK MicroVM Create/Guest Files/Connect/Destroy 最小 Demo PASS（本机两次）**；**真实 Cube + PG Binding/Fencing B/8、同 Workspace Native 重连、Guest 字节保持、Destroy 单条联合 Gate PASS（2026-10-13）**；物理 Hatchet A SIGKILL→B 同 Cube、Guest Shell/Git 与完整 OCI/安全门禁仍 OPEN。详见 [M5 真实集成审计](retrospectives/DEV_M5_REAL_CUBE_PG_WORKER_GATE_20261013.md) |
+| DEV-M5 Cube 可信执行 | WorkspaceRef/Scope/Lease/Fencing、跨 Worker 接管 | **CLOSED（原始有界平台/单宿主真实 Coding Guest 合同）**：PR #94 PG/Native Cube Guest Shell/Git/Fencing/Scope Fail Closed；本地真实 Cube+PG、物理 Hatchet Worker A SIGKILL→B/8，同 Cube/Guest 字节、Git Shell、Release PASS；Model-only 0 Cube。**NOT TESTED**：跨宿主、Guest in-flight Fencing、完整 OpenCode Agent loop / Production Security。GitHub-hosted 真 Cube Gate 未配置，官方 PG/SDK/Architecture CI PASS；平台 **Production NO-GO**。见 [M5 最终收口](retrospectives/DEV_M5_FINAL_CLOSEOUT_20261013.md)。|
 | DEV-M6 多 Agent Recipe | 跨 Runtime 交接、Verifier、Artifact、Approval | PLANNED |
 | DEV-M7 公共 API/SDK | Conversation/Turn/Run、鉴权、Typed SSE、错误合同 | **CLOSED（原始平台受控交付限定范围）**：受控 PG 事实及真实 Hatchet/双 SDK Run、授权公共 API/SSE/ArtifactRef/结果页面与合成 Tool/审核/文件事件投影及 >250 Cursor，经 PR #65/#67/#86/#88/#90/#91 真实 CI/架构及本次归档验收。企业 Gateway/IdP/Policy 实际接入、真正 Tool/Approval/OSS 数据来源和旧企业 Portal **NOT VERIFIED**，归既有 M6/M8/M9/外部 Owner 独立验收；不等于整个产品集成上线，**Production NO-GO**。详见 [M7 正式限定收口](retrospectives/DEV_M7_FINAL_CLOSEOUT_20261013.md)。|
 | DEV-M8 通用消费者互通 | **只用合成数据**验证独立客户端对 Harness 公共 API 的调用、身份隔离和故障语义 | PLANNED |
@@ -29,7 +29,7 @@
 |---|---|---|
 | M3 | M1 PG/Hatchet Run 基础已就绪，原限定 Replan 交付已完成 | **CLOSED**：v1→v2 独立 Segment 与过期 Attempt 隔离，后续 M4/M5/M9 Gate 不重复列为 M3 门禁 |
 | M4 | M3 原始领域/Segment CLOSED，可复用事务 Outbox、Inbox、真实 Native Lookup/Receipt | **CLOSED（限定交付）**：真实 ACK-loss、非幂等外部账本 SIGKILL、Native A→B/并发恢复、一条持久观察 Inbox 去重；通用 ToolRuntime、M5 Cube、M9 Production 另行验收 |
-| M5 | HC-03 是约束；Cube Allocate/Bind/Release 可与 M3/M4 并行；A→B 恢复需要相关执行事实 | 真 Cube MicroVM 原生创建、Guest 文件读写、同 ID 重连与销毁最小 Demo PASS；Harness PG/Worker B 联合 Fencing/Guest OCI/生产资源回收仍 OPEN |
+| M5 | HC-03 不变；真实 Cube/PG/Native Worker 接管必须可溯源；不新增宿主 Shell 或第二引擎 | **CLOSED（单宿主原始有界交付）**：Cube Allocate/Bind/Release、Guest Shell/Files/Git、物理 A→B、PG Fencing 和模型-only 零沙箱实机/合同 PASS；跨宿主/进行中 Guest Fence/完整 OpenCode Agent loop **NOT TESTED**，按既有 M6/M9/基础设施 Gate；Production NO-GO |
 | M6 | 依赖 M3/M4/M5 相关真实执行、安全和恢复 Gate | 通用合成 Recipe 的跨 Runtime、Approval、Artifact/Evidence、Verifier 实测 |
 | M7 | 原 M2 Typed SSE、M3 Run Owner；企业 IAM/OSS/审批提供方始终外部，不新增平台责任 | **CLOSED（原始 Harness API 受控范围）**：公共 API/PG/双 SDK/授权 SSE/ArtifactRef/只读 UI 技术合同实机验收与 OpenSpec 归档；真实企业 IdP、OSS/Tool/Approval 来源、现有 Portal **NOT VERIFIED**，仍为原 M6/M8/M9 以及外部平台的联合验收和生产 **NO-GO**，不得作为 M7 的新增功能任务 |
 | M8 | 依赖 M7 版本化公共 API/SDK 与相关 M3～M6 合同；只使用独立合成客户端 | 身份隔离、取消、游标和失败传播的真实公共 API 联调 |
@@ -43,7 +43,7 @@
 |---|---|
 | DEV-M3 | [dev-m3-run-plan-domain（已归档）](../openspec/changes/archive/2026-10-13-dev-m3-run-plan-domain/) |
 | DEV-M4 | [dev-m4-reliable-task-facts（已归档）](../openspec/changes/archive/2026-10-13-dev-m4-reliable-task-facts/) |
-| DEV-M5 | [dev-m5-sandbox-worker-binding](../openspec/changes/dev-m5-sandbox-worker-binding/) |
+| DEV-M5 | [CLOSED · dev-m5-sandbox-worker-binding](../openspec/changes/archive/2026-10-13-dev-m5-sandbox-worker-binding/) |
 | DEV-M6 | [dev-m6-agent-recipe-execution](../openspec/changes/dev-m6-agent-recipe-execution/) |
 | DEV-M7 | [CLOSED · dev-m7-platform-access-contract](../openspec/changes/archive/2026-10-13-dev-m7-platform-access-contract/) |
 | DEV-M8 | [dev-m8-external-consumer-integration](../openspec/changes/dev-m8-external-consumer-integration/) |

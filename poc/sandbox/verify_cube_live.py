@@ -42,6 +42,10 @@ def main():
         gateway.write(eid,"worker-A",7,"/workspace/m5-reconnect.txt",text)
         assert gateway.read(eid,"worker-A",7,
                             "/workspace/m5-reconnect.txt")==text
+        # Real Git and Shell execute IN the Cube Guest, not in the host OS.
+        git=gateway.command(eid,"worker-A",7,"git --version")
+        assert git.exit_code==0 and "git version" in git.stdout
+
         # Fault injection ONLY for the control-plane Lease, not the VM.
         # A fresh native Sandbox.connect from B must read A's same bytes.
         with db.tx() as c:
@@ -56,10 +60,20 @@ def main():
             pass
         else:
             raise AssertionError("STALE_WORKER_A_WAS_AUTHORIZED")
+        try:
+            gateway.command(eid,"worker-A",7,"git --version")
+        except UnsafeDispatch:
+            pass
+        else:
+            raise AssertionError("STALE_WORKER_A_COMMAND_WAS_AUTHORIZED")
+
         # Completely new Cube SDK client and PG reader, same persisted locator.
         b_gateway=CubeWorkspaceGateway(CubeBinding(PgFacts()),NativeCubeTransport())
         actual=b_gateway.read(eid,"worker-B",8,"/workspace/m5-reconnect.txt")
         assert actual==text
+        guest=b_gateway.command(eid,"worker-B",8,
+                                "cat /workspace/m5-reconnect.txt")
+        assert guest.exit_code==0 and guest.stdout.strip()==text
         b_gateway.release(eid,"worker-B",8)
         released=True
         assert binding.get(eid).state=="RELEASED"
@@ -71,6 +85,8 @@ def main():
             "native_reconnect":True,
             "worker_B_epoch":8,
             "read_original_bytes":True,
+            "native_guest_shell_git":"PASS",
+            "host_shell_fallback":False,
             "destroy_ack":"RELEASED",
             "physical_worker_SIGKILL":"NOT_TESTED_IN_THIS_CUBE_GATE",
             "cross_host":"NOT_TESTED",

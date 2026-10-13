@@ -132,6 +132,10 @@ def cube_task(input: CubeInput, ctx: Context) -> dict:
     bytes_read = recovered.read(input.execution_id, "worker-B", 8, proof_path(input))
     if bytes_read != proof_bytes(input):
         raise RuntimeError("B lost original Guest workspace data")
+    # Native SDK Guest Shell/Git is fenced by the same current PG owner.
+    git=recovered.command(input.execution_id,"worker-B",8,"git --version")
+    if git.exit_code!=0 or "git version" not in git.stdout:
+        raise RuntimeError("Worker B did not execute Git inside original Cube Guest")
     recovered.release(input.execution_id, "worker-B", 8)
     if CubeBinding(db).get(input.execution_id).state != "RELEASED":
         raise RuntimeError("Native Cube release was not confirmed in PG")
@@ -146,6 +150,8 @@ def cube_task(input: CubeInput, ctx: Context) -> dict:
         "fencing_epoch": current.fencing_epoch,
         "original_guest_bytes": True,
         "native_destroy_and_pg_release": True,
+        "native_guest_git": True,
+        "host_shell_fallback": False,
     }
 
 
@@ -243,7 +249,9 @@ def verify() -> dict:
                 or proof.get("provider_workflow_run_id") != ref.workflow_run_id
                 or proof.get("sandbox_id") != sid
                 or proof.get("fencing_epoch") != 8
-                or proof.get("original_guest_bytes") is not True):
+                or proof.get("original_guest_bytes") is not True
+                or proof.get("native_guest_git") is not True
+                or proof.get("host_shell_fallback") is not False):
             raise RuntimeError("Hatchet/PG/real Cube identity mismatch " + repr(out))
         snapshot = db.snapshot(run_id)
         events = snapshot["events"]
@@ -266,6 +274,8 @@ def verify() -> dict:
             "retry_count": proof["native_retry_count"],
             "pg_fencing_epoch": 8,
             "guest_original_content_kept": True,
+            "native_guest_git": proof.get("native_guest_git") is True,
+            "host_shell_fallback": False,
             "cube_release_confirmed": True,
             "cross_host": "NOT_TESTED",
             "guest_inflight_fencing": "NOT_TESTED",
