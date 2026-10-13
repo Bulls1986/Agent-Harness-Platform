@@ -62,7 +62,43 @@ def launch_server() -> FastAPI:
                     LOG.exception("Could not persist failed execution observation")
         return pool.submit(background)
 
-    app = create_app(submit=submit)
+    # LOCAL POC ONLY: explicitly enabled with compose Inspector profile.
+    # Synthetic identity is server-owned and cannot be overridden by client
+    # request headers. Do not mount on enterprise/production public gateways.
+    m7_demo = None
+    if os.getenv("HARNESS_INSPECTOR_M7_DEMO_ENABLED") == "1":
+        from poc.platform_access.authorized_reads import SecurityContext
+        from poc.platform_access.pg_reader import PgRunReader
+        from poc.platform_access.conversation_pg import PgConversationStore
+        from poc.platform_access.platform_api import create_platform_app
+        from .real_model import ModelConfiguration
+
+        principal = SecurityContext("inspector-local-demo", "USER", "inspector-local-demo")
+        def admission(agent_ref: str, recipe_ref: str) -> bool:
+            return (agent_ref == "dual-sdk-requirements-review@v1"
+                    and recipe_ref == "requirements-review@v1")
+        def model_binding() -> tuple[str, str | None]:
+            cfg = ModelConfiguration.from_env()
+            return (cfg.mode, cfg.model_id)
+
+        m7_demo = create_platform_app(
+            resolve_context=lambda _request: principal,
+            reader=PgRunReader(PgFacts()),
+            store=PgConversationStore(PgFacts()),
+            # This is a **fixed synthetic LOCAL identity**, not an enterprise
+            # IAM/Policy decision. Production adapters are a separate M7 Gate.
+            authorize=lambda context, binding, _action: (
+                context == principal and binding.project_scope == principal.project_scope
+            ),
+            authorize_create=lambda context, _action: context == principal,
+            admit_recipe=admission,
+            start_run=submit,
+            model_binding=model_binding,
+            cancel_run=PgFacts().request_cancel,
+            sse_max_polls=20,
+        )
+
+    app = create_app(submit=submit, public_api_app=m7_demo)
     app.router.lifespan_context = lifespan
     return app
 
