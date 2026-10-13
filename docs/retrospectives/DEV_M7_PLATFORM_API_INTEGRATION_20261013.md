@@ -48,3 +48,14 @@
 - 合并至 Main，提交 `eb224ff9981d93555bbe75ee88e3d235c65c7184`，没有合并任何私有业务或外部 IAM 适配器。
 - 架构首次失败仅因 `DEVELOPMENT_MILESTONES.md` 和 `DEVELOPMENT_BACKLOG.md` 使用加粗 `**ACTIVE**：`，与既有阶段校验 `| ACTIVE：` 不一致。恢复现有规范写法后两条 CI PASS，**没有修改状态语义或验收合同**。
 - 此实测只证明合成 Server-side Gateway Policy 注入 + 真实 PostgreSQL/HTTP 的限定集成。原 DEV-M7 的真实企业 IdP、公开入口实际启动 Agent、OSS/Approval/既有 Portal 完整 Gate **仍 OPEN**；生产 NO-GO。
+
+## 2026-10-13 原生公共 API 实际执行结果与阶段判定（最终补录）
+
+[PR #88](https://github.com/Bulls1986/Agent-Harness-Platform/pull/88) 已合并 Main `6189e6377a1f00826a99419a817ba995a9b1710c`，三条 Head CI 均 SUCCESS：
+- [实际 Native Hatchet/双 SDK/Inspector/Replan CI 38363098226](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38363098226)；新增 `M7 Real versioned Public API creates actual Hatchet workflow and two SDK Results` 和原 Native/Replan/Inspector 均 **SUCCESS**。
+- [M7 真实 PostgreSQL/HTTP/原 OpenSpec 38363098215](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38363098215)：原授权 8 + 原 PG/HTTP 14 + 新 PG Run 启动/幂等/阻断 7，**29/29 PASS，0 SKIPPED**。
+- [架构护栏 38363098214](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38363098214)：**SUCCESS**。
+
+官方 Native 运行中，`platform_run_id=run-83876c5046df54db2ec02f51f12b6697`，`hatchet_workflow_run_id=0d63b110-a9a7-4578-986b-1d1a1d50785f`，`conversation_id=conversation-dd2ec47b12ab475e9aec331b4f4c62ca`，`turn_id=turn-6c91452af813435cbea7c5ca89cb10dc`。业务 Run `COMPLETED`、14 条连续序号的 PG Event、两个 SDK 的真实运行结果经版本化 API/SSE 校验；**Native 派发 1 次**且相同 `Idempotency-Key` 的 HTTP 重试没有再创建 Provider Workflow。无权限与撤权 API 读均拒绝。
+
+**严格限定证据层级**：真实 Hatchet Embedded + 实际 PG + Pydantic AI/OpenAI Agents SDK，但两 SDK 使用**确定性本地模型**；Gateway/Policy 是服务端注入的**合成可信 Adapter**。这并未验证企业 IdP、外部真实 LLM、OSS 授权下载、审批事件 UI 或既有 Portal 联动。先前本文件“原生 CI 待验”是开发过程快照，以本最终证据为准。DEV-M7 **ACTIVE**、原 1.1～2.3 未通过的部分保持 OPEN；Production NO-GO。M5/M6/M8/M9 均不加入 DEV-M7 退出条件。
