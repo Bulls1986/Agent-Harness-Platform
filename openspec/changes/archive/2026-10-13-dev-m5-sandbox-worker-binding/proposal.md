@@ -22,4 +22,4 @@ HC-03 已冻结；DEV-M3/4 联合接管用例；任务编号：DEV-HC-03 / HC-03
 
 ## Status
 
-**PLANNED · 只有规划产物，全部实现/真实验收 Tasks 尚未启动。**
+**CLOSED（2026-10-13 原始有界平台合同）**。真实 PG + Native Cube MicroVM + Hatchet A SIGKILL→B + 同 Workspace + Coding Guest Shell/Git 通过本地实机；PG/Native SDK/架构官方 CI PASS。最终报告：`docs/retrospectives/DEV_M5_FINAL_CLOSEOUT_20261013.md`。跨宿主和 Guest in-flight Fencing、完整 OpenCode Agent loop **NOT TESTED**，生产 **NO-GO**。

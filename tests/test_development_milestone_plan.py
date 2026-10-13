@@ -211,6 +211,28 @@ class MilestonePlanTests(unittest.TestCase):
             self.assertTrue(any("unfinished tasks" in error
                                 for error in validate_milestones(root)))
 
+    def test_m5_bounded_cube_stage_closed_with_real_evidence_and_open_production_gate(self):
+        plan = (ROOT / "docs/DEVELOPMENT_MILESTONES.md").read_text(encoding="utf-8")
+        backlog = (ROOT / "docs/DEVELOPMENT_BACKLOG.md").read_text(encoding="utf-8")
+        stage = next(line for line in plan.splitlines()
+                     if line.startswith("| DEV-M5 Cube 可信执行 |"))
+        owner = next(line for line in backlog.splitlines()
+                     if line.startswith("| DEV-HC-03 | DEV-M5 |"))
+        self.assertIn("**CLOSED（原始有界平台/单宿主真实 Coding Guest 合同）**", stage)
+        self.assertIn("**CLOSED（原始有界平台/单宿主真实 Coding Guest 合同）**", owner)
+        self.assertIn("Production NO-GO", stage)
+        self.assertIn("NOT TESTED", stage)
+        self.assertFalse((ROOT / "openspec/changes/dev-m5-sandbox-worker-binding").exists())
+        archive = ROOT / "openspec/changes/archive/2026-10-13-dev-m5-sandbox-worker-binding"
+        tasks = (archive / "tasks.md").read_text(encoding="utf-8")
+        self.assertNotRegex(tasks, r"(?m)^- \\[ \\] ")
+        self.assertEqual(tasks.count("**正式验收**：docs/retrospectives/DEV_M5_FINAL_CLOSEOUT_20261013.md"), 9)
+        self.assertTrue((ROOT / "openspec/specs/sandbox-worker-binding/spec.md").is_file())
+        report = (ROOT / "docs/retrospectives/DEV_M5_FINAL_CLOSEOUT_20261013.md").read_text(encoding="utf-8")
+        for item in ("SIGKILL", "native_guest_git", "NOT TESTED", "cross-host",
+                     "Host Shell", "Production", "M9"):
+            self.assertIn(item, report)
+
     def test_m7_archived_bounded_contract_and_api_owner_stay_in_sync(self):
         milestones = (ROOT / "docs/DEVELOPMENT_MILESTONES.md").read_text(encoding="utf-8")
         backlog = (ROOT / "docs/DEVELOPMENT_BACKLOG.md").read_text(encoding="utf-8")

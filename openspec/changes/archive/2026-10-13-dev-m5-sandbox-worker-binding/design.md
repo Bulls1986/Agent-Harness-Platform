@@ -53,3 +53,6 @@ SandboxProvider→Cube Scope/Lease/Fencing/WorkspaceRef 绑定、按需分配释
 ## Exit gate
 
 真实 Worker A→B 可信重连同 Workspace；跨 Scope 和旧 Owner 被拒，Shell/Git 仅在 Cube。。测试 Red/Green/Refactor、真实端到端、CI/架构、OpenSpec 完整核对及复盘均须留下可检索证据。阶段与生产 GO 明确区分。
+## 2026-10-13 原始固定范围的最终有界验收
+
+PG 冻结事实/Lease/Scope/Fencing 通过现有 CubeWorkspaceGateway 复用，Native SDK 在 Cube Guest 内执行 Shell/Git（cwd=/workspace）。同一 Host 的独立 Hatchet Worker A 真实 SIGKILL、B 原生 Retry 和原 Cube/Guest 文件保持及销毁均有实测证据；模型-only 0 Sandbox，不能 Host fallback。详见 docs/retrospectives/DEV_M5_FINAL_CLOSEOUT_20261013.md。跨宿主、Guest in-flight 命令撤销、完整 OpenCode Agent loop 和生产安全 NOT TESTED；原 M6/M9 继续承担后续结果，Production NO-GO。
