@@ -14,7 +14,7 @@
 | DEV-M5 Cube 可信执行 | WorkspaceRef/Scope/Lease/Fencing、跨 Worker 接管 | **CLOSED（原始有界平台/单宿主真实 Coding Guest 合同）**：PR #94 PG/Native Cube Guest Shell/Git/Fencing/Scope Fail Closed；本地真实 Cube+PG、物理 Hatchet Worker A SIGKILL→B/8，同 Cube/Guest 字节、Git Shell、Release PASS；Model-only 0 Cube。**NOT TESTED**：跨宿主、Guest in-flight Fencing、完整 OpenCode Agent loop / Production Security。GitHub-hosted 真 Cube Gate 未配置，官方 PG/SDK/Architecture CI PASS；平台 **Production NO-GO**。见 [M5 最终收口](retrospectives/DEV_M5_FINAL_CLOSEOUT_20261013.md)。|
 | DEV-M6 多 Agent Recipe | 跨 Runtime 交接、Verifier、Artifact、Approval | **CLOSED（原始有界合成 Recipe）**：PR #95 真实 Hatchet/PG 三 SDK 规划→编码→验证、真实 LiteLLM 独立调用、WAITING_INPUT/APPROVAL 原生唤醒、审批拒绝零写入、Worker A SIGKILL→B 同 Run/Provider 接管、三 Step 各 1 Attempt、合成外部账本 Receipt 仅 1 次；真实 PG 12/12 与字节夹具 2/2，官方 [Native CI 38499209969](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38499209969) 和 [架构 CI 38499209960](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38499209960) SUCCESS。**NOT TESTED / 非 M6 交付**：企业 OSS/IdP、业务 Git/OSS Tool、跨宿主及生产安全；Production NO-GO。正式 [M6 限定收口](retrospectives/DEV_M6_FINAL_CLOSEOUT_20261014.md)。 |
 | DEV-M7 公共 API/SDK | Conversation/Turn/Run、鉴权、Typed SSE、错误合同 | **CLOSED（原始平台受控交付限定范围）**：受控 PG 事实及真实 Hatchet/双 SDK Run、授权公共 API/SSE/ArtifactRef/结果页面与合成 Tool/审核/文件事件投影及 >250 Cursor，经 PR #65/#67/#86/#88/#90/#91 真实 CI/架构及本次归档验收。企业 Gateway/IdP/Policy 实际接入、真正 Tool/Approval/OSS 数据来源和旧企业 Portal **NOT VERIFIED**，归既有 M6/M8/M9/外部 Owner 独立验收；不等于整个产品集成上线，**Production NO-GO**。详见 [M7 正式限定收口](retrospectives/DEV_M7_FINAL_CLOSEOUT_20261013.md)。|
-| DEV-M8 通用消费者互通 | **只用合成数据**验证独立客户端对 Harness 公共 API 的调用、身份隔离和故障语义 | PLANNED |
+| DEV-M8 通用消费者互通 | **只用合成数据**验证独立客户端对 Harness 公共 API 的调用、身份隔离和故障语义 | **CLOSED（原始合成消费者公共 API 合同；以归档 PR 最新 Head CI + Merge 为准）**：独立 Node HTTP Client 7/7、真实 PostgreSQL + Native Hatchet/双 SDK + 版本化 API 合成身份及权限/取消意图/游标，官方 [M8 Native CI 38502537080](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38502537080) SUCCESS，架构 [38502537102](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38502537102) SUCCESS。企业 IdP、真正 OSS/Tool、Provider 物理取消和 Production 仍 NOT VERIFIED。见 [M8 限定收口](retrospectives/DEV_M8_FINAL_CLOSEOUT_20261014.md)。 |
 | DEV-M9 生产交付 | 容量/安全/可靠性/部署/回退（含 100 Active Runs 实测） | PLANNED，Production NO-GO |
 
 **依赖方向：外部业务消费者 → 受版本管理的 Harness 公共 API/SDK → Harness Domain/AgentRuntime → Hatchet/Cube。** 业务系统独立发布和维护，不得导入 Harness 内部源码、操作 Harness PG 或挪用技术执行权威；Harness 更不包含业务系统专属实现。
@@ -46,7 +46,7 @@
 | DEV-M5 | [CLOSED · dev-m5-sandbox-worker-binding](../openspec/changes/archive/2026-10-13-dev-m5-sandbox-worker-binding/) |
 | DEV-M6 | [CLOSED · dev-m6-agent-recipe-execution](../openspec/changes/archive/2026-10-14-dev-m6-agent-recipe-execution/) |
 | DEV-M7 | [CLOSED · dev-m7-platform-access-contract](../openspec/changes/archive/2026-10-13-dev-m7-platform-access-contract/) |
-| DEV-M8 | [dev-m8-external-consumer-integration](../openspec/changes/dev-m8-external-consumer-integration/) |
+| DEV-M8 | [CLOSED · dev-m8-external-consumer-integration](../openspec/changes/archive/2026-10-14-dev-m8-external-consumer-integration/) |
 | DEV-M9 | [dev-m9-delivery-readiness](../openspec/changes/dev-m9-delivery-readiness/) |
 
 ## 阶段退出 Gate

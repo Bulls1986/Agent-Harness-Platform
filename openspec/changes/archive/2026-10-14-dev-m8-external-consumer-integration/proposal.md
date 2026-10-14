@@ -18,4 +18,4 @@ DEV-M3 through DEV-M7 and accepted G01–G20/Harness owner contracts. Production
 
 ## Status
 
-PLANNED; all implementation tasks unchecked.
+CLOSED (original bounded synthetic external-consumer contract; effective on archive PR passing latest Head CI and merging). M6/M7 CLOSED; 7/7 Node TDD, actual public HTTP/PG/Native Hatchet + two Agent SDK M8 CI SUCCESS, security/retrospective evidence docs/retrospectives/DEV_M8_FINAL_CLOSEOUT_20261014.md. Enterprise IdP/OSS/native physical cancel and production deployment NOT VERIFIED.

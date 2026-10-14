@@ -1,0 +1,69 @@
+name: DEV-M8 generic public API consumer
+on:
+  pull_request:
+    paths:
+      - 'integrations/synthetic_consumer.mjs'
+      - 'integrations/verify_m8_http.mjs'
+      - 'tests/test_m8_synthetic_consumer.mjs'
+      - 'poc/platform_access/verify_m8_external_api.py'
+      - 'openspec/changes/dev-m8-external-consumer-integration/**'
+      - '.github/workflows/dev-m8-generic-consumer.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'integrations/synthetic_consumer.mjs'
+      - 'integrations/verify_m8_http.mjs'
+      - 'tests/test_m8_synthetic_consumer.mjs'
+      - 'poc/platform_access/verify_m8_external_api.py'
+      - 'openspec/changes/dev-m8-external-consumer-integration/**'
+      - '.github/workflows/dev-m8-generic-consumer.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public-api-consumer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: harness_poc
+          POSTGRES_PASSWORD: local_ci_disposable
+          POSTGRES_DB: hatchet_poc
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U harness_poc -d hatchet_poc"
+          --health-interval 2s --health-timeout 5s --health-retries 30
+    env:
+      PYTHONUNBUFFERED: '1'
+      HATCHET_CLIENT_EMBEDDED_VERSION: 'v0.110.5'
+      HATCHET_CLIENT_EMBEDDED_CHECKSUM: '18ddacae0005042bd982328bcb8d370cca6907352a1ab2a3c8406001d31e7dee'
+      HATCHET_POC_DATABASE_URL: 'postgres://harness_poc:local_ci_disposable@127.0.0.1:5432/hatchet_poc'
+      HARNESS_POC_DATABASE_URL: 'postgresql://harness_poc:local_ci_disposable@127.0.0.1:5432/harness_poc'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: M8 standalone consumer contract and negative tests
+        run: node --test tests/test_m8_synthetic_consumer.mjs
+      - name: Install public API and Native Hatchet real integration dependencies
+        run: |
+          python -m pip install 'hatchet-sdk==1.42.1' 'pydantic-ai-slim==2.54.0' 'openai-agents==0.23.1' 'psycopg[binary]>=3.2,<4' 'fastapi>=0.115,<1' 'uvicorn>=0.30,<1' 'httpx>=0.27,<1'
+      - name: Prepare separate actual PostgreSQL Harness facts store
+        run: |
+          python - <<'PY'
+          import psycopg
+          with psycopg.connect("postgresql://harness_poc:local_ci_disposable@127.0.0.1:5432/hatchet_poc", autocommit=True) as c:
+              c.execute("CREATE DATABASE harness_poc")
+          PY
+      - name: M8 existing OpenSpec and architecture guard
+        run: |
+          npx --yes @fission-ai/openspec@1.12.0 validate --specs --strict
+          python -B -m unittest tests.test_architecture_guardrails -v
+      - name: M8 real HTTP independent Node consumer to PG and Native Hatchet
+        run: python -B -m poc.platform_access.verify_m8_external_api
