@@ -63,7 +63,7 @@ jobs:
           PY
       - name: M8 existing OpenSpec and architecture guard
         run: |
-          npx --yes @fission-ai/openspec@1.12.0 validate dev-m8-external-consumer-integration --strict
+          npx --yes @fission-ai/openspec@1.12.0 validate --specs --strict
           python -B -m unittest tests.test_architecture_guardrails -v
       - name: M8 real HTTP independent Node consumer to PG and Native Hatchet
         run: python -B -m poc.platform_access.verify_m8_external_api
