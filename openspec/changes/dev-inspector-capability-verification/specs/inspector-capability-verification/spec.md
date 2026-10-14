@@ -10,6 +10,18 @@
 - **WHEN** 评审者切换到能力验证 Tab
 - **THEN** 看到双 Agent 跨 SDK 接力、Cube Workspace 恢复、Worker 物理故障接管和非幂等 Tool Receipt 四种独立场景的用途、证明标准、执行步骤与限制，不需理解原始 JSON 才能解释场景
 
+### Requirement: Live and deterministic demo entry MUST be distinguishable
+
+Inspector SHALL retain a single Agent demo Tab, but in `live` mode its visible title, action and node roles MUST identify real-LLM Product Agent requirement design and independent Reviewer Agent. An untouched default prompt SHALL be replaced with a non-sensitive example without overwriting user edits. Deterministic mode MUST NOT claim to perform actual product analysis.
+
+#### Scenario: Real model enabled
+- **WHEN** `/api/config` reports `mode=live` and a model ID
+- **THEN** the existing demo clearly identifies real-model requirements design/review and its two SDK roles, without adding privileged or duplicate execution endpoints
+
+#### Scenario: Local deterministic mode
+- **WHEN** `/api/config` reports deterministic local mode
+- **THEN** the demo identifies fixed-output SDK handoff, not real business analysis
+
 ### Requirement: Persisted evidence MUST NOT be represented as actual external proof
 
 证据查询仅从 Harness PostgreSQL 读取白名单事件、Bound Provider 和可选 Cube/Tool 领域事实。模型输入、Token、外部操作和业务秘密 SHALL NOT 在新接口返回；缺失事实 MUST NOT 被补造为通过。未经独立真实执行验证，`verified` MUST be `false`，Status 保持只读事实。

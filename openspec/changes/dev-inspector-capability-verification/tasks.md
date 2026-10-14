@@ -10,8 +10,10 @@
 - [x] 1.1 先提交真实 PG 合同负例，覆盖 Catalog/Field/非法 Run/PG Binding/不虚假 PASS/Tab 结构。
 - [x] 1.2 在同一 HTML 页面只添加一个顶层「能力验证」Tab；四场景均有使用场景、能力、步骤、证据、限制。
 - [x] 1.3 新增只读 Catalog 与 PG 证据 API，采用有限证据字段与明确 `verified=false`；不存在后端特权 Runner 时不得出现假的开始按钮。
+- [x] 1.3a Live 产品需求设计/独立评审与 Local 固定输出的标签、示例输入和节点语义区分已实现并完成 Red/Green 单测，保持原双 Tab 合同。
 - [ ] 1.4 后续可信 Worker/Cube 联合 Gate 真通过之后，接入由受信任后端运行的演示执行器、真实 OS/Cube/Guest 原生证据与终态，不得从无认证页面直接放行特权操作。
 
 ## 2. 门禁
 - [x] 2.1 本 Tab 的真实 PG 合同、原 Inspector Black-box、Architecture Guards、Strict OpenSpec 均通过，新增 TDD 失败与整改已复盘：`docs/retrospectives/INSPECTOR_CAPABILITY_TAB_20261012.md`。完成文档后最终 Head CI 仍须复验再合并。
 - [ ] 2.2 M5 联合实机/Guest Fencing/Production IAM 未通过前，仍保持 OPEN/NO-GO。
+- [ ] 2.3 新 Live UI 文案的运行容器交付验收：新版镜像已构建、合同通过，但最终部署操作被环境安全检查阻止，不能宣称已上线。

@@ -33,3 +33,11 @@
 - 不同层级的证据必须明确：数据库绑定记录 `sandbox.binding.confirmed` ≠ 原生 Cube Guest 文件内容保留；PG Fencing 转移 ≠ Worker OS 实际 SIGKILL；Tool Receipt 终态 ≠ 独立外部系统唯一副作用。所有场景都需要可解释的“使用场景—证明标准—原始可信证据—局限”。
 - 本次是**Inspector 演示可读性与只读数据观察层**，并未实现有认证的 Cube/Worker/Tool 一键故障场景启动器。以后必须通过可信授权后端执行，并且存储操作系统/Provider/Guest/外部 Effect 的独立 Evidence；不应让公开页面直接拥有 Host SIGKILL 权限。
 - Inspector POC 仍 localhost-only；未有生产 IAM、授权、数据脱敏体系；不可外网公开。DEV-M5 物理 Worker+Cube 联合故障和完整阶段收口继续 OPEN，Production NO-GO。
+## 2026-10-12 Live Inspector 版本错位与展示区分
+
+- 根因：本地 `8766` 曾以旧镜像及旧开发工作树 `bind:/app` 启动；即使新镜像已构建，浏览器仍使用旧代码。`8765` 为确定性模型，`8766` 为真实 LLM，必须分别核验 `/api/config` 与 `/api/verification/scenarios`，不能把仅有 Docker 运行视为功能已发布。
+- 实机证据：在使用与新版 Inspector 相同代码、Live 配置的临时容器中，以**合成**企业注册/认证需求完成 Pydantic AI 产品需求分析 → 持久化交接 → OpenAI Agents SDK 独立审核。`run-00b67b7c0054434dbb63b72e61b81bb6` 状态 `COMPLETED`，`qwen3.8-flash`，Hatchet Workflow `123a60a9-6def-451a-9a4a-561f718d45de`，374 个事件；该结果仅证明此 Live 模型链路，不证明 Cube/Tool/Production Gate。
+- 运行修复：`8766` 已重建并取消旧代码 `/app` bind；当前 API 返回 `live`、场景接口返回 200，真实需求分析链路可调用。旧 `8765` 仍按设计保留固定输出模式。
+- 可解释性回归：保持仅两个 Tab，不新增冗余 Scheduler 或业务 API；基于服务端模型配置动态标记真实 LLM 需求设计/评审与固定输出 SDK 接力，防止演示身份混淆，且输入默认样例不得覆盖人工编辑。
+- TDD：新增 3 项前端合同测试，Red 3/3 失败 → Green 3/3 通过；真实 PostgreSQL 合同合计 12/12 PASS；JavaScript `node --check`、OpenSpec Strict、Docker 镜像构建 PASS。
+- 部署边界：更醒目的 **Live 界面文案变更已编写和构建，但向运行中的 `8766` 容器部署新 UI 的最终操作被环境安全检查阻止，未验证发布；不可把 UI 新标题宣称为已上线**。后续通过授权的版本化镜像/配置管道部署并实测才可关闭此项。

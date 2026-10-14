@@ -369,7 +369,9 @@ function render(s){
   for(const id of ["pydantic","openai"]){
     const step=s.steps[id];if(!step)continue;
     const info=stageInfo[id],card=node("article","","step");
-    const head=node("div","","headrow");head.append(node("h3",info.name),node("span",stateLabels[step.state]||step.state,"status"));
+    const head=node("div","","headrow");
+    const role=live?(id==="pydantic"?"节点 A · 产品 Agent（Pydantic AI）":"节点 B · 评审 Agent（OpenAI Agents SDK）"):info.name;
+    head.append(node("h3",role),node("span",stateLabels[step.state]||step.state,"status"));
     card.append(head,node("p",live?(id==="pydantic"?
       "使用真实 LiteLLM 模型生成需求分析 JSON，通过结构校验并持久化后交给节点 B。":
       "读取 A 的结构化结果，使用真实 LiteLLM 模型独立审核并生成最终业务报告。"):info.role));
@@ -543,6 +545,17 @@ $("m7-start").addEventListener("click",async()=>{
 
 api('/api/config').then(cfg=>{
   const live=cfg.mode==='live';
+  const initialPrompt='Review a short product requirement';
+  $('tab-agent-demo').textContent=live?
+    '真实 LLM · 产品需求设计与独立评审':
+    '双 Agent SDK 接力 · 固定输出';
+  if(live){
+    $('about-title').textContent='真实 LLM · 产品 Agent 接收需求并设计，评审 Agent 独立审核';
+    $('start').textContent='调用真实 LLM · 开始需求分析与评审';
+    if($('prompt').value===initialPrompt){
+      $('prompt').value='请设计一个企业成员邀请和权限审批功能，包含邀请链接过期、重复邀请、权限审核、撤销和失败补偿，并给出可执行验收标准。';
+    }
+  }
   $('mode-notice').textContent=live?
     '当前模式：真实模型 Live（'+cfg.model_id+'）。模型文本片段经真实 SDK 流式进入持久 PG SSE；Cube/审批等生产门禁仍未验收。':
     '当前模式：确定性本地模型（不会产生真实业务分析）。如需真实模型，请在服务端配置 Live 模式。';
