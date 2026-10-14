@@ -1,6 +1,6 @@
 # DEV-SBX M2 路 Session Attach / onAttach (bounded V1)
 
-**Status: acceptance in progress; production NO-GO.** This is an opt-in
+**Status: bounded SBX-M2 acceptance CLOSED; production NO-GO.** This is an opt-in
 FastAPI factory extension of M1; not mounted in Inspector or backed by
 production IdP/Gateway. No general Run-time Execute endpoint (SBX-M3).
 
