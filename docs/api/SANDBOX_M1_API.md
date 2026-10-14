@@ -1,6 +1,6 @@
 # DEV-SBX M1 - Cube-native Sandbox and Template APIs
 
-**Status: SBX-M1 IN PROGRESS (limited development API; Production NO-GO).**
+**Status: SBX-M1 bounded CLOSED (local development API; Production NO-GO).**
 These are optional, separate FastAPI factory routes. They are **not mounted**
 by default in Inspector and do not provide enterprise Gateway/IdP. The
 factory requires trusted `resolve_context`, `SandboxCreateService`,
