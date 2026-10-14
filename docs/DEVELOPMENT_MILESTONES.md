@@ -25,8 +25,8 @@
 
 | 子里程碑 | 冻结交付 | 状态 / 退出 Gate |
 |---|---|---|
-| **SBX-M0** 合同冻结 | Cube Native Template/参数原则；Create/Attach/Execute、授权/UNKNOWN、正反例与 Non-goals、OpenSpec | **SCOPE FROZEN / 文档 Gate 待 PR CI+Merge**；不算功能实现 |
-| **SBX-M1** Cube Native + Create | Cube Template 管理受控透传、实例 Create、可选 onCreate、持久 Operation/幂等 | PLANNED：真 Cube+PG 创建、初始化/ACK-loss/拒绝负例和 API/CI PASS |
+| **SBX-M0** 合同冻结 | Cube Native Template/参数原则；Create/Attach/Execute、授权/UNKNOWN、正反例与 Non-goals、OpenSpec | **CLOSED（文档范围）：PR #98 Merge + Architecture CI 38524180142 SUCCESS + OpenSpec Strict PASS**；不算功能实现 |
+| **SBX-M1** Cube Native + Create | Cube Template 管理受控透传、实例 Create、可选 onCreate、持久 Operation/幂等 | **IN PROGRESS**：Create/onCreate PG/HTTP 测试切片；真 Cube Template 管理/原生 SDK/CI 尚未验收 |
 | **SBX-M2** Session Attach | 独立 Session↔Sandbox Binding、短期 Initialization Permit、onAttach、同 Binding reconnect | PLANNED：真 Cube Git、跨 Session/Scope 拒绝、重连不重跑、M5 Fencing 回归 |
 | **SBX-M3** Execute + 生命周期 | 授权命令/Files、结果/超时、查询、解绑、Native Pause/Resume/Release | PLANNED：真 Guest Command/UNKNOWN/Host fallback 拒绝、Workspace 生命周期正确 |
 | **SBX-M4** 整体验收 | 版本化公共 API/OpenAPI、Cube+PG Create→Attach→Execute E2E、操作手册、复盘/归档 | PLANNED：官方 CI/架构/Strict + 真实负例、PR Merge，限原范围 CLOSED |
