@@ -1,6 +1,6 @@
 # DEV-SBX V1 · Tasks / 里程碑计划
 
-> **2026-10-14 范围冻结，SBX-M0 文档收口；SBX-M1 core acceptance verified; final official CI / PR closeout pending。** 只有 M0 规划产物可按文档/Strict Gate 收口；所有 M1–M4 未经真实测试均须保持 OPEN。Owner/工期根据本机真实资源后续确定，不虚构日程。每个里程碑只按以下既定目标推进，不自动追加后续功能。
+> **2026-10-14 范围冻结，SBX-M0 文档收口；SBX-M1 原冻结范围验收通过（CLOSED）。** M0 文档范围及 M1 Cube 原生创建范围凭验证据收口；M2–M4 仍保持 OPEN。Owner/工期根据本机真实资源后续确定，不虚构日程。每个里程碑只按以下既定目标推进，不自动追加后续功能。
 
 ## SBX-M0 · 需求、架构与接口合同冻结
 - [x] 0.1 合并正式冻结范围、Non-goals、HC-03/Identity/Workspace/Registry 兼容审查；说明 Cube 原生 Template/参数对齐策略与版本依赖。
@@ -11,15 +11,15 @@
 
 ## SBX-M1 · Cube 原生管理 + Create/onCreate
 
-> 实施增量：完成限定 Create/onCreate + PG/HTTP 单元合同；Cube SDK / PG / Guest / disposable Native Template build, alias and delete verified. Latest-head CI pending.
+> 实施增量：完成限定 Create/onCreate + PG/HTTP 单元合同；Cube SDK / PG / Guest / disposable Native Template build, alias and delete verified. 官方最新 PR Head 的 Architecture / M5 Cube PG / Full Hatchet+Inspector CI 均 SUCCESS。
 
 - [x] 1.1 Red：模板权限/不存在/Native 参数不支持、Create ACK-loss、相同 Key 冲突、初始化失败等测试。
 - [x] 1.2 实现受控 Cube Native Template 管理入口（只支持实证已存在原生动作）、创建及 Template ID 解析；取消创建链全局单一 `CUBE_TEMPLATE_ID` 假设。
 - [x] 1.3 实现 Create、onCreate guest command、Operation 持久化/查询/幂等/对账；实际 Cube+PG 验证（含 `envd` 可用性）。
-- [ ] 1.4 OpenAPI、CI、架构 Review 与 M1 复盘，证据 PASS 后才能关闭 M1。
+- [x] 1.4 OpenAPI、CI、架构 Review 与 M1 复盘，证据 PASS 后才能关闭 M1。
 
 
-**SBX-M1 evidence (final CI gate pending):** actual Cube SDK 0.7.3
+**SBX-M1 CLOSED evidence (PR #101):** actual Cube SDK 0.7.3
 Template list/get; real Cube MicroVM + PostgreSQL + HTTP Create/onCreate/
 Guest Git READY; same-key replay and native cleanup PASS; **isolated**
 native Template Build (async job completed READY, 100%), Alias set/resolve
@@ -27,7 +27,7 @@ and delete confirmed, inventory restored to original 7. Contract negative
 cases for lost ACK / ambiguous outcome tested with simulated provider,
 not with actual dropped Cube network packets. See
 [SBX-M1 acceptance evidence](../../../docs/retrospectives/DEV_SBX_M1_FINAL_EVIDENCE_20261014.md).
-M2, M3, M4 and M9 remain untouched / Production NO-GO.
+[Architecture CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38555102881), [M5 Cube/PG CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38555102789), [full Hatchet/PG/Inspector CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38555102848) all SUCCESS on PR #101; PR merge is the final documentation/code closeout gate. M2, M3, M4 remain OPEN; M9 Production NO-GO.
 
 ## SBX-M2 · Session Attach/onAttach
 - [ ] 2.1 Red：未授权 Session/Scope、同一可写 Sandbox 跨 Session、未 READY、重连重复初始化、Git 不安全覆盖负例。
