@@ -1,10 +1,11 @@
 # API reference · HTTP / SSE / OpenAPI
 
-Agent Harness currently exposes two **different** FastAPI surfaces. Do not confuse the unprotected localhost Inspector with the injected-authentication Public API facade.
+Agent Harness has two established FastAPI surfaces and an optional **DEV-SBX M1 pilot factory** (not mounted in Inspector by default). Do not confuse the unprotected localhost Inspector with the injected-authentication Public API facade.
 
 | Interface | Source | Documentation | Machine-readable contract |
 |---|---|---|---|
 | **Versioned Public API** | [platform_api.py](../../poc/platform_access/platform_api.py) | [Public API v1](PUBLIC_API.md) | [OpenAPI v1](openapi-v1.json) |
+| **DEV-SBX M1 pilot Create/Operation** | [sbx_api.py](../../poc/sandbox/sbx_api.py) | [SBX-M1 API](SANDBOX_M1_API.md) | [SBX-M1 OpenAPI](openapi-sbx-m1.json) |
 | **Local Inspector / debugging** | [inspector.py](../../poc/closed_loop/inspector.py) | [Inspector API](INSPECTOR_API.md) | [Inspector OpenAPI](openapi-inspector.json) |
 
 ## Live Swagger / OpenAPI in development
