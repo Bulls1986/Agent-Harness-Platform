@@ -262,7 +262,7 @@ class MilestonePlanTests(unittest.TestCase):
             content = (m7 / filename).read_text(encoding="utf-8")
             self.assertNotRegex(content, r"DEV-CONSUMER-0[2-9]\s*前置", filename)
             self.assertIn("DEV-M8" if filename != "tasks.md" else "M8", content)
-        m6 = base / "dev-m6-agent-recipe-execution"
+        m6 = base / "archive/2026-10-14-dev-m6-agent-recipe-execution"
         for filename in ("proposal.md", "design.md", "tasks.md"):
             self.assertNotIn("DEV-CONSUMER-04", (m6 / filename).read_text(encoding="utf-8"))
         config = (ROOT / "openspec/config.yaml").read_text(encoding="utf-8")

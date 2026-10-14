@@ -22,4 +22,4 @@ DEV-M3/M4/M5 适用的真实 Domain/Receipt/Cube Gate；任务编号：DEV-RECIP
 
 ## Status
 
-**PLANNED · 只有规划产物，全部实现/真实验收 Tasks 尚未启动。**
+**CLOSED（2026-10-14，原始有界合成 Recipe）**：真实 Hatchet/三 Agent SDK、独立 PG 字节及 Receipt、WAITING_INPUT/审批、真实 Worker SIGKILL A→B、官方 CI/架构 PASS；不代表企业 OSS/IAM 或 M9 Production GO。验收：[正式收口](../../../docs/retrospectives/DEV_M6_FINAL_CLOSEOUT_20261014.md)。最终归档 Head CI 仍为合并前置。
