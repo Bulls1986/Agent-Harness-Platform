@@ -5,6 +5,8 @@ on:
     paths:
       - 'poc/closed_loop/**'
       - 'poc/platform_access/**'
+      - 'poc/recipe/**'
+      - 'openspec/changes/dev-m6-agent-recipe-execution/**'
       - 'compose.yaml'
       - 'openspec/changes/minimal-run-closed-loop/**'
       - 'openspec/changes/real-model-agent-closed-loop/**'
@@ -62,9 +64,11 @@ jobs:
       - name: Verify OpenSpec, architecture guards and PG/API TDD contracts
         run: |
           npx --yes @fission-ai/openspec@1.12.0 validate dev-inspector-capability-verification --strict
+          npx --yes @fission-ai/openspec@1.12.0 validate dev-m6-agent-recipe-execution --strict
           npx --yes @fission-ai/openspec@1.12.0 validate --specs --strict
           python -B -m unittest poc.closed_loop.test_step_attempt_pg poc.closed_loop.test_facts_pg poc.closed_loop.test_inspector_capabilities_pg poc.closed_loop.test_inspector_pg poc.closed_loop.test_inspector_m7_pg poc.closed_loop.test_real_model poc.closed_loop.test_stream_sse_pg poc.closed_loop.test_plan_guard_pg poc.closed_loop.test_replan_v2_pg poc.closed_loop.test_replan_v2_execution_pg poc.closed_loop.test_replan_non_pure_pg poc.closed_loop.test_replan_orphaned_attempt_pg poc.closed_loop.test_replan_ack_pg poc.closed_loop.test_hatchet_segment_lookup -v
           python -B -m unittest tests.test_architecture_guardrails -v
+          python -B -m unittest poc.recipe.test_recipe_pg poc.recipe.test_synthetic_artifacts_pg -v
           python -B poc/verify_repo_navigation.py
       - name: Check capability tab browser JavaScript syntax
         run: |
@@ -78,6 +82,11 @@ jobs:
           node --check /tmp/harness-inspector.js
       - name: Real Engine and two SDKs in one PG-backed business Run
         run: python -B -m poc.closed_loop.hatchet_pg_live
+      - name: M6 Native durable Input, Approval, three SDKs and real PG Receipt
+        run: |
+          python -B -m poc.recipe.hatchet_three_agent
+          python -B -m poc.recipe.hatchet_three_agent --decision REJECTED
+          python -B -m poc.recipe.verify_worker_resume
       - name: M7 Real versioned Public API creates actual Hatchet workflow and two SDK Results
         run: python -B -m poc.platform_access.verify_public_api_hatchet
       - name: Real Hatchet v1-to-v2 PURE Replan and independent Segment gate

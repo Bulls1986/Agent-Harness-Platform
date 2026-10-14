@@ -22,4 +22,4 @@ DEV-M3/M4/M5 适用的真实 Domain/Receipt/Cube Gate；任务编号：DEV-RECIP
 
 ## Status
 
-**PLANNED · 只有规划产物，全部实现/真实验收 Tasks 尚未启动。**
+**ACTIVE / OPEN · 2026-10-14 已完成真实 PostgreSQL 合成安全合同 9/9；正式三 Agent SDK/Hatchet、OSS Artifact/独立 Verifier、WAITING_INPUT/恢复、受信任 Tool/Cube 与 CI/PR 未验收，非阶段 CLOSED。** 证据：[有界复盘](../../../docs/retrospectives/DEV_M6_RECIPE_SAFETY_SLICE_20261014.md)。
