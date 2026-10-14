@@ -75,12 +75,184 @@
     }
   },
   "info": {
-    "description": "DEV-SBX M1 Create/onCreate pilot only. Requires trusted Gateway, explicit Policy and PostgreSQL; no Cube/PG is contacted by this exporter. Not a deployed production endpoint, Attach/Execute not yet implemented.",
+    "description": "DEV-SBX M1 Create/onCreate pilot only. Requires trusted Gateway, explicit Policy and PostgreSQL; no Cube/PG is contacted by this exporter. Native Cube Template admin is separately Policy-gated. Not a deployed production endpoint, Attach/Execute not yet implemented.",
     "title": "DEV-SBX M1 Cube-native Create (limited development)",
     "version": "0.1.0"
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/cube/templates": {
+      "get": {
+        "operationId": "list_templates_api_v1_cube_templates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Templates"
+      }
+    },
+    "/api/v1/cube/templates/build": {
+      "post": {
+        "operationId": "build_template_api_v1_cube_templates_build_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Build Template"
+      }
+    },
+    "/api/v1/cube/templates/{template}": {
+      "delete": {
+        "operationId": "delete_template_api_v1_cube_templates__template__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template",
+            "required": true,
+            "schema": {
+              "title": "Template",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Template"
+      },
+      "get": {
+        "operationId": "get_template_api_v1_cube_templates__template__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template",
+            "required": true,
+            "schema": {
+              "title": "Template",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Template"
+      }
+    },
+    "/api/v1/cube/templates/{template}/alias": {
+      "put": {
+        "operationId": "template_alias_api_v1_cube_templates__template__alias_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template",
+            "required": true,
+            "schema": {
+              "title": "Template",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Template Alias"
+      }
+    },
     "/api/v1/sandbox-operations/{operation_id}": {
       "get": {
         "operationId": "operation_api_v1_sandbox_operations__operation_id__get",
@@ -116,6 +288,43 @@
           }
         },
         "summary": "Operation"
+      }
+    },
+    "/api/v1/sandbox-operations/{operation_id}/reconcile": {
+      "post": {
+        "operationId": "reconcile_api_v1_sandbox_operations__operation_id__reconcile_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "operation_id",
+            "required": true,
+            "schema": {
+              "title": "Operation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reconcile"
       }
     },
     "/api/v1/sandboxes": {

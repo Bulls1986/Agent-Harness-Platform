@@ -28,6 +28,9 @@ class FakeStore:
             self.rows[k]=dict(operation_id="op-"+uuid4().hex,scope=scope,principal=principal,key=key,fingerprint=fingerprint,template_id=template_id,state="PENDING",sandbox_id=None,exit_code=None)
         elif self.rows[k]["fingerprint"] != fingerprint: raise SandboxConflict("different request")
         return dict(self.rows[k])
+    def lookup(self,*,scope,principal,key):
+        row=self.rows.get((scope,principal,key))
+        return dict(row) if row else None
     def get(self,op,scope,principal):
         for r in self.rows.values():
             if r["operation_id"]==op:
@@ -84,6 +87,57 @@ class SBXM1Contract(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.create(key=uuid4().hex,commands=[{"command":"pwd","cwd":cwd,"timeoutSeconds":30}])
         self.assertFalse(self.cube.created)
+    def test_native_ack_lost_reconciles_unique_existing_cube_without_replaying(self):
+        class NativeAckLost(FakeCube):
+            def create(self, **kwargs):
+                self.instance=super().create(**kwargs)
+                raise TimeoutError("synthetic response lost after native commit")
+            def list(self):
+                return [{"sandboxID":self.instance.sandbox_id,
+                         "metadata":self.created[-1]["metadata"]}]
+            def connect(self, sandbox_id):
+                if sandbox_id!=self.instance.sandbox_id:
+                    raise LookupError(sandbox_id)
+                return SimpleNamespace(get_info=lambda:SimpleNamespace(
+                    sandbox_id=sandbox_id,metadata=self.created[-1]["metadata"],
+                    template_id=self.created[-1]["template"]))
+        cube=NativeAckLost()
+        service=SandboxCreateService(FakeStore(),CubeNativeCreateTransport(sdk=cube),
+                                      authorize=lambda *_:True)
+        kw=dict(scope="s1",principal="u1",idempotency_key="lost",
+                cube={"template":"tpl-real"},on_create=[])
+        with self.assertRaises(SandboxUnknown):
+            service.create(**kw)
+        row=service.create(**kw)
+        self.assertEqual(row["state"],"UNKNOWN")
+        recovered=service.reconcile(scope="s1",principal="u1",
+                                     operation_id=row["operation_id"])
+        self.assertEqual(recovered["sandbox_id"],cube.instance.sandbox_id)
+        self.assertEqual(recovered["state"],"UNKNOWN")
+        self.assertEqual(len(cube.created),1)
+        self.assertEqual(len(cube.commands),0)
+
+    def test_ambiguous_native_create_evidence_cannot_reconcile(self):
+        class DuplicateEvidence(FakeCube):
+            def create(self,**kwargs):
+                self.instance=super().create(**kwargs)
+                raise TimeoutError("lost")
+            def list(self):
+                return [{"sandboxID":"one","metadata":self.created[-1]["metadata"]},
+                        {"sandboxID":"two","metadata":self.created[-1]["metadata"]}]
+        cube=DuplicateEvidence()
+        svc=SandboxCreateService(FakeStore(),CubeNativeCreateTransport(sdk=cube),
+                                 authorize=lambda *_:True)
+        kw=dict(scope="s1",principal="u1",idempotency_key="lost",
+                cube={"template":"tpl-real"},on_create=[])
+        with self.assertRaises(SandboxUnknown):
+            svc.create(**kw)
+        row=svc.create(**kw)
+        with self.assertRaises(SandboxUnknown):
+            svc.reconcile(scope="s1",principal="u1",operation_id=row["operation_id"])
+        self.assertEqual(svc.create(**kw)["state"],"UNKNOWN")
+        self.assertEqual(len(cube.created),1)
+
     def test_authorization_and_scope(self):
         with self.assertRaises(SandboxPermissionDenied): self.create(principal="other")
         self.assertFalse(self.cube.created)

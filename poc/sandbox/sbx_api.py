@@ -31,7 +31,7 @@ def _public(row):
     }
 
 
-def create_sbx_m1_app(*, resolve_context: Callable, service: SandboxCreateService):
+def create_sbx_m1_app(*, resolve_context: Callable, service: SandboxCreateService, template_gateway=None):
     if not callable(resolve_context) or not isinstance(service, SandboxCreateService):
         raise ValueError("Trusted context resolver and Sandbox Create service required")
     app = FastAPI(title="DEV-SBX M1 Cube-native Create (limited development)",
@@ -77,5 +77,61 @@ def create_sbx_m1_app(*, resolve_context: Callable, service: SandboxCreateServic
                 scope=scope, principal=principal, operation_id=operation_id))
         except KeyError:
             raise HTTPException(404, "Not found") from None
+
+
+    @app.post("/api/v1/sandbox-operations/{operation_id}/reconcile", status_code=202)
+    def reconcile(operation_id: str, request: Request):
+        scope, principal = identity(request)
+        try:
+            return _public(service.reconcile(
+                scope=scope, principal=principal, operation_id=operation_id))
+        except KeyError:
+            raise HTTPException(404, "Not found") from None
+        except SandboxUnknown:
+            raise HTTPException(409, "Cube native evidence not verified; stays UNKNOWN") from None
+
+    if template_gateway is not None:
+        from poc.sandbox.sbx_template import CubeTemplateGateway
+        if not isinstance(template_gateway, CubeTemplateGateway):
+            raise ValueError("Native Cube Template Gateway required")
+
+        def native_action(action, request, **kwargs):
+            scope, principal = identity(request)
+            try:
+                return getattr(template_gateway, action)(
+                    scope=scope, principal=principal, **kwargs)
+            except SandboxPermissionDenied:
+                raise HTTPException(403, "Template administration denied") from None
+            except ValueError:
+                raise HTTPException(422, "Unsupported native Cube Template request") from None
+            except KeyError:
+                raise HTTPException(404, "Native Cube Template not found") from None
+            except Exception:
+                # Native mutating ACK may be ambiguous. Do not auto-resubmit.
+                raise HTTPException(503, "Cube native operation unavailable or outcome unknown") from None
+
+        @app.get("/api/v1/cube/templates")
+        def list_templates(request: Request):
+            return native_action("list", request)
+
+        @app.get("/api/v1/cube/templates/{template}")
+        def get_template(template: str, request: Request):
+            return native_action("get", request, template=template)
+
+        @app.post("/api/v1/cube/templates/build", status_code=202)
+        def build_template(body: dict[str, Any], request: Request):
+            return native_action("build", request, cube=body)
+
+        @app.put("/api/v1/cube/templates/{template}/alias")
+        def template_alias(template: str, body: dict[str, str], request: Request):
+            if set(body) != {"alias"}:
+                raise HTTPException(422, "Only Cube native alias update supported")
+            return native_action("set_alias", request,
+                                 template=template, alias=body["alias"])
+
+        @app.delete("/api/v1/cube/templates/{template}", status_code=204)
+        def delete_template(template: str, request: Request):
+            native_action("delete", request, template=template)
+            return None
 
     return app

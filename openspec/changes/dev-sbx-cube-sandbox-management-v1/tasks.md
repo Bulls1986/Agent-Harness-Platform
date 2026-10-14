@@ -13,6 +13,9 @@
 - [ ] 1.3 实现 Create、onCreate guest command、Operation 持久化/查询/幂等/对账；实际 Cube+PG 验证（含 `envd` 可用性）。
 - [ ] 1.4 OpenAPI、CI、架构 Review 与 M1 复盘，证据 PASS 后才能关闭 M1。
 
+
+**M1 observed evidence (not closeout):** Cube SDK 0.7.3 native Template.list/get + actual localhost Cube MicroVM, HTTP Create -> real PG -> onCreate Guest git -> READY, idempotency replay and native Kill PASS. See [native Cube report](../../../docs/retrospectives/DEV_SBX_M1_NATIVE_CUBE_INCREMENT_20261014.md). Native build/alias/delete, real lost ACK injection, latest CI and final M1 review remain OPEN.
+
 ## SBX-M2 · Session Attach/onAttach
 - [ ] 2.1 Red：未授权 Session/Scope、同一可写 Sandbox 跨 Session、未 READY、重连重复初始化、Git 不安全覆盖负例。
 - [ ] 2.2 实现独立 Session Binding、Attach 受限 Initialization Permit，按顺序在真实 Cube Guest 执行 onAttach；初始化成功才变可用。
