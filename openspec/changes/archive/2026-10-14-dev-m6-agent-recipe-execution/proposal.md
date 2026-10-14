@@ -22,4 +22,4 @@ DEV-M3/M4/M5 适用的真实 Domain/Receipt/Cube Gate；任务编号：DEV-RECIP
 
 ## Status
 
-**ACTIVE / OPEN · 2026-10-14 已完成真实 PostgreSQL 合成安全合同 9/9；正式三 Agent SDK/Hatchet、OSS Artifact/独立 Verifier、WAITING_INPUT/恢复、受信任 Tool/Cube 与 CI/PR 未验收，非阶段 CLOSED。** 证据：[有界复盘](../../../docs/retrospectives/DEV_M6_RECIPE_SAFETY_SLICE_20261014.md)。
+**CLOSED（2026-10-14，原始有界合成 Recipe）**：真实 Hatchet/三 Agent SDK、独立 PG 字节及 Receipt、WAITING_INPUT/审批、真实 Worker SIGKILL A→B、官方 CI/架构 PASS；不代表企业 OSS/IAM 或 M9 Production GO。验收：[正式收口](../../../docs/retrospectives/DEV_M6_FINAL_CLOSEOUT_20261014.md)。最终归档 Head CI 仍为合并前置。

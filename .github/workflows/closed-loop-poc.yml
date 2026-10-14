@@ -6,7 +6,8 @@ on:
       - 'poc/closed_loop/**'
       - 'poc/platform_access/**'
       - 'poc/recipe/**'
-      - 'openspec/changes/dev-m6-agent-recipe-execution/**'
+      - 'openspec/changes/archive/2026-10-14-dev-m6-agent-recipe-execution/**'
+      - 'openspec/specs/agent-recipe-execution/**'
       - 'compose.yaml'
       - 'openspec/changes/minimal-run-closed-loop/**'
       - 'openspec/changes/real-model-agent-closed-loop/**'
@@ -64,7 +65,6 @@ jobs:
       - name: Verify OpenSpec, architecture guards and PG/API TDD contracts
         run: |
           npx --yes @fission-ai/openspec@1.12.0 validate dev-inspector-capability-verification --strict
-          npx --yes @fission-ai/openspec@1.12.0 validate dev-m6-agent-recipe-execution --strict
           npx --yes @fission-ai/openspec@1.12.0 validate --specs --strict
           python -B -m unittest poc.closed_loop.test_step_attempt_pg poc.closed_loop.test_facts_pg poc.closed_loop.test_inspector_capabilities_pg poc.closed_loop.test_inspector_pg poc.closed_loop.test_inspector_m7_pg poc.closed_loop.test_real_model poc.closed_loop.test_stream_sse_pg poc.closed_loop.test_plan_guard_pg poc.closed_loop.test_replan_v2_pg poc.closed_loop.test_replan_v2_execution_pg poc.closed_loop.test_replan_non_pure_pg poc.closed_loop.test_replan_orphaned_attempt_pg poc.closed_loop.test_replan_ack_pg poc.closed_loop.test_hatchet_segment_lookup -v
           python -B -m unittest tests.test_architecture_guardrails -v
