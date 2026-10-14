@@ -54,6 +54,8 @@
 44. [**HC-02 · Harness/Hatchet 状态一致性、Outbox/Inbox、丢 ACK、Receipt UNKNOWN 对账**](HARNESS_HATCHET_CONSISTENCY_CONTRACT_20261010.md)
 45. [**HC-03 · Worker/ExecutionContext/Cube Scope/Lease/Fencing 绑定与故障接管**](HATCHET_WORKER_SANDBOX_BINDING_CONTRACT_20261010.md)
 
+46. [**DEV-SBX · Cube 原生模板与 Sandbox Create / Attach / Execute V1 冻结合同（2026-10-14；实现未启动）**](CUBE_SANDBOX_MANAGEMENT_V1_20261014.md)：不引入新的 Template DSL/Registry；复用现有 HC-03 执行权限、Cube 原生生命周期与沙箱 API，限本机真实 Cube 验证。
+
 **架构视图：** 八类分层架构图唯一维护位置为 [ARCHITECTURE_VIEWS.md](../ARCHITECTURE_VIEWS.md)，根目录 README 保留轻量入口，不复制 Mermaid 图表。
 
 ## 阶段评估处置索引

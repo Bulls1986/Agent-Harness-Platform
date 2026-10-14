@@ -19,6 +19,20 @@
 
 **依赖方向：外部业务消费者 → 受版本管理的 Harness 公共 API/SDK → Harness Domain/AgentRuntime → Hatchet/Cube。** 业务系统独立发布和维护，不得导入 Harness 内部源码、操作 Harness PG 或挪用技术执行权威；Harness 更不包含业务系统专属实现。
 
+## DEV-SBX · M9 之前的独立沙箱管理补齐（2026-10-14 Scope FROZEN）
+
+**新增独立交付线 DEV-SBX，不重新打开已经限定收口的 DEV-M5 / DEV-M7，也不改变 M9 的生产门禁与环境前置。** 开发范围由 [Cube Sandbox Management V1 冻结合同](references/CUBE_SANDBOX_MANAGEMENT_V1_20261014.md) 确定，四份 OpenSpec 规划材料见 [dev-sbx-cube-sandbox-management-v1](../openspec/changes/dev-sbx-cube-sandbox-management-v1/)。
+
+| 子里程碑 | 冻结交付 | 状态 / 退出 Gate |
+|---|---|---|
+| **SBX-M0** 合同冻结 | Cube Native Template/参数原则；Create/Attach/Execute、授权/UNKNOWN、正反例与 Non-goals、OpenSpec | **SCOPE FROZEN / 文档 Gate 待 PR CI+Merge**；不算功能实现 |
+| **SBX-M1** Cube Native + Create | Cube Template 管理受控透传、实例 Create、可选 onCreate、持久 Operation/幂等 | PLANNED：真 Cube+PG 创建、初始化/ACK-loss/拒绝负例和 API/CI PASS |
+| **SBX-M2** Session Attach | 独立 Session↔Sandbox Binding、短期 Initialization Permit、onAttach、同 Binding reconnect | PLANNED：真 Cube Git、跨 Session/Scope 拒绝、重连不重跑、M5 Fencing 回归 |
+| **SBX-M3** Execute + 生命周期 | 授权命令/Files、结果/超时、查询、解绑、Native Pause/Resume/Release | PLANNED：真 Guest Command/UNKNOWN/Host fallback 拒绝、Workspace 生命周期正确 |
+| **SBX-M4** 整体验收 | 版本化公共 API/OpenAPI、Cube+PG Create→Attach→Execute E2E、操作手册、复盘/归档 | PLANNED：官方 CI/架构/Strict + 真实负例、PR Merge，限原范围 CLOSED |
+
+**排除：** Harness 自定义 Template DSL/Registry、二次包装 apt/pip/npm、项目/技能/子 Agent 管理、第二 Provider、Pool/调度引擎、生产集群部署/100 Active Runs。Cube 原生定义与 SDK 为唯一实施来源；上层决定初始化命令，Harness 验权限和状态。运行期仍采用 M5 HC-03；不以业务消费者私有迁移为前置。**M9 在真实生产部署/负载环境具备前继续 PLANNED / Production NO-GO。**
+
 ## 工作波次
 
 第一波：M3 领域事实、M5 可信执行并行；M4 故障负例可以并行准备。第二波：M4 集成与 M7 API/SDK；第三波：M6 多 Agent Recipe 与 M8 独立合成客户端联调；最终 M9 的平台生产故障与安全门禁。Owner、工期与上线日期需根据真实资源独立基线化，不虚构排期。
