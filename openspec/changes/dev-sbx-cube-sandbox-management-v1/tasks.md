@@ -1,13 +1,13 @@
 # DEV-SBX V1 · Tasks / 里程碑计划
 
-> **2026-10-14 范围冻结，实施未启动。** 只有 M0 规划产物可按文档/Strict Gate 收口；所有 M1–M4 未经真实测试均须保持 OPEN。Owner/工期根据本机真实资源后续确定，不虚构日程。每个里程碑只按以下既定目标推进，不自动追加后续功能。
+> **2026-10-14 范围冻结，SBX-M0 文档收口；SBX-M1 实施中，尚未验收。** 只有 M0 规划产物可按文档/Strict Gate 收口；所有 M1–M4 未经真实测试均须保持 OPEN。Owner/工期根据本机真实资源后续确定，不虚构日程。每个里程碑只按以下既定目标推进，不自动追加后续功能。
 
 ## SBX-M0 · 需求、架构与接口合同冻结
-- [ ] 0.1 合并正式冻结范围、Non-goals、HC-03/Identity/Workspace/Registry 兼容审查；说明 Cube 原生 Template/参数对齐策略与版本依赖。
-- [ ] 0.2 完成 Proposal/Design/Spec/Tasks、正例/负例验收矩阵、API Create/Attach/Execute 初稿及文档导航；OpenSpec Strict PASS。
-- [ ] 0.3 文档 PR 最新 Head CI/架构审核、Merge；明确 M1–M4 未开始，M9 Production NO-GO。
+- [x] 0.1 合并正式冻结范围、Non-goals、HC-03/Identity/Workspace/Registry 兼容审查；说明 Cube 原生 Template/参数对齐策略与版本依赖。
+- [x] 0.2 完成 Proposal/Design/Spec/Tasks、正例/负例验收矩阵、API Create/Attach/Execute 初稿及文档导航；OpenSpec Strict PASS。
+- [x] 0.3 文档 PR 最新 Head CI/架构审核、Merge；明确 M1–M4 未验收，M9 Production NO-GO。
 
-## SBX-M1 · Cube 原生管理 + Create/onCreate
+**SBX-M0 证据**：PR #98 已合并主干（`56e210f`），OpenSpec Strict PASS，Architecture CI 38524180142 SUCCESS。\n\n## SBX-M1 · Cube 原生管理 + Create/onCreate\n\n> 实施增量：完成限定 Create/onCreate + PG/HTTP 单元合同；Native Cube/Template Manager 尚未实测，M1 未完成。\n
 - [ ] 1.1 Red：模板权限/不存在/Native 参数不支持、Create ACK-loss、相同 Key 冲突、初始化失败等测试。
 - [ ] 1.2 实现受控 Cube Native Template 管理入口（只支持实证已存在原生动作）、创建及 Template ID 解析；取消创建链全局单一 `CUBE_TEMPLATE_ID` 假设。
 - [ ] 1.3 实现 Create、onCreate guest command、Operation 持久化/查询/幂等/对账；实际 Cube+PG 验证（含 `envd` 可用性）。
