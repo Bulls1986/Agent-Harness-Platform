@@ -1,6 +1,6 @@
 # DEV-SBX V1 · Tasks / 里程碑计划
 
-> **2026-10-14 范围冻结，SBX-M0 文档收口；SBX-M1 原冻结范围验收通过（CLOSED）。** M0 文档范围及 M1 Cube 原生创建范围凭验证据收口；M2–M4 仍保持 OPEN。Owner/工期根据本机真实资源后续确定，不虚构日程。每个里程碑只按以下既定目标推进，不自动追加后续功能。
+> **2026-10-14 范围冻结，SBX-M0 文档收口；SBX-M1 原冻结范围验收通过（CLOSED）。** M0 文档范围及 M1 Cube 原生创建范围凭验证据收口；M2 原冻结范围已验收收口；M3/M4 仍 OPEN。Owner/工期根据本机真实资源后续确定，不虚构日程。每个里程碑只按以下既定目标推进，不自动追加后续功能。
 
 ## SBX-M0 · 需求、架构与接口合同冻结
 - [x] 0.1 合并正式冻结范围、Non-goals、HC-03/Identity/Workspace/Registry 兼容审查；说明 Cube 原生 Template/参数对齐策略与版本依赖。
@@ -27,15 +27,15 @@ and delete confirmed, inventory restored to original 7. Contract negative
 cases for lost ACK / ambiguous outcome tested with simulated provider,
 not with actual dropped Cube network packets. See
 [SBX-M1 acceptance evidence](../../../docs/retrospectives/DEV_SBX_M1_FINAL_EVIDENCE_20261014.md).
-[Architecture CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38555102881), [M5 Cube/PG CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38555102789), [full Hatchet/PG/Inspector CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38555102848) all SUCCESS on PR #101; PR merge is the final documentation/code closeout gate. M2, M3, M4 remain OPEN; M9 Production NO-GO.
+[Architecture CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38555102881), [M5 Cube/PG CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38555102789), [full Hatchet/PG/Inspector CI](https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38555102848) all SUCCESS on PR #101; PR merge is the final documentation/code closeout gate. M2 CLOSED（原冻结本机范围）；M3/M4 继续 OPEN；M9 Production NO-GO.
 
 ## SBX-M2 · Session Attach/onAttach
-- [ ] 2.1 Red：未授权 Session/Scope、同一可写 Sandbox 跨 Session、未 READY、重连重复初始化、Git 不安全覆盖负例。
-- [ ] 2.2 实现独立 Session Binding、Attach 受限 Initialization Permit，按顺序在真实 Cube Guest 执行 onAttach；初始化成功才变可用。
-- [ ] 2.3 真 Cube Git Clone/Fetch、同 Binding reconnect、跨 Scope 拒绝、HTTP 断线/UNKNOWN 对账；回归 M5 Execution Fencing。
-- [ ] 2.4 OpenAPI、CI、架构 Review 与 M2 复盘，证据 PASS 后才能关闭 M2。
+- [x] 2.1 Red：未授权 Session/Scope、同一可写 Sandbox 跨 Session、未 READY、重连重复初始化、Git 不安全覆盖负例。
+- [x] 2.2 实现独立 Session Binding、Attach 受限 Initialization Permit，按顺序在真实 Cube Guest 执行 onAttach；初始化成功才变可用。
+- [x] 2.3 真 Cube Git Clone/Fetch、同 Binding reconnect、跨 Scope 拒绝、HTTP 断线/UNKNOWN 对账；回归 M5 Execution Fencing。
+- [x] 2.4 OpenAPI、CI、架构 Review 与 M2 复盘，证据 PASS 后才能关闭 M2。
 
-## SBX-M3 · Execute + 生命周期
+**SBX-M2 真实验收**：本机 Cube SDK 0.7.3 + PostgreSQL + HTTP Create → Attach → Git Clone/Fetch/Revision → 同 Session 重连/文件保留 → 跨 Session/Scope 拒绝，真实 Cube 临时实例销毁；初始化 Permit 包含资源/命令摘要/过期时间。M2 合同、Negative、OpenAPI、本机 E2E 已通过；2.4 [官方 Architecture / M5 Cube PG / Full Hatchet+Inspector CI 已 PASS](https://github.com/Bulls1986/Agent-Harness-Platform/pull/102)；最终 Closeout PR #102 合并门禁已确认。实际网络丢包未注入，UNKNOWN 合同为模拟负例。[验收记录](../../../docs/retrospectives/DEV_SBX_M2_FINAL_EVIDENCE_20261014.md)。M3/M4 不提前实施。\n\n## SBX-M3 · Execute + 生命周期
 - [ ] 3.1 Red：无命令授权/过期 Lease/Fencing、非幂等 Command UNKNOWN、不允许 Host fallback、解绑仍活跃、Pause/Kill Workspace 丢失负例。
 - [ ] 3.2 实现带许可的 Execute 和 Cube Commands/必要 Files、Operation 状态/受限输出/超时、受控的 Native inspect/pause/resume/release。
 - [ ] 3.3 真 Cube 执行、故障恢复/命令对账、同 Scope 释放/重连、未授权拒绝、Model-only 0 Cube 回归。

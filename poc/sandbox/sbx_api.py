@@ -15,6 +15,14 @@ from poc.sandbox.sbx_management import (
 )
 
 
+class SandboxAttachRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+    createOperationId: str
+    sessionRef: str
+    onAttach: dict[str, list[dict[str, Any]]] = Field(
+        default_factory=lambda: {"commands": []})
+
+
 class SandboxCreateRequest(BaseModel):
     cube: dict[str, Any]
     onCreate: dict[str, list[dict[str, Any]]] = Field(
@@ -31,7 +39,8 @@ def _public(row):
     }
 
 
-def create_sbx_m1_app(*, resolve_context: Callable, service: SandboxCreateService, template_gateway=None):
+def create_sbx_m1_app(*, resolve_context: Callable, service: SandboxCreateService,
+                      template_gateway=None, attach_service=None):
     if not callable(resolve_context) or not isinstance(service, SandboxCreateService):
         raise ValueError("Trusted context resolver and Sandbox Create service required")
     app = FastAPI(title="DEV-SBX M1 Cube-native Create (limited development)",
@@ -89,6 +98,81 @@ def create_sbx_m1_app(*, resolve_context: Callable, service: SandboxCreateServic
             raise HTTPException(404, "Not found") from None
         except SandboxUnknown:
             raise HTTPException(409, "Cube native evidence not verified; stays UNKNOWN") from None
+
+    if attach_service is not None:
+        from poc.sandbox.sbx_attach import SessionAttachService
+        if not isinstance(attach_service, SessionAttachService):
+            raise ValueError("Explicit trusted PG Session Attach service required")
+
+        def binding_public(row):
+            return {
+                "bindingId": row["binding_id"],
+                "sessionRef": row["session_ref"],
+                "sandboxRef": row["sandbox_id"],
+                "state": row["state"],
+                "exitCode": row["exit_code"],
+            }
+
+        def binding_error(exc):
+            if isinstance(exc,SandboxPermissionDenied):
+                raise HTTPException(403,"Session Attach denied") from None
+            if isinstance(exc,SandboxConflict):
+                raise HTTPException(409,"Session binding conflict or inactive") from None
+            if isinstance(exc,SandboxUnknown):
+                raise HTTPException(503,"Guest initialization UNKNOWN; no replay") from None
+            if isinstance(exc,KeyError):
+                raise HTTPException(404,"Sandbox/Binding not found") from None
+            if isinstance(exc,ValueError):
+                raise HTTPException(422,"Invalid Attach request") from None
+            raise exc
+
+        @app.post("/api/v1/sandbox-bindings", status_code=202)
+        def attach(body: SandboxAttachRequest, request: Request,
+                   idempotency_key: str | None = Header(default=None, alias="Idempotency-Key")):
+            scope, principal = identity(request)
+            if not idempotency_key:
+                raise HTTPException(400,"Idempotency-Key required")
+            try:
+                if set(body.onAttach)!={"commands"}:
+                    raise ValueError("Only onAttach.commands supported")
+                return binding_public(attach_service.attach(
+                    scope=scope,principal=principal,
+                    create_operation_id=body.createOperationId,
+                    session_ref=body.sessionRef,idempotency_key=idempotency_key,
+                    on_attach=body.onAttach["commands"]))
+            except (SandboxPermissionDenied,SandboxConflict,SandboxUnknown,KeyError,ValueError) as e:
+                binding_error(e)
+
+        @app.get("/api/v1/sandbox-bindings/{binding_id}")
+        def binding_get(binding_id: str, request: Request):
+            scope, principal=identity(request)
+            try:
+                return binding_public(attach_service.get(
+                    scope=scope,principal=principal,binding_id=binding_id))
+            except (SandboxPermissionDenied,SandboxConflict,KeyError,ValueError) as e:
+                binding_error(e)
+
+        @app.post("/api/v1/sandbox-bindings/{binding_id}/reconcile", status_code=202)
+        def binding_reconcile(binding_id: str, request: Request):
+            scope, principal=identity(request)
+            try:
+                return binding_public(attach_service.reconcile(
+                    scope=scope,principal=principal,binding_id=binding_id))
+            except (SandboxPermissionDenied,SandboxConflict,KeyError,ValueError) as e:
+                binding_error(e)
+
+        @app.post("/api/v1/sandbox-bindings/{binding_id}/reconnect")
+        def binding_reconnect(binding_id: str, body: dict[str, str],
+                              request: Request):
+            scope, principal=identity(request)
+            if set(body)!={"sessionRef"}:
+                raise HTTPException(422,"SessionRef required")
+            try:
+                return binding_public(attach_service.reconnect(
+                    scope=scope,principal=principal,
+                    session_ref=body["sessionRef"],binding_id=binding_id))
+            except (SandboxPermissionDenied,SandboxConflict,SandboxUnknown,KeyError,ValueError) as e:
+                binding_error(e)
 
     if template_gateway is not None:
         from poc.sandbox.sbx_template import CubeTemplateGateway

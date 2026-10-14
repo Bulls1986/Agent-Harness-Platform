@@ -22,6 +22,7 @@ from scripts.openapi_signature import contract_signature
 from poc.sandbox.sbx_api import create_sbx_m1_app
 from poc.sandbox.sbx_management import CubeNativeCreateTransport, SandboxCreateService
 from poc.sandbox.sbx_template import CubeTemplateGateway
+from poc.sandbox.sbx_attach import SessionAttachService, PgSessionBindingStore
 
 
 def schemas():
@@ -58,7 +59,31 @@ def schemas():
         " explicit Policy and PostgreSQL; no Cube/PG is contacted by this exporter."
         " Native Cube Template admin is separately Policy-gated."
         " Not a deployed production endpoint, Attach/Execute not yet implemented.")
+    # M2 schema-only binding adapter. No PostgreSQL / Cube / Policy calls.
+    class NeverConnect:
+        def connect(self, sandbox_id):
+            raise RuntimeError("OpenAPI-only adapter must never execute")
+    schema_binding = SessionAttachService(
+        store=object.__new__(PgSessionBindingStore),
+        create_store=object(),native=NeverConnect(),
+        authorize=lambda *_: False,authorize_session=lambda *_: False)
+    sbx_m2=create_sbx_m1_app(
+        resolve_context=lambda _request:None,
+        service=SandboxCreateService(
+            object(),CubeNativeCreateTransport(sdk=object()),
+            authorize=lambda *_:False),
+        template_gateway=CubeTemplateGateway(
+            sdk=object(),authorize=lambda *_:False),
+        attach_service=schema_binding,
+    ).openapi()
+    sbx_m2["info"]["description"]=(
+        "DEV-SBX M2 bounded API: native Cube Create + Session Attach/onAttach, "
+        "read/reconnect and fail-closed operator reconciliation. "
+        "Gateway Session identity, Policy, short-lived InitializationPermit "
+        "and real PostgreSQL must be injected on actual deployment. "
+        "No Run Execute or production authentication is provided.")
     return {
+        ROOT/"docs/api/openapi-sbx-m2.json":sbx_m2,
         ROOT/"docs/api/openapi-sbx-m1.json":sbx,
         ROOT/"docs/api/openapi-v1.json":pub,
         ROOT/"docs/api/openapi-inspector.json":inspector,
