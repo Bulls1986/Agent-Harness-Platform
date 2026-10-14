@@ -1,6 +1,6 @@
-# DEV-SBX M1 路 Cube-native Sandbox and Template APIs
+# DEV-SBX M1 - Cube-native Sandbox and Template APIs
 
-**Status: SBX-M1 IN PROGRESS (limited development API; Production NO-GO).**
+**Status: SBX-M1 bounded CLOSED (local development API; Production NO-GO).**
 These are optional, separate FastAPI factory routes. They are **not mounted**
 by default in Inspector and do not provide enterprise Gateway/IdP. The
 factory requires trusted `resolve_context`, `SandboxCreateService`,
@@ -35,9 +35,10 @@ properties return 422. The native SDK requires an OCI image for Build.
 **Important:** Mutating Template build/alias/delete methods are currently
 admin-policy guarded but **not yet production-grade idempotent admin
 operations**. If the native ACK is lost, the operator must inspect Cube
-directly before any new request. Actual native Build/alias/delete and
-their failed-ACK behavior are not yet live-tested; do not mark SBX-M1
-CLOSED on the strength of injected SDK tests alone.
+directly before any new request. Actual Build / Alias / Delete succeeded against a newly created, isolated
+Cube Template; the template was deleted and inventory restored. Loss of a
+native admin-mutation ACK was **not** injected into a live Cube manager:
+inspect native Cube job/template state before any manual retry.
 
 ## Create and onCreate
 
@@ -104,7 +105,7 @@ PG contract needs real `HARNESS_POC_DATABASE_URL`:
 python -B -m unittest poc.sandbox.test_sbx_pg_m1 -v
 ```
 
-For a **real Cube + PostgreSQL** HTTP鈫扵emplate鈫扖reate鈫抩nCreate鈫扜uest smoke,
+For a **real Cube + PostgreSQL** HTTP -> Template -> Create -> onCreate -> Guest smoke,
 explicitly configure `CUBE_API_URL`, `CUBE_PROXY_NODE_IP`,
 `HARNESS_POC_DATABASE_URL`, `SBX_M1_CUBE_TEST_TEMPLATE_ID` and run:
 
@@ -112,12 +113,18 @@ explicitly configure `CUBE_API_URL`, `CUBE_PROXY_NODE_IP`,
 python -B -m poc.sandbox.verify_sbx_m1_cube_live
 ```
 
-The smoke uses a deliberately local synthetic identity injected into
+The Template build/alias/delete validation is available only with explicit
+opt-in using `python -B -m poc.sandbox.verify_sbx_m1_template_live`.
+It polls native asynchronous Build job status instead of treating a
+transient `Template.get` 404 as a failed build; only templates created
+by the smoke are eligible for its cleanup. Existing templates are not touched.
+
+The sandbox smoke uses a deliberately local synthetic identity injected into
 FastAPI TestClient, validates native onCreate and same-key replay,
 then destroys only its own test sandbox. Do not confuse it with
 production authentication. Lack of Cube, SDK or PG must be a hard
 test failure, never a SKIPPED/PASS.
 
-[OpenAPI M1](openapi-sbx-m1.json) 路
+[OpenAPI M1](openapi-sbx-m1.json) |
 [Frozen contract](../references/CUBE_SANDBOX_MANAGEMENT_V1_20261014.md) 路
 [Milestones](../DEVELOPMENT_MILESTONES.md).
