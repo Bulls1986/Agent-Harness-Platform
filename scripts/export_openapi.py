@@ -21,6 +21,7 @@ from poc.closed_loop.inspector import create_app
 from scripts.openapi_signature import contract_signature
 from poc.sandbox.sbx_api import create_sbx_m1_app
 from poc.sandbox.sbx_management import CubeNativeCreateTransport, SandboxCreateService
+from poc.sandbox.sbx_template import CubeTemplateGateway
 
 
 def schemas():
@@ -49,10 +50,13 @@ def schemas():
             object(), CubeNativeCreateTransport(sdk=object()),
             authorize=lambda *_: False,
         ),
+        template_gateway=CubeTemplateGateway(
+            sdk=object(), authorize=lambda *_: False),
     ).openapi()
     sbx["info"]["description"] = (
         "DEV-SBX M1 Create/onCreate pilot only. Requires trusted Gateway,"
         " explicit Policy and PostgreSQL; no Cube/PG is contacted by this exporter."
+        " Native Cube Template admin is separately Policy-gated."
         " Not a deployed production endpoint, Attach/Execute not yet implemented.")
     return {
         ROOT/"docs/api/openapi-sbx-m1.json":sbx,
