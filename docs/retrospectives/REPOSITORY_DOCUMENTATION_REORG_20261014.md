@@ -17,6 +17,10 @@ M9 前的一次**纯仓库门面与文档治理**：根 README 缩短为开源�
 - 本地验证：`python -B -m unittest discover -s tests -v` 27/27；`python -B scripts/check_architecture_guardrails.py` PASS（8 views/9 diagrams）；`python -B poc/verify_repo_navigation.py` PASS（123 links）；`python -B scripts/export_openapi.py --check` PASS；`docker compose config --quiet` PASS；8 OpenSpec specs Strict PASS。
 - 已有 localhost Inspector `/`、`/api/config`、`/openapi.json`、`/m7-demo/openapi.json` 均实际 HTTP 200；未对已有环境执行 `down -v`，未改变 Docker 服务、身份机制或业务状态。
 
+## Official CI version divergence and fix
+
+首次 PR #97 架构 CI PASS；Native CI 38508985881 在 OpenAPI 快照逐字对比失败，原因是本地 FastAPI 0.115.14/Pydantic 2.12.5 与 GitHub CI FastAPI 0.143.0/Pydantic 2.14.1 生成元数据存在非语义差异。修正为纯标准库 `scripts/openapi_signature.py` 投影校验：仍阻断路径/方法、Query/Header/Body 字段、请求必填、响应状态等合同漂移，但容忍框架生成的描述和验证错误组件差异，不变更运行时依赖。新增负例测试证明路由删除/请求字段删除必 FAIL、info 元数据差异不导致 FAIL。修复后应以 PR 最新 Head 官方完整 CI 为准。
+
 ## Risk / follow-up boundary
 
 旧历史文件中的某些相对链接仍以**原根目录位置**为参照，已显式标注历史快照而不作为当前运行指南；正式导航改为有检查的 docs hub。README 的精简不应改变 9 张 Mermaid 的语义。企业生产发布、镜像制品/签名、企业 IdP/OSS 和生产 M9 准入仍 **OPEN / NO-GO**，没有因手册存在就升级为能力。GitHub 官方 PR/CI 是最终合并准入，本地通过不是官方 CI。

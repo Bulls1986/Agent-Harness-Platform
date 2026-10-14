@@ -18,6 +18,7 @@ if str(ROOT) not in sys.path:
 from poc.platform_access.conversation_pg import PgConversationStore
 from poc.platform_access.platform_api import create_platform_app
 from poc.closed_loop.inspector import create_app
+from scripts.openapi_signature import contract_signature
 
 
 def schemas():
@@ -54,9 +55,17 @@ def main():
     for file,content in schemas().items():
         rendered=json.dumps(content,indent=2,ensure_ascii=False,sort_keys=True)+"\n"
         if args.check:
-            if not file.is_file() or file.read_text(encoding="utf-8")!=rendered:
-                print("STALE OpenAPI snapshot:",file.relative_to(ROOT))
+            if not file.is_file():
+                print("MISSING OpenAPI snapshot:",file.relative_to(ROOT))
                 ok=False
+            else:
+                checked=json.loads(file.read_text(encoding="utf-8"))
+                if contract_signature(checked)!=contract_signature(content):
+                    print("API CONTRACT DRIFT:",file.relative_to(ROOT))
+                    ok=False
+                elif file.read_text(encoding="utf-8")!=rendered:
+                    print("Framework-only OpenAPI metadata drift (allowed):",
+                          file.relative_to(ROOT))
         else:
             file.parent.mkdir(parents=True,exist_ok=True)
             file.write_text(rendered,encoding="utf-8")
