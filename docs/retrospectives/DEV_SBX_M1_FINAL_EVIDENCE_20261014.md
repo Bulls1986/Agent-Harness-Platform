@@ -1,6 +1,6 @@
 # DEV-SBX SBX-M1 - Final evidence and bounded acceptance
 
-Date: 2026-10-14. **Latest-head CI and PR merge pending at the time of this draft.**
+Date: 2026-10-14. **Bounded M1 evidence accepted. PR #101 latest-head official CI SUCCESS; final merger is the last closure action.**
 
 ## Frozen scope and real acceptance
 
@@ -56,9 +56,11 @@ deployment.
 - Top-level repository regression 28/28 passed;
   OpenSpec Strict, checked-in OpenAPI semantic contract, and
   architecture guard passed.
-- Final latest-head official CI URLs and verdicts must be recorded
-  after the closeout PR is green; a previous head alone is not evidence
-  for an edited head.
+- PR #101 official latest-head CI (before documentation-only closure edits):
+  Architecture https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38555102881 SUCCESS,
+  M5 Cube/PG https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38555102789 SUCCESS,
+  Full Hatchet/PG/Inspector https://github.com/Bulls1986/Agent-Harness-Platform/actions/runs/38555102848 SUCCESS.
+  Documentation-only closure Head is rechecked independently before merge.
 
 ### Explicit limits, not silent passes
 
