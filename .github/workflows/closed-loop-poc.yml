@@ -17,6 +17,10 @@ on:
       - 'openspec/specs/platform-access-contract/**'
       - 'openspec/specs/run-plan-domain/**'
       - 'poc/runtime_spi/**'
+      - 'poc/sandbox/**'
+      - 'openspec/changes/dev-sbx-cube-sandbox-management-v1/**'
+      - 'docs/api/openapi-sbx-m1.json'
+      - 'scripts/export_openapi.py'
       - '.github/workflows/closed-loop-poc.yml'
 
 permissions:
@@ -65,6 +69,8 @@ jobs:
       - name: Verify OpenSpec, architecture guards and PG/API TDD contracts
         run: |
           npx --yes @fission-ai/openspec@1.12.0 validate dev-inspector-capability-verification --strict
+          npx --yes @fission-ai/openspec@1.12.0 validate dev-sbx-cube-sandbox-management-v1 --strict
+          python -B -m unittest poc.sandbox.test_sbx_m1 poc.sandbox.test_sbx_api_m1 poc.sandbox.test_sbx_pg_m1 -v
           npx --yes @fission-ai/openspec@1.12.0 validate --specs --strict
           python -B -m unittest poc.closed_loop.test_step_attempt_pg poc.closed_loop.test_facts_pg poc.closed_loop.test_inspector_capabilities_pg poc.closed_loop.test_inspector_pg poc.closed_loop.test_inspector_m7_pg poc.closed_loop.test_real_model poc.closed_loop.test_stream_sse_pg poc.closed_loop.test_plan_guard_pg poc.closed_loop.test_replan_v2_pg poc.closed_loop.test_replan_v2_execution_pg poc.closed_loop.test_replan_non_pure_pg poc.closed_loop.test_replan_orphaned_attempt_pg poc.closed_loop.test_replan_ack_pg poc.closed_loop.test_hatchet_segment_lookup -v
           python -B -m unittest tests.test_architecture_guardrails -v
