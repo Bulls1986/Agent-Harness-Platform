@@ -735,7 +735,7 @@ OpenCode 2 / MAF；目前全部为候选，尚无完美零适配技术栈。
 
 **方向：** Hatchet 作为当前 Process/Durable SPI **唯一优先实现候选**（开源双 Engine 接管已实测）；Temporal、MAF Durable、PG + Worker/Scheduler 仅保留原有历史/条件性技术方案，不进入当前同等级重复验证。**DBOS 因自托管 Conductor 多 Executor 商业许可约束，正式排除（REJECTED / OUT OF SCOPE），不再作为备选、POC 或生产候选**。Pydantic 仅为 AgentRuntime Adapter 候选，不拥有跨 SDK Durable 语义。
 
-**2026-10-10 架构调整权威说明：** [Hatchet Process/Durable 六层职责、Provider ID Binding、数据/部署/运行架构及恢复门禁](references/HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md) 为当前实施基线；[根目录 README 八视图](../README.md#31-八类分层架构视图) 已联动更新。**实施方向已确定，不再把 DBOS 许可证问题视为待解决事项，不并行重造 PG Scheduler；但生产 Accepted ADR 仍等待端到端 Gate。**
+**2026-10-10 架构调整权威说明：** [Hatchet Process/Durable 六层职责、Provider ID Binding、数据/部署/运行架构及恢复门禁](references/HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md) 为当前实施基线；[分层架构视图](ARCHITECTURE_VIEWS.md) 已归位为唯一 Mermaid 图源。**实施方向已确定，不再把 DBOS 许可证问题视为待解决事项，不并行重造 PG Scheduler；但生产 Accepted ADR 仍等待端到端 Gate。**
 
 **2026-10-10 三项实施合同已收口（ADR-032 / HC-01~03，架构 DECIDED；真实集成 Gate 仍 OPEN）：** [HC-01 Run/Plan/Step/Attempt↔Hatchet Workflow/Task/Replan Mapping](references/HATCHET_WORKFLOW_MAPPING_CONTRACT_20261010.md) · [HC-02 Outbox/Binding/状态投影/UNKNOWN Receipt 一致性](references/HARNESS_HATCHET_CONSISTENCY_CONTRACT_20261010.md) · [HC-03 Worker/ExecutionContext/Cube Scope/Lease/Fencing](references/HATCHET_WORKER_SANDBOX_BINDING_CONTRACT_20261010.md)。架构阶段无需重新比较 Durable SDK；**执行时须按三份合同验收同 Run 的故障注入**，不能把文档 DECIDED 记为集成 PASS。
 

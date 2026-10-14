@@ -53,28 +53,31 @@ def check_vendor_imports(source: str, label: str) -> list[str]:
     return issues
 
 
-def check_views(readme: str, legacy: str) -> list[str]:
+def check_views(readme: str, views: str) -> list[str]:
+    """One canonical diagram source in docs, short README links to it."""
     issues = []
-    start = readme.find("### 3.1 八类分层架构视图")
-    end = readme.find("## 4. 为什么采用这样的技术方案？")
-    if start == -1 or end <= start:
-        return ["README: 3.1 inline architecture views missing or outside expected section"]
-    section = readme[start:end]
-    for n, name in enumerate(VIEW_NAMES, 1):
+    if "docs/ARCHITECTURE_VIEWS.md" not in readme:
+        issues.append("README: link to canonical architecture views missing")
+    start=views.find("### 3.1 八类分层架构视图")
+    if start<0:
+        return issues+["ARCHITECTURE_VIEWS: missing section 3.1"]
+    section=views[start:]
+    for n,name in enumerate(VIEW_NAMES,1):
         if f"#### 3.1.{n} {name}" not in section:
-            issues.append(f"README: missing 3.1.{n} {name} view")
-    if not all(f"##### 3.1.8.{i} " in section for i in (1, 2)):
-        issues.append("README: two runtime execution/recovery diagrams not found")
-    diagrams = FENCE.findall(section)
-    if len(diagrams) != 9:
-        issues.append(f"README: expected 9 Mermaid diagrams in section 3.1; found {len(diagrams)}")
-    for i, diagram in enumerate(diagrams, 1):
-        if not diagram.lstrip().startswith(("flowchart ", "sequenceDiagram")):
-            issues.append(f"README: unsupported Mermaid diagram {i} start")
-    if FENCE.search(legacy):
-        issues.append("legacy architecture views document duplicates Mermaid diagrams; keep README canonical")
-    if "README.md#31-" not in legacy:
-        issues.append("legacy architecture views document must link to README 3.1")
+            issues.append(f"ARCHITECTURE_VIEWS: missing 3.1.{n} {name}")
+    if not all(f"##### 3.1.8.{i} " in section for i in (1,2)):
+        issues.append("ARCHITECTURE_VIEWS: missing two runtime execution/recovery diagrams")
+    diagrams=FENCE.findall(section)
+    if len(diagrams)!=9:
+        issues.append(f"ARCHITECTURE_VIEWS: expected 9 Mermaid diagrams; found {len(diagrams)}")
+    for i,diagram in enumerate(diagrams,1):
+        if not diagram.lstrip().startswith(("flowchart ","sequenceDiagram")):
+            issues.append(f"ARCHITECTURE_VIEWS: unsupported Mermaid diagram {i} start")
+    # A small README explainer is acceptable; copying the 9 canonical views is not.
+    if "#### 3.1.1 业务架构" in readme or len(FENCE.findall(readme))>=9:
+        issues.append("README duplicates canonical architecture views")
+    if "README.md#31-" in views:
+        issues.append("ARCHITECTURE_VIEWS still points back to legacy README")
     return issues
 
 

@@ -23,9 +23,10 @@ def fixture(root: Path) -> None:
         if i == 8:
             doc += "##### 3.1.8.2 恢复\n"
             doc += f"{fence}mermaid\nsequenceDiagram\n  A->>B: hello\n{fence}\n"
-    (root / "README.md").write_text("ARCHITECTURE_GUARDRAILS.md\n" + doc + "## 4. 为什么采用这样的技术方案？", encoding="utf-8")
+    (root / "README.md").write_text(
+        "ARCHITECTURE_GUARDRAILS.md docs/ARCHITECTURE_VIEWS.md", encoding="utf-8")
     (root / "AGENTS.md").write_text("ARCHITECTURE_GUARDRAILS.md", encoding="utf-8")
-    (root / "docs/ARCHITECTURE_VIEWS.md").write_text("README.md#31-八类分层架构视图", encoding="utf-8")
+    (root / "docs/ARCHITECTURE_VIEWS.md").write_text(doc, encoding="utf-8")
     (root / "poc/runtime_spi/contract.py").write_text("from dataclasses import dataclass\n", encoding="utf-8")
 
 
@@ -52,18 +53,19 @@ class GuardTests(unittest.TestCase):
             root = Path(d)
             fixture(root)
             readme = (root / "README.md").read_text(encoding="utf-8")
-            first = chr(96) * 3 + "mermaid"
-            readme = readme.replace(first, "~~~text", 1)
+            views=(root / "docs/ARCHITECTURE_VIEWS.md").read_text(encoding="utf-8")
+            first=chr(96)*3+"mermaid"
             self.assertTrue(any("expected 9 Mermaid" in x for x in check_views(
-                readme, "README.md#31-八类分层架构视图")))
+                readme, views.replace(first,"~~~text",1))))
 
     def test_duplicate_legacy_diagram_detected(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             fixture(root)
             readme = (root / "README.md").read_text(encoding="utf-8")
-            legacy = "README.md#31-八类分层架构视图\n" + chr(96)*3 + "mermaid\nflowchart LR\nA-->B\n" + chr(96)*3
-            self.assertTrue(any("duplicates" in x for x in check_views(readme, legacy)))
+            views = (root / "docs/ARCHITECTURE_VIEWS.md").read_text(encoding="utf-8")
+            self.assertTrue(any("duplicates" in x for x in check_views(
+                readme+"\n"+views, views)))
 
     def test_missing_contract_detected(self):
         with tempfile.TemporaryDirectory() as d:

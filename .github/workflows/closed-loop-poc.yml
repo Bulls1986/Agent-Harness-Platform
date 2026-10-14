@@ -70,6 +70,8 @@ jobs:
           python -B -m unittest tests.test_architecture_guardrails -v
           python -B -m unittest poc.recipe.test_recipe_pg poc.recipe.test_synthetic_artifacts_pg -v
           python -B poc/verify_repo_navigation.py
+      - name: Verify checked-in FastAPI OpenAPI documents reflect source
+        run: python -B scripts/export_openapi.py --check
       - name: Check capability tab browser JavaScript syntax
         run: |
           python - <<'PY'
