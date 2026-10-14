@@ -18,4 +18,4 @@ DEV-M3 through DEV-M7 and accepted G01–G20/Harness owner contracts. Production
 
 ## Status
 
-PLANNED; all implementation tasks unchecked.
+ACTIVE / PARTIAL. M7/M6 are CLOSED. Independent generic consumer contract 7/7 local tests PASS; real public API + PG/Native integration CI and final security review/retrospective are pending. No customer data or private consumer implementation.
