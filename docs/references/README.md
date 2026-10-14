@@ -54,7 +54,7 @@
 44. [**HC-02 · Harness/Hatchet 状态一致性、Outbox/Inbox、丢 ACK、Receipt UNKNOWN 对账**](HARNESS_HATCHET_CONSISTENCY_CONTRACT_20261010.md)
 45. [**HC-03 · Worker/ExecutionContext/Cube Scope/Lease/Fencing 绑定与故障接管**](HATCHET_WORKER_SANDBOX_BINDING_CONTRACT_20261010.md)
 
-**架构视图：** 八类分层架构图现已[直接嵌入根目录 README（第 3.1 节）](../../README.md#31-八类分层架构视图)，旧 [ARCHITECTURE_VIEWS.md](../ARCHITECTURE_VIEWS.md) 仅提供兼容导航，不重复维护图表。
+**架构视图：** 八类分层架构图唯一维护位置为 [ARCHITECTURE_VIEWS.md](../ARCHITECTURE_VIEWS.md)，根目录 README 保留轻量入口，不复制 Mermaid 图表。
 
 ## 阶段评估处置索引
 

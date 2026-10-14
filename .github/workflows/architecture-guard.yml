@@ -22,6 +22,8 @@ jobs:
         run: python -B -m unittest discover -s tests -p "test_architecture_guardrails.py" -v
       - name: Formal development milestone plan and OpenSpec phase regression
         run: python -B -m unittest discover -s tests -p "test_development_milestone_plan.py" -v
+      - name: Open-source documentation, link and API-route contract
+        run: python -B -m unittest tests.test_repository_docs -v
       - name: DEV-M5 trusted execution admission negative contracts
         run: python -B -m unittest discover -s tests -p "test_trusted_execution_gate.py" -v
       - name: Architecture docs and import boundaries

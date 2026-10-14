@@ -1,41 +1,19 @@
-# 文档导航 / 单一现行入口
+# Documentation / 文档中心
 
-> **2026-10-10 更新：根目录 [README 总体架构设计](../README.md) 是当前唯一可直接阅读的完整方案。** 本页仅作专题索引，不另设一份与 README 竞争的总体方案；Accepted Contract 仍在规范优先级上高于候选设计，历史证据原样保留。
+Root [README](../README.md) is the short open-source landing page. This directory holds maintained user, operator and developer documentation; architecture decisions and historical POC evidence are not interchangeable with production instructions.
 
-## 现在该读什么
-
-| 目的 | 权威入口 | 状态 |
+| Goal | Maintained source | Scope |
 |---|---|---|
-| **总体架构、建设必要性、方案优劣势、真实 POC 证据与路线图** | **[根目录 README：架构设计方案](../README.md)** | **现行总入口：集成 POC LIMITED GO / 生产 NO-GO** |
-| **通用客户端独立接入** | [正式里程碑与外部客户端合同](DEVELOPMENT_MILESTONES.md) | 业务消费者由独立私有仓库拥有；Harness 只验证版本化公共 API |
-| **架构收口 HC-01/02/03（ADR-032）** | **[Run↔Hatchet](references/HATCHET_WORKFLOW_MAPPING_CONTRACT_20261010.md) · [状态一致性](references/HARNESS_HATCHET_CONSISTENCY_CONTRACT_20261010.md) · [Worker/Cube 绑定](references/HATCHET_WORKER_SANDBOX_BINDING_CONTRACT_20261010.md)** | **DECIDED，实际集成/生产 Gate OPEN** |
-| **Thin Harness Control Plane 自研职责瘦身（ADR-031）** | **[2026-10-10 控制层职责决议](references/THIN_HARNESS_CONTROL_PLANE_DECISION_20261010.md)** | **已明确 Hatchet 执行权威与平台必要领域事实；生产 NO-GO** |
-| **当前 Process/Durable 目标架构、部署拓扑与安全恢复** | **[Hatchet 分层与架构设计（2026-10-10）](references/HATCHET_PROCESS_DURABLE_ARCHITECTURE_20261010.md)** | **Hatchet 唯一优先实施候选；DBOS REJECTED；生产 NO-GO** |
-| 多 Harness 原始目标评估快照 | [2026-10-09 多 Harness 候选](references/MULTI_HARNESS_TARGET_ARCHITECTURE_20261009.md) | 历史快照；其 Durable 默认已被上面新决策覆盖 |
-| 本轮技术准入 / GO-NO GO 和证据 | [准入评估](references/MULTI_HARNESS_ADMISSION_20261009.md) | POC 分级准入 |
-| **已验证技术版本 / 可兼容 SDK 组合 / OCI Digest / Cube Template** | [2026-10-10 实测版本基线](references/VERIFIED_STACK_BASELINE_20261010.md) | **POC 锁定版本，生产未 Accepted** |
-| **本轮主干分支整合与历史分支覆盖核查** | [2026-10-10 整合审计记录](BRANCH_INTEGRATION_20261010.md) | **已执行三方合并、待 CI/主干合并** |
-| **Multica 调度思路参考与不复用源码（ADR-030）** | [2026-10-10 决策记录](references/MULTICA_DESIGN_REFERENCE_DECISION_20261010.md) | **已决定源码使用边界；平台 Execution 策略独立设计，Durable Engine 首选 Hatchet** |
-| 唯一架构待办主清单 | [ARCHITECTURE_BACKLOG](ARCHITECTURE_BACKLOG.md)（024～029） | OPEN |
-| 平台既有架构总设计 | [ARCHITECTURE](ARCHITECTURE.md) | V1.0 及其 Accepted Contract 不被 POC 候选覆盖 |
-| POC 硬门禁、方案 A/C 历史范围 | [POC](POC.md) | 历史基线 + 新候选补充 |
-| 最短运行验证脚本清单 | [poc/README](../poc/README.md) | 按 offline / Cube native / E2B native 区分 |
+| Start in 5 minutes | [Quickstart](guides/QUICKSTART.md) | Local Docker and localhost Inspector |
+| Understand the screens | [User guide](guides/USER_GUIDE.md) | Browser flows, evidence and limitations |
+| Install and troubleshoot | [Deployment](deployment/README.md) | Compose profiles, config and lifecycle |
+| Build, package, upgrade | [Release guide](deployment/RELEASE.md) | Maintainer checklist; production still NO-GO |
+| HTTP and SSE contracts | [API hub](api/README.md) | Public API / Inspector API / OpenAPI |
+| Current decisions | [Architecture](ARCHITECTURE.md) · [Guardrails](ARCHITECTURE_GUARDRAILS.md) | Accepted constraints |
+| Architecture diagrams | [Architecture Views](ARCHITECTURE_VIEWS.md) | **Only canonical Mermaid source** |
+| Phases and backlog | [Milestones](DEVELOPMENT_MILESTONES.md) · [Development Backlog](DEVELOPMENT_BACKLOG.md) | M3–M8 bounded CLOSED, M9 pending |
+| Alternatives, ADR context | [References](references/README.md) · [Architecture Backlog](ARCHITECTURE_BACKLOG.md) | Historical and candidate decisions |
+| POC and regression evidence | [POC Index](../poc/README.md) · [POC](POC.md) · [Retrospectives](retrospectives/) | Date-specific tests, not production guarantee |
+| Superseded long homepage | [Historical overview (2026-10-11)](history/PROJECT_OVERVIEW_20261011.md) | Historic snapshot, not a how-to |
 
-## 正式 Contracts（优先于候选）
-
-沿用既有领域模型、失败/副作用、Workspace/Git、Sandbox、执行租约、安全/恢复、Typed Events 等 Accepted Contracts。完整目录与状态参见 [Reference 索引](references/README.md) 和 AGENTS.md 规定的优先级。**不能因为这个索引的技术排名而变更已冻结 Domain Model**。
-
-## 各项 POC 与历史记录
-
-- [Cube / OpenCode 2 / OpenAI Agents SDK](../poc/opencode_sandbox/README.md)：真实 Cube OpenCode V2 / Git / SDK 接力 PASS；官方 E2B 2.40.0 + OpenAI Native 在指定 DNS/CA 下 PASS，2.53.1 405 仍为已知不兼容组合。
-- [Pydantic AI Harness](../poc/pydantic_harness/README.md)：共享 Agent Run、Linux 本地工具路由 PASS；真实 Cube 的默认 E2B Backend 尚未 PASS。
-- [MAF](../poc/maf/)：POC-A 归档。保留 Workflow、Recovery、协议结论，并作为可选 Runtime 比较。
-- [Temporal](../poc/temporal/)：POC-C 历史归档。保留任务级可靠性证据，不再作为当前与 Hatchet 并行开发的 Durable Backend。
-- [架构候选与技术评估](references/README.md)：技术选型演变过程的**历史探索证据**，不能用早期“环境不可运行 / 尚无 Cube 实例”覆盖后续真机结果。
-
-## 维护规则
-
-1. 最新结论只更新目标架构候选与准入记录；新增开放事项只进 `ARCHITECTURE_BACKLOG.md`，其他文档链接它。
-2. 测试结果必须注明 LIVE / DOCKER / OFFLINE / MOCK，以及 PASS / FAIL / BLOCKED / NOT TESTED；**Adapter PASS 不等于 Native Client PASS**。
-3. 保留旧脚本和历史结果，除非经过显式依赖审计，不做大范围目录重命名、分支删除、清理真实数据。
-4. 要把候选变成 Accepted，必须完成对应 ARCH-TODO 门禁，并更新正式架构及 ADR；单凭文档整理不能准入生产。
+**Documentation rules.** API endpoints are documented from current source; Docker examples are development-only unless an acceptance gate says otherwise. Do not duplicate the nine diagrams in README or reclassify historic experiments as production releases. Avoid moving Accepted Contracts, OpenSpec archives or evidence paths without a dependency audit.
